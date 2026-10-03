@@ -1,0 +1,209 @@
+export type UserRole = 'super_admin' | 'school_admin' | 'teacher' | 'student';
+
+export interface School {
+  id: string;
+  name: string;
+  registrationNumber?: string; // Kenyan MOE / KNEC School Registration Code
+  county: string;
+  subCounty?: string;
+  category: 'National' | 'Extra-County' | 'County' | 'Sub-County' | 'Private';
+  subscriptionPlan: 'Basic' | 'Standard KCSE Prep' | 'Institutional Pro';
+  adminName: string;
+  adminEmail: string;
+  phone?: string;
+  totalStudents: number;
+  totalTeachers: number;
+  createdAt: string;
+  status: 'active' | 'pending';
+}
+
+export interface User {
+  id: string;
+  schoolId: string | null; // null for super_admin
+  name: string;
+  email: string;
+  role: UserRole;
+  admissionNumber?: string; // For students
+  subjectSpecialization?: string; // For teachers, e.g. "Chemistry & Biology"
+  classId?: string; // For students
+  className?: string; // e.g. "Form 3 East"
+  teacherId?: string; // For students, the assigned teacher they are connected to
+  teacherName?: string;
+  avatarColor?: string;
+  mustChangePassword?: boolean; // Flag to force password update on first login
+  tempPassword?: string; // Generated temporary password sent via email
+}
+
+export interface EmailDispatch {
+  id: string;
+  recipientEmail: string;
+  recipientName: string;
+  recipientRole: UserRole;
+  subject: string;
+  tempPassword?: string;
+  messageBody: string;
+  sentAt: string;
+  schoolName?: string;
+}
+
+export interface ClassGroup {
+  id: string;
+  schoolId: string;
+  name: string; // e.g. "Form 3 East"
+  formYear: number; // 3 or 4
+  teacherId: string;
+  teacherName: string;
+  subject: 'Chemistry' | 'Physics' | 'Biology' | 'General Science';
+  studentCount: number;
+}
+
+export type SubjectType = 'chemistry' | 'physics' | 'biology';
+export type ExperimentTier = 'global' | 'school' | 'teacher';
+export type SimulationType = 'titration' | 'circuit' | 'qualitative' | 'food_test' | 'osmosis' | 'hookes_law' | 'general';
+
+export interface ApparatusItem {
+  id: string;
+  name: string;
+  subject: SubjectType;
+  icon: string;
+  isDistractor?: boolean;
+  quantity?: number;
+}
+
+export interface ExperimentStep {
+  id: number;
+  instruction: string;
+  validationType: 'apparatus_placed' | 'connection_made' | 'volume_set' | 'reading_recorded' | 'reagent_added' | 'run_simulation';
+  validationDetail?: string;
+  marks: number;
+  hint?: string;
+  allowForcePush: boolean;
+}
+
+export interface AnswerSheetQuestion {
+  id: string;
+  type: 'data_table' | 'observation_inference' | 'calculation' | 'short_answer' | 'multiple_choice';
+  prompt: string;
+  maxMarks: number;
+  // Specific config for data tables (e.g. burette readings: initial, final, volume used)
+  tableHeaders?: string[];
+  tableRows?: { label: string; simulatedValue: number; tolerance: number }[];
+  // For observation & inference
+  observationAcceptedKeywords?: string[];
+  inferenceAcceptedKeywords?: string[];
+  // For calculation
+  correctNumericValue?: number;
+  tolerance?: number;
+  unit?: string;
+  formulaHint?: string;
+  // For MCQs
+  options?: string[];
+  correctOptionIndex?: number;
+}
+
+export interface ExperimentSpec {
+  id: string;
+  subject: SubjectType;
+  title: string;
+  kcsePaper: string; // e.g. "233/3 (Chemistry Practical)"
+  topic: string;
+  objectives: string[];
+  estimatedDurationMinutes: number;
+  apparatus: ApparatusItem[];
+  steps: ExperimentStep[];
+  simulationType: SimulationType;
+  simulationConfig: {
+    // Titration params
+    acidConcentrationM?: number; // e.g. 0.1M HCl
+    baseVolumeCm3?: number; // e.g. 25.0 cm3
+    unknownMolarity?: number; // target concentration e.g. 0.098 M
+    indicator?: string; // 'Phenolphthalein' | 'Methyl Orange'
+    equivalencePointCm3?: number; // e.g. 24.50 cm3
+    colorBefore?: string; // 'Pink'
+    colorAfter?: string; // 'Colourless'
+    
+    // Circuit params (Ohm's Law)
+    emfVoltage?: number; // e.g. 3.0 V
+    internalResistance?: number; // e.g. 0.5 ohm
+    resistorValues?: number[]; // e.g. [2, 4, 6, 8, 10]
+    
+    // Qualitative params
+    unknownSolidName?: string; // e.g. "Solid Q (Hydrated Iron(II) Ammonium Sulphate)"
+    cation?: string; // Fe2+
+    anion?: string; // SO4(2-)
+    
+    // Food tests
+    sampleName?: string;
+    nutrientsPresent?: string[];
+  };
+  answerSheet: AnswerSheetQuestion[];
+  ownerType: ExperimentTier;
+  schoolId?: string | null;
+  teacherId?: string | null;
+  authorName: string;
+  status: 'draft' | 'published';
+  clonedFrom?: string;
+}
+
+export interface Assignment {
+  id: string;
+  schoolId: string;
+  teacherId: string;
+  teacherName: string;
+  classId: string;
+  className: string;
+  experimentId: string;
+  experimentTitle: string;
+  subject: SubjectType;
+  kcsePaper: string;
+  mode: 'practice' | 'exam';
+  deadline: string;
+  timeLimitMinutes: number;
+  assignedAt: string;
+  totalEnrolledStudents: number;
+  submittedCount: number;
+}
+
+export interface StepLogEntry {
+  stepId: number;
+  status: 'passed' | 'failed' | 'force_pushed';
+  marksEarned: number;
+  marksPossible: number;
+  timestamp: string;
+}
+
+export interface StudentAnswer {
+  questionId: string;
+  studentValue: any;
+  autoScore: number;
+  teacherScore?: number;
+  feedback?: string;
+}
+
+export interface Attempt {
+  id: string;
+  schoolId: string;
+  assignmentId?: string; // null if practice mode from open library
+  isPracticeOpenLab?: boolean;
+  experimentId: string;
+  experimentTitle: string;
+  subject: SubjectType;
+  studentId: string;
+  studentName: string;
+  studentAdmission: string;
+  teacherId?: string;
+  teacherName?: string;
+  classId?: string;
+  className?: string;
+  mode: 'practice' | 'exam';
+  startedAt: string;
+  submittedAt?: string;
+  status: 'in_progress' | 'submitted' | 'graded';
+  stepLogs: StepLogEntry[];
+  answers: StudentAnswer[];
+  totalScore: number;
+  maxScore: number;
+  percentage: number;
+  teacherComments?: string;
+  teacherFeedbackReleased?: boolean;
+}

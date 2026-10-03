@@ -1,0 +1,6 @@
+{
+  "name": "STEM-SPARK-LAB - KCSE Virtual Science Lab Platform",
+  "description": "Multi-tenant KCSE-aligned virtual science laboratory platform for secondary schools across Kenya, featuring interactive chemistry, physics, and biology simulations, auto-grading, and teacher management.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

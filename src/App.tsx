@@ -19,7 +19,7 @@ const AppContent: React.FC = () => {
   const { currentUser, currentView } = useApp();
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col font-sans">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans antialiased transition-colors">
       <Navbar />
       {currentUser && currentView !== 'landing' && <RoleBanner />}
 
@@ -46,22 +46,17 @@ const AppContent: React.FC = () => {
         {currentUser && currentView === 'builder' && <ExperimentBuilder />}
       </main>
 
-      {/* Institutional Platform Footer */}
-      <footer className="border-t border-slate-800 bg-slate-950 py-6 text-xs text-slate-400">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+      {/* Clean Institutional Footer */}
+      <footer className="border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 py-4 text-xs text-slate-500 dark:text-slate-400">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-2">
           <div className="flex items-center space-x-2">
-            <span className="font-extrabold text-white">STEM-SPARK-LAB</span>
-            <span className="text-slate-600">|</span>
-            <span>Kenyan KCSE Virtual Science Laboratory Ecosystem</span>
+            <span className="font-semibold text-slate-800 dark:text-slate-200">STEM-SPARK-LAB</span>
+            <span className="text-slate-300 dark:text-slate-700">•</span>
+            <span>Secondary school science practicals</span>
           </div>
 
-          <div className="flex items-center space-x-4 text-[11px] text-slate-400">
-            <span className="flex items-center gap-1">
-              <Award className="w-3.5 h-3.5 text-emerald-400" />
-              KCSE Paper 3 (233/3, 232/3, 231/3) Aligned
-            </span>
-            <span className="text-slate-600">•</span>
-            <span>Multi-Tenant Architecture</span>
+          <div className="flex items-center space-x-3 text-[11px]">
+            <span>Chemistry, Physics & Biology practicals</span>
           </div>
         </div>
       </footer>

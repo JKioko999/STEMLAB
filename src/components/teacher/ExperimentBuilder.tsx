@@ -390,91 +390,89 @@ export const ExperimentBuilder: React.FC = () => {
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-        <button
-          onClick={() => setCurrentView('dashboard')}
-          className="flex items-center space-x-2 text-xs font-semibold text-slate-400 hover:text-white transition"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Back to Teacher Dashboard</span>
-        </button>
-
-        <div className="flex items-center space-x-2">
-          <span className="text-xs px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-semibold border border-amber-500/30">
-            KCSE Custom Practical Creator
-          </span>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-slate-200 dark:border-slate-800">
+        <div>
+          <button
+            onClick={() => setCurrentView('dashboard')}
+            className="inline-flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 mb-2 transition-colors"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Back to dashboard</span>
+          </button>
+          <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-100 tracking-tight">
+            {editingExperiment ? `Edit practical: ${editingExperiment.title}` : 'Create practical'}
+          </h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+            Configure apparatus, procedure steps, validation triggers, and scoring rubric.
+          </p>
         </div>
       </div>
 
       {notification && (
-        <div className="p-3.5 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-semibold flex items-center gap-2 shadow">
-          <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+        <div className="p-3 rounded-md bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900 text-emerald-800 dark:text-emerald-300 text-xs font-medium flex items-center gap-2">
+          <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
           <span>{notification}</span>
         </div>
       )}
 
       {/* Editing Banner */}
       {editingExperiment && (
-        <div className="p-4 rounded-2xl bg-amber-500/15 border border-amber-500/40 text-amber-200 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow">
-          <div className="flex items-center gap-2.5">
-            <Sliders className="w-5 h-5 text-amber-400 shrink-0" />
-            <div>
-              <span className="font-bold text-amber-300 text-sm block">
-                Editing Practical: {editingExperiment.title}
-              </span>
-              <span className="text-[11px] text-amber-200/90">
-                You have full control to modify apparatus items, add or rewrite procedure steps, change marks, update hints, and adjust simulation parameters before assigning to your class.
-              </span>
-            </div>
+        <div className="p-3.5 rounded-md bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
+            <Sliders className="w-4 h-4 text-slate-500 shrink-0" />
+            <span>
+              Editing practical: <strong className="text-slate-900 dark:text-slate-100">{editingExperiment.title}</strong>
+            </span>
           </div>
-          <span className="px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-300 font-mono text-[10px] font-bold border border-amber-500/30 whitespace-nowrap self-start sm:self-auto">
-            Teacher Customization Mode
+          <span className="px-1.5 py-0.5 rounded text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 self-start sm:self-auto">
+            Customization mode
           </span>
         </div>
       )}
 
-      <div className="bg-slate-800/90 border border-slate-700/80 rounded-3xl p-6 shadow-xl space-y-6">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-6 space-y-6">
         
-        <div>
-          <h1 className="text-2xl font-black text-white">Design & Customize KCSE Practical</h1>
-          <p className="text-xs text-slate-400 mt-1">
-            Pick your own apparatus, choose the calculation engine, write instructions, and set the reference answer marking scheme.
-          </p>
-        </div>
-
         {/* 4 Step Tabs */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 border-b border-slate-700 pb-4 text-xs font-bold">
+        <div className="flex space-x-6 border-b border-slate-200 dark:border-slate-800 text-xs font-medium">
           <button
             onClick={() => setBuilderStep(1)}
-            className={`p-2.5 rounded-xl border text-center transition ${
-              builderStep === 1 ? 'bg-amber-600 text-white border-amber-500 shadow' : 'bg-slate-900 border-slate-750 text-slate-400'
+            className={`pb-2.5 -mb-px transition-colors ${
+              builderStep === 1
+                ? 'border-b-2 border-slate-900 dark:border-slate-100 text-slate-900 dark:text-slate-100 font-semibold'
+                : 'border-b-2 border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
             }`}
           >
-            1. Title & Subject
+            1. Title & subject
           </button>
           <button
             onClick={() => setBuilderStep(2)}
-            className={`p-2.5 rounded-xl border text-center transition ${
-              builderStep === 2 ? 'bg-amber-600 text-white border-amber-500 shadow' : 'bg-slate-900 border-slate-750 text-slate-400'
+            className={`pb-2.5 -mb-px transition-colors ${
+              builderStep === 2
+                ? 'border-b-2 border-slate-900 dark:border-slate-100 text-slate-900 dark:text-slate-100 font-semibold'
+                : 'border-b-2 border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
             }`}
           >
-            2. Apparatus & Bench ({formData.apparatus.length})
+            2. Apparatus & bench ({formData.apparatus.length})
           </button>
           <button
             onClick={() => setBuilderStep(3)}
-            className={`p-2.5 rounded-xl border text-center transition ${
-              builderStep === 3 ? 'bg-amber-600 text-white border-amber-500 shadow' : 'bg-slate-900 border-slate-750 text-slate-400'
+            className={`pb-2.5 -mb-px transition-colors ${
+              builderStep === 3
+                ? 'border-b-2 border-slate-900 dark:border-slate-100 text-slate-900 dark:text-slate-100 font-semibold'
+                : 'border-b-2 border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
             }`}
           >
-            3. Guided Steps ({formData.steps.length})
+            3. Guided steps ({formData.steps.length})
           </button>
           <button
             onClick={() => setBuilderStep(4)}
-            className={`p-2.5 rounded-xl border text-center transition ${
-              builderStep === 4 ? 'bg-amber-600 text-white border-amber-500 shadow' : 'bg-slate-900 border-slate-750 text-slate-400'
+            className={`pb-2.5 -mb-px transition-colors ${
+              builderStep === 4
+                ? 'border-b-2 border-slate-900 dark:border-slate-100 text-slate-900 dark:text-slate-100 font-semibold'
+                : 'border-b-2 border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
             }`}
           >
-            4. Answer Key & Publish
+            4. Answer key & publish
           </button>
         </div>
 
@@ -482,23 +480,23 @@ export const ExperimentBuilder: React.FC = () => {
         {builderStep === 1 && (
           <div className="space-y-4 text-xs">
             <div>
-              <label className="block text-slate-300 font-semibold mb-1">Experiment Title *</label>
+              <label className="block text-slate-700 dark:text-slate-300 font-medium mb-1">Experiment title *</label>
               <input
                 type="text"
                 value={formData.title}
                 onChange={e => setFormData({ ...formData, title: e.target.value })}
                 placeholder="e.g. Volumetric Analysis of Dibasic Acid using 0.1M NaOH"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white text-sm focus:outline-none focus:border-amber-500"
+                className="w-full px-3 py-1.5 rounded-md bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-xs focus:outline-none focus:ring-1 focus:ring-slate-900"
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
-                <label className="block text-slate-300 font-semibold mb-1">Subject</label>
+                <label className="block text-slate-700 dark:text-slate-300 font-medium mb-1">Subject</label>
                 <select
                   value={formData.subject}
                   onChange={e => setFormData({ ...formData, subject: e.target.value as any })}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs focus:outline-none focus:border-amber-500"
+                  className="w-full px-3 py-1.5 rounded-md bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-xs focus:outline-none focus:ring-1 focus:ring-slate-900"
                 >
                   <option value="chemistry">Chemistry</option>
                   <option value="physics">Physics</option>
@@ -507,52 +505,52 @@ export const ExperimentBuilder: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-slate-300 font-semibold mb-1">KCSE Paper Code</label>
+                <label className="block text-slate-700 dark:text-slate-300 font-medium mb-1">KCSE paper code</label>
                 <input
                   type="text"
                   value={formData.kcsePaper}
                   onChange={e => setFormData({ ...formData, kcsePaper: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs focus:outline-none focus:border-amber-500"
+                  className="w-full px-3 py-1.5 rounded-md bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-slate-900"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-300 font-semibold mb-1">Estimated Duration (Mins)</label>
+                <label className="block text-slate-700 dark:text-slate-300 font-medium mb-1">Estimated duration (minutes)</label>
                 <input
                   type="number"
                   value={formData.durationMinutes}
                   onChange={e => setFormData({ ...formData, durationMinutes: Number(e.target.value) })}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs focus:outline-none focus:border-amber-500"
+                  className="w-full px-3 py-1.5 rounded-md bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-slate-900"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-slate-300 font-semibold mb-1">Curriculum Topic / Strand</label>
+              <label className="block text-slate-700 dark:text-slate-300 font-medium mb-1">Curriculum topic / strand</label>
               <input
                 type="text"
                 value={formData.topic}
                 onChange={e => setFormData({ ...formData, topic: e.target.value })}
                 placeholder="e.g. Volumetric Analysis or Current Electricity"
-                className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs focus:outline-none focus:border-amber-500"
+                className="w-full px-3 py-1.5 rounded-md bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-xs focus:outline-none focus:ring-1 focus:ring-slate-900"
               />
             </div>
 
             <div>
-              <label className="block text-slate-300 font-semibold mb-1">Learning Objectives</label>
+              <label className="block text-slate-700 dark:text-slate-300 font-medium mb-1">Learning objectives</label>
               <textarea
                 rows={3}
                 value={formData.objectives}
                 onChange={e => setFormData({ ...formData, objectives: e.target.value })}
-                placeholder="What practical skills will the candidate master?"
-                className="w-full p-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs focus:outline-none focus:border-amber-500"
+                placeholder="Key practical skills and concepts..."
+                className="w-full px-3 py-2 rounded-md bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-xs focus:outline-none focus:ring-1 focus:ring-slate-900"
               />
             </div>
 
             <div>
-              <label className="block text-slate-300 font-semibold mb-1">Visibility Scope</label>
-              <div className="flex gap-4">
-                <label className="flex items-center space-x-2 text-slate-300 cursor-pointer">
+              <label className="block text-slate-700 dark:text-slate-300 font-medium mb-1">Visibility scope</label>
+              <div className="flex gap-4 text-xs text-slate-600 dark:text-slate-400">
+                <label className="flex items-center space-x-1.5 cursor-pointer">
                   <input
                     type="radio"
                     checked={formData.visibility === 'teacher'}
@@ -560,13 +558,13 @@ export const ExperimentBuilder: React.FC = () => {
                   />
                   <span>Private to my assigned class streams</span>
                 </label>
-                <label className="flex items-center space-x-2 text-slate-300 cursor-pointer">
+                <label className="flex items-center space-x-1.5 cursor-pointer">
                   <input
                     type="radio"
                     checked={formData.visibility === 'school'}
                     onChange={() => setFormData({ ...formData, visibility: 'school' })}
                   />
-                  <span>Publish school-wide for all teachers at my institution</span>
+                  <span>Publish school-wide</span>
                 </label>
               </div>
             </div>
@@ -574,9 +572,9 @@ export const ExperimentBuilder: React.FC = () => {
             <div className="pt-2 flex justify-end">
               <button
                 onClick={() => setBuilderStep(2)}
-                className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold"
+                className="px-4 py-1.5 rounded-md bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 text-white dark:text-slate-900 font-medium text-xs shadow-sm transition-colors"
               >
-                Proceed to Apparatus & Bench Engine →
+                Next: Apparatus & bench →
               </button>
             </div>
           </div>
@@ -587,119 +585,100 @@ export const ExperimentBuilder: React.FC = () => {
           <div className="space-y-6 text-xs">
             
             {/* Simulation Engine Explanation Card */}
-            <div className="p-4 rounded-2xl bg-slate-900/90 border border-amber-500/30 space-y-2">
-              <div className="flex items-center gap-2 text-amber-300 font-bold text-sm">
-                <Info className="w-4 h-4 text-amber-400" />
-                <span>What is a Simulation Engine?</span>
+            <div className="p-4 rounded-md bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2">
+              <div className="text-xs font-semibold text-slate-900 dark:text-slate-100">
+                Simulation engine
               </div>
-              <p className="text-slate-300 text-xs leading-relaxed">
-                The <strong>Simulation Engine</strong> is the mathematical and physics calculator running behind the screen. It decides how the bench behaves—for example, calculating titration neutralization curves (M₁V₁ = M₂V₂), ammeter needle deflections in circuits (V = IR), or boiling water bath color transitions in food tests.
+              <p className="text-slate-600 dark:text-slate-400 text-xs leading-relaxed">
+                The simulation engine runs the numerical model for the workbench (titration neutralization, Ohm's law current/voltage, or qualitative reaction outcomes).
               </p>
               
               <div className="pt-2">
-                <label className="block text-slate-200 font-bold mb-1.5">
-                  Select the Workbench Engine for this practical:
+                <label className="block text-slate-700 dark:text-slate-300 font-medium mb-1.5">
+                  Select engine type:
                 </label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   <div 
                     onClick={() => setFormData({ ...formData, simulationType: 'titration' })}
-                    className={`p-3 rounded-xl border cursor-pointer transition ${
+                    className={`p-3 rounded-md border cursor-pointer transition-colors ${
                       formData.simulationType === 'titration'
-                        ? 'bg-amber-950/60 border-amber-400 text-white shadow'
-                        : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
+                        ? 'bg-white dark:bg-slate-900 border-slate-900 dark:border-slate-100 text-slate-900 dark:text-slate-100 font-medium'
+                        : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700'
                     }`}
                   >
-                    <div className="font-bold flex items-center gap-1.5 text-xs text-amber-300">
-                      <FlaskConical className="w-4 h-4" />
-                      <span>Volumetric Titration Engine</span>
-                    </div>
-                    <p className="text-[11px] text-slate-400 mt-1">
-                      Models burette meniscus, dropwise flow, endpoint color changes & over-titration.
+                    <div className="font-medium text-xs">Volumetric titration</div>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                      Burette, dropwise flow, indicator transition, and titre volume.
                     </p>
                   </div>
 
                   <div 
                     onClick={() => setFormData({ ...formData, simulationType: 'circuit' })}
-                    className={`p-3 rounded-xl border cursor-pointer transition ${
+                    className={`p-3 rounded-md border cursor-pointer transition-colors ${
                       formData.simulationType === 'circuit'
-                        ? 'bg-amber-950/60 border-amber-400 text-white shadow'
-                        : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
+                        ? 'bg-white dark:bg-slate-900 border-slate-900 dark:border-slate-100 text-slate-900 dark:text-slate-100 font-medium'
+                        : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700'
                     }`}
                   >
-                    <div className="font-bold flex items-center gap-1.5 text-xs text-cyan-300">
-                      <Zap className="w-4 h-4" />
-                      <span>Ohm's Law & Circuit Engine</span>
-                    </div>
-                    <p className="text-[11px] text-slate-400 mt-1">
-                      Computes current, voltage, short circuits, polarity checks & rheostat sliding.
+                    <div className="font-medium text-xs">Circuit & Ohm&apos;s law</div>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                      Current, voltage, resistor loads, and rheostat slider.
                     </p>
                   </div>
 
                   <div 
                     onClick={() => setFormData({ ...formData, simulationType: 'qualitative' })}
-                    className={`p-3 rounded-xl border cursor-pointer transition ${
+                    className={`p-3 rounded-md border cursor-pointer transition-colors ${
                       formData.simulationType === 'qualitative'
-                        ? 'bg-amber-950/60 border-amber-400 text-white shadow'
-                        : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
+                        ? 'bg-white dark:bg-slate-900 border-slate-900 dark:border-slate-100 text-slate-900 dark:text-slate-100 font-medium'
+                        : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700'
                     }`}
                   >
-                    <div className="font-bold flex items-center gap-1.5 text-xs text-teal-300">
-                      <Sparkles className="w-4 h-4" />
-                      <span>Qualitative Analysis Engine</span>
-                    </div>
-                    <p className="text-[11px] text-slate-400 mt-1">
-                      Precipitate formation, solubility in excess reagent & white ceramic spot tiles.
+                    <div className="font-medium text-xs">Inorganic qualitative</div>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                      Precipitate formation, solubility in excess reagent.
                     </p>
                   </div>
 
                   <div 
                     onClick={() => setFormData({ ...formData, simulationType: 'food_test' })}
-                    className={`p-3 rounded-xl border cursor-pointer transition ${
+                    className={`p-3 rounded-md border cursor-pointer transition-colors ${
                       formData.simulationType === 'food_test'
-                        ? 'bg-amber-950/60 border-amber-400 text-white shadow'
-                        : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
+                        ? 'bg-white dark:bg-slate-900 border-slate-900 dark:border-slate-100 text-slate-900 dark:text-slate-100 font-medium'
+                        : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700'
                     }`}
                   >
-                    <div className="font-bold flex items-center gap-1.5 text-xs text-rose-300">
-                      <Flame className="w-4 h-4" />
-                      <span>Biochemical Food Tests Engine</span>
-                    </div>
-                    <p className="text-[11px] text-slate-400 mt-1">
-                      95°C water bath heating, Benedict's color gradient, Biuret peptide & iodine.
+                    <div className="font-medium text-xs">Biochemical food tests</div>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                      Water bath heating, Benedict&apos;s, Biuret, and iodine tests.
                     </p>
                   </div>
 
                   <div 
                     onClick={() => setFormData({ ...formData, simulationType: 'hookes_law' })}
-                    className={`p-3 rounded-xl border cursor-pointer transition ${
+                    className={`p-3 rounded-md border cursor-pointer transition-colors ${
                       formData.simulationType === 'hookes_law'
-                        ? 'bg-amber-950/60 border-amber-400 text-white shadow'
-                        : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
+                        ? 'bg-white dark:bg-slate-900 border-slate-900 dark:border-slate-100 text-slate-900 dark:text-slate-100 font-medium'
+                        : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700'
                     }`}
                   >
-                    <div className="font-bold flex items-center gap-1.5 text-xs text-emerald-300">
-                      <Scale className="w-4 h-4" />
-                      <span>Hooke's Law Mechanics Engine</span>
-                    </div>
-                    <p className="text-[11px] text-slate-400 mt-1">
-                      Helical spring elasticity, slotted weights, eye-level parallax & elastic limit.
+                    <div className="font-medium text-xs">Hooke&apos;s law mechanics</div>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                      Helical spring extension, slotted masses, and pointer readings.
                     </p>
                   </div>
 
                   <div 
                     onClick={() => setFormData({ ...formData, simulationType: 'general' })}
-                    className={`p-3 rounded-xl border cursor-pointer transition ${
+                    className={`p-3 rounded-md border cursor-pointer transition-colors ${
                       formData.simulationType === 'general'
-                        ? 'bg-amber-950/60 border-amber-400 text-white shadow'
-                        : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
+                        ? 'bg-white dark:bg-slate-900 border-slate-900 dark:border-slate-100 text-slate-900 dark:text-slate-100 font-medium'
+                        : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700'
                     }`}
                   >
-                    <div className="font-bold flex items-center gap-1.5 text-xs text-violet-300">
-                      <Layers className="w-4 h-4" />
-                      <span>Universal Multi-Purpose Lab Bench</span>
-                    </div>
-                    <p className="text-[11px] text-slate-400 mt-1">
-                      Works for ANY other practical (Thermochemistry, Optics, Pendulum, Rates of Reaction, Ecology, Osmosis).
+                    <div className="font-medium text-xs">General multi-purpose bench</div>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                      Suitable for other procedural lab tests.
                     </p>
                   </div>
                 </div>
@@ -710,55 +689,48 @@ export const ExperimentBuilder: React.FC = () => {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                    <span>Apparatus Selected for Students ({formData.apparatus.length})</span>
-                    <span className="text-[11px] font-normal text-slate-400">
-                      (These items appear in the student's apparatus locker)
-                    </span>
+                  <h3 className="text-xs font-semibold text-slate-900 dark:text-slate-100">
+                    Selected apparatus ({formData.apparatus.length})
                   </h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Apparatus available to candidates on their lab bench.
+                  </p>
                 </div>
               </div>
 
               {formData.apparatus.length === 0 ? (
-                <div className="p-6 text-center rounded-2xl bg-slate-900 border border-dashed border-slate-700 text-slate-400">
-                  No apparatus selected yet. Pick items from the catalog below or add your own custom item.
+                <div className="p-6 text-center rounded-md bg-slate-50 dark:bg-slate-950 border border-dashed border-slate-200 dark:border-slate-800 text-slate-500 text-xs">
+                  No apparatus selected yet. Add items from the catalog below.
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                   {formData.apparatus.map(item => (
                     <div 
                       key={item.id} 
-                      className={`p-3 rounded-xl border flex items-center justify-between gap-2 ${
-                        item.isDistractor 
-                          ? 'bg-rose-950/20 border-rose-500/40 text-rose-200' 
-                          : 'bg-slate-900 border-slate-750 text-white'
-                      }`}
+                      className="p-2.5 rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 flex items-center justify-between gap-2 text-xs"
                     >
                       <div className="truncate">
-                        <div className="font-semibold text-xs truncate">{item.name}</div>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <button
-                            type="button"
-                            onClick={() => handleToggleDistractor(item.id)}
-                            className={`text-[10px] font-bold px-1.5 py-0.2 rounded border ${
-                              item.isDistractor
-                                ? 'bg-rose-600 text-white border-rose-500'
-                                : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-white'
-                            }`}
-                            title="Distractor items test if student selects the correct apparatus"
-                          >
-                            {item.isDistractor ? 'Distractor (Not Needed)' : 'Required Item'}
-                          </button>
-                        </div>
+                        <div className="font-medium text-slate-900 dark:text-slate-100 truncate">{item.name}</div>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleDistractor(item.id)}
+                          className={`text-[10px] font-medium px-1.5 py-0.5 rounded mt-0.5 border ${
+                            item.isDistractor
+                              ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800'
+                              : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'
+                          }`}
+                        >
+                          {item.isDistractor ? 'Distractor item' : 'Required item'}
+                        </button>
                       </div>
 
                       <button
                         type="button"
                         onClick={() => handleRemoveApparatus(item.id)}
-                        className="text-slate-500 hover:text-rose-400 p-1"
+                        className="text-slate-400 hover:text-rose-600 p-1"
                         title="Remove apparatus"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   ))}
@@ -767,44 +739,44 @@ export const ExperimentBuilder: React.FC = () => {
             </div>
 
             {/* Add Custom Apparatus Box */}
-            <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-750 space-y-3">
-              <span className="font-bold text-white text-xs block">
-                Add Any Custom Apparatus / Chemical
+            <div className="p-3.5 rounded-md bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2">
+              <span className="font-medium text-slate-900 dark:text-slate-100 text-xs block">
+                Add custom item
               </span>
-              <div className="flex flex-col sm:flex-row items-center gap-2.5">
+              <div className="flex flex-col sm:flex-row items-center gap-2">
                 <input
                   type="text"
                   value={customApparatusName}
                   onChange={e => setCustomApparatusName(e.target.value)}
-                  placeholder="e.g. 0.25M Oxalic Acid Solution, Platinum Wire Loop, or Calorimeter Cup"
-                  className="flex-1 w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-750 text-white text-xs focus:outline-none focus:border-amber-500"
+                  placeholder="e.g. 0.25M Oxalic Acid Solution"
+                  className="flex-1 w-full px-3 py-1.5 rounded-md bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-xs focus:outline-none focus:ring-1 focus:ring-slate-900"
                 />
 
-                <label className="flex items-center gap-1.5 text-xs text-slate-300 cursor-pointer shrink-0">
+                <label className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400 cursor-pointer shrink-0">
                   <input
                     type="checkbox"
                     checked={customIsDistractor}
                     onChange={e => setCustomIsDistractor(e.target.checked)}
                   />
-                  <span>Mark as Distractor</span>
+                  <span>Mark as distractor</span>
                 </label>
 
                 <button
                   type="button"
                   onClick={handleCreateCustomApparatus}
-                  className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs shrink-0 flex items-center gap-1 shadow"
+                  className="px-3 py-1.5 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium shrink-0 flex items-center gap-1"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  <span>Add Apparatus</span>
+                  <span>Add item</span>
                 </button>
               </div>
             </div>
 
             {/* Browse KCSE Apparatus Catalog */}
-            <div className="space-y-3 pt-2">
+            <div className="space-y-3 pt-1">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <span className="font-bold text-white text-xs">
-                  Pick from Stocked KCSE Practical Catalog
+                <span className="font-medium text-slate-900 dark:text-slate-100 text-xs">
+                  Stocked apparatus catalog
                 </span>
 
                 <div className="flex items-center gap-2">
@@ -813,14 +785,14 @@ export const ExperimentBuilder: React.FC = () => {
                     value={catalogSearch}
                     onChange={e => setCatalogSearch(e.target.value)}
                     placeholder="Search apparatus..."
-                    className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-700 text-white text-xs"
+                    className="px-2.5 py-1 rounded bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-xs focus:outline-none"
                   />
                   <select
                     value={catalogSubjectFilter}
                     onChange={e => setCatalogSubjectFilter(e.target.value as any)}
-                    className="px-2 py-1 rounded-lg bg-slate-900 border border-slate-700 text-white text-xs"
+                    className="px-2 py-1 rounded bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-xs focus:outline-none"
                   >
-                    <option value="all">All Subjects</option>
+                    <option value="all">All subjects</option>
                     <option value="chemistry">Chemistry</option>
                     <option value="physics">Physics</option>
                     <option value="biology">Biology</option>
@@ -835,17 +807,17 @@ export const ExperimentBuilder: React.FC = () => {
                     <div
                       key={idx}
                       onClick={() => !isAdded && handleAddApparatusFromCatalog(item)}
-                      className={`p-2.5 rounded-xl border text-xs flex items-center justify-between transition cursor-pointer ${
+                      className={`p-2 rounded-md border text-xs flex items-center justify-between transition-colors cursor-pointer ${
                         isAdded
-                          ? 'bg-emerald-950/30 border-emerald-500/40 text-emerald-300 opacity-60'
-                          : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-amber-500 hover:text-white'
+                          ? 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-400 opacity-60'
+                          : 'bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-slate-400'
                       }`}
                     >
                       <span className="truncate">{item.name}</span>
                       {isAdded ? (
-                        <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                        <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                       ) : (
-                        <Plus className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                        <Plus className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                       )}
                     </div>
                   );
@@ -853,18 +825,18 @@ export const ExperimentBuilder: React.FC = () => {
               </div>
             </div>
 
-            <div className="pt-4 flex justify-between border-t border-slate-800">
+            <div className="pt-4 flex justify-between border-t border-slate-100 dark:border-slate-800">
               <button
                 onClick={() => setBuilderStep(1)}
-                className="px-4 py-2 rounded-xl bg-slate-700 text-slate-300 font-semibold"
+                className="px-3 py-1.5 rounded-md border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
               >
-                ← Back to Title
+                ← Back
               </button>
               <button
                 onClick={() => setBuilderStep(3)}
-                className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold"
+                className="px-4 py-1.5 rounded-md bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 text-white dark:text-slate-900 font-medium text-xs shadow-sm transition-colors"
               >
-                Proceed to Guided Steps →
+                Next: Guided steps →
               </button>
             </div>
 
@@ -876,27 +848,27 @@ export const ExperimentBuilder: React.FC = () => {
           <div className="space-y-4 text-xs">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-bold text-white">Define Step-by-Step Practical Sequence</h3>
-                <p className="text-slate-400 text-xs">Each step provides an instruction, validation trigger, marks, and optional hint.</p>
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Procedure steps</h3>
+                <p className="text-slate-500 dark:text-slate-400 text-xs">Instructions, validation actions, marks, and optional hints.</p>
               </div>
 
               <button
                 onClick={handleAddStep}
-                className="px-3 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-650 text-white font-bold flex items-center gap-1"
+                className="px-2.5 py-1.5 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium text-xs flex items-center gap-1"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>Add Step</span>
+                <span>Add step</span>
               </button>
             </div>
 
             <div className="space-y-3">
               {formData.steps.map((st, idx) => (
-                <div key={st.id} className="p-4 rounded-xl bg-slate-900 border border-slate-750 space-y-3">
+                <div key={st.id} className="p-3.5 rounded-md bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2.5">
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-amber-400">Step {st.id}</span>
+                    <span className="font-semibold text-slate-900 dark:text-slate-100 text-xs">Step {st.id}</span>
                     <button
                       onClick={() => handleDeleteStep(idx)}
-                      className="text-rose-400 hover:text-rose-300"
+                      className="text-slate-400 hover:text-rose-600 p-0.5"
                       title="Delete step"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -904,83 +876,83 @@ export const ExperimentBuilder: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="block text-slate-400 mb-1">Instruction Text</label>
+                    <label className="block text-slate-600 dark:text-slate-400 mb-1">Instruction text</label>
                     <textarea
                       rows={2}
                       value={st.instruction}
                       onChange={e => handleUpdateStep(idx, 'instruction', e.target.value)}
-                      className="w-full p-2 rounded-lg bg-slate-950 border border-slate-750 text-white"
+                      className="w-full px-3 py-1.5 rounded-md bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-xs focus:outline-none focus:ring-1 focus:ring-slate-900"
                     />
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
-                      <label className="block text-slate-400 mb-1">Validation Action</label>
+                      <label className="block text-slate-600 dark:text-slate-400 mb-1">Validation action</label>
                       <select
                         value={st.validationType}
                         onChange={e => handleUpdateStep(idx, 'validationType', e.target.value)}
-                        className="w-full p-1.5 rounded-lg bg-slate-950 border border-slate-750 text-white"
+                        className="w-full px-2 py-1.5 rounded-md bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-xs focus:outline-none focus:ring-1 focus:ring-slate-900"
                       >
-                        <option value="apparatus_placed">Apparatus Placed on Bench</option>
-                        <option value="connection_made">Electrical Connection Made</option>
-                        <option value="volume_set">Liquid Volume Pipetted/Measured</option>
-                        <option value="reagent_added">Chemical Reagent Added</option>
-                        <option value="reading_recorded">Meter/Burette Reading Taken</option>
-                        <option value="run_simulation">Run Simulation Test</option>
+                        <option value="apparatus_placed">Apparatus placed on bench</option>
+                        <option value="connection_made">Electrical connection made</option>
+                        <option value="volume_set">Liquid volume pipetted/measured</option>
+                        <option value="reagent_added">Chemical reagent added</option>
+                        <option value="reading_recorded">Meter/burette reading taken</option>
+                        <option value="run_simulation">Run simulation test</option>
                       </select>
                     </div>
 
                     <div>
-                      <label className="block text-slate-400 mb-1">Step Marks (KCSE)</label>
+                      <label className="block text-slate-600 dark:text-slate-400 mb-1">Step marks</label>
                       <input
                         type="number"
                         min="1"
                         max="5"
                         value={st.marks}
                         onChange={e => handleUpdateStep(idx, 'marks', Number(e.target.value))}
-                        className="w-full p-1.5 rounded-lg bg-slate-950 border border-slate-750 text-white"
+                        className="w-full px-2 py-1.5 rounded-md bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-slate-900"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-slate-400 mb-1">Allow Force-Push (Override)?</label>
-                      <label className="flex items-center space-x-2 pt-1 text-slate-300">
+                      <label className="block text-slate-600 dark:text-slate-400 mb-1">Force-push override</label>
+                      <label className="flex items-center space-x-1.5 pt-1 text-slate-700 dark:text-slate-300 text-xs cursor-pointer">
                         <input
                           type="checkbox"
                           checked={st.allowForcePush}
                           onChange={e => handleUpdateStep(idx, 'allowForcePush', e.target.checked)}
                         />
-                        <span>Allow student override</span>
+                        <span>Allow override (0 marks)</span>
                       </label>
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-slate-400 mb-1">Practice Mode Hint (Optional)</label>
+                    <label className="block text-slate-600 dark:text-slate-400 mb-1">Practice mode hint (optional)</label>
                     <input
                       type="text"
                       placeholder="e.g. Deliver micro-drops slowly when approaching the endpoint..."
                       value={st.hint || ''}
                       onChange={e => handleUpdateStep(idx, 'hint', e.target.value)}
-                      className="w-full p-1.5 rounded-lg bg-slate-950 border border-slate-750 text-white"
+                      className="w-full px-3 py-1.5 rounded-md bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-xs focus:outline-none focus:ring-1 focus:ring-slate-900"
                     />
                   </div>
                 </div>
               ))}
             </div>
 
-            <div className="pt-2 flex justify-between">
+            <div className="pt-2 flex justify-between border-t border-slate-100 dark:border-slate-800">
               <button
                 onClick={() => setBuilderStep(2)}
-                className="px-4 py-2 rounded-xl bg-slate-700 text-slate-300 font-semibold"
+                className="px-3 py-1.5 rounded-md border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
               >
-                ← Back to Apparatus
+                ← Back
               </button>
               <button
                 onClick={() => setBuilderStep(4)}
-                className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold"
+                className="px-4 py-1.5 rounded-md bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 text-white dark:text-slate-900 font-medium text-xs shadow-sm transition-colors"
               >
-                Set Answer Scheme & Marking Key →
+                Next: Answer scheme →
               </button>
             </div>
           </div>
@@ -990,127 +962,126 @@ export const ExperimentBuilder: React.FC = () => {
         {builderStep === 4 && (
           <div className="space-y-5 text-xs">
             
-            <div className="p-4 rounded-2xl bg-slate-900 border border-slate-750 space-y-4">
-              <div className="flex items-center gap-2 text-amber-300 font-bold text-sm">
-                <Award className="w-4 h-4 text-amber-400" />
-                <span>Reference Answer Key & Auto-Grading Standards</span>
+            <div className="p-4 rounded-md bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-4">
+              <div>
+                <h3 className="font-semibold text-slate-900 dark:text-slate-100 text-sm">Reference answer key</h3>
+                <p className="text-slate-500 dark:text-slate-400 text-xs mt-0.5">
+                  Define reference values and tolerances for automatic grading.
+                </p>
               </div>
-              <p className="text-slate-400 text-xs">
-                Define the expected theoretical answers and tolerance margins. The system will use these to grade student answer sheets automatically.
-              </p>
 
               {/* Data Table expected answer */}
-              <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
-                <span className="font-bold text-white text-xs block">
-                  1. Data Table 1 Expected Readings
+              <div className="p-3 rounded-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2.5">
+                <span className="font-medium text-slate-900 dark:text-slate-100 text-xs block">
+                  1. Table readings standard
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-slate-400 mb-1">Expected Standard Reading</label>
+                    <label className="block text-slate-500 dark:text-slate-400 mb-1">Expected reading</label>
                     <input
                       type="number"
                       step="0.05"
                       value={formData.expectedTableValue}
                       onChange={e => setFormData({ ...formData, expectedTableValue: Number(e.target.value) })}
                       placeholder="e.g. 24.50"
-                      className="w-full p-2 rounded-lg bg-slate-900 border border-slate-700 text-white font-mono"
+                      className="w-full px-2.5 py-1.5 rounded-md bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-mono text-xs focus:outline-none focus:ring-1 focus:ring-slate-900"
                     />
                   </div>
                   <div>
-                    <label className="block text-slate-400 mb-1">Accepted KNEC Concordancy Tolerance (±)</label>
+                    <label className="block text-slate-500 dark:text-slate-400 mb-1">Accepted tolerance (±)</label>
                     <input
                       type="number"
                       step="0.05"
                       value={formData.tableTolerance}
                       onChange={e => setFormData({ ...formData, tableTolerance: Number(e.target.value) })}
                       placeholder="e.g. 0.20"
-                      className="w-full p-2 rounded-lg bg-slate-900 border border-slate-700 text-white font-mono"
+                      className="w-full px-2.5 py-1.5 rounded-md bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-mono text-xs focus:outline-none focus:ring-1 focus:ring-slate-900"
                     />
                   </div>
                 </div>
               </div>
 
               {/* Calculation Question expected answer */}
-              <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
-                <span className="font-bold text-white text-xs block">
-                  2. Calculation Question & Formula
+              <div className="p-3 rounded-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2.5">
+                <span className="font-medium text-slate-900 dark:text-slate-100 text-xs block">
+                  2. Calculation question
                 </span>
                 <div>
-                  <label className="block text-slate-400 mb-1">Calculation Prompt</label>
+                  <label className="block text-slate-500 dark:text-slate-400 mb-1">Prompt</label>
                   <input
                     type="text"
                     value={formData.calculationPrompt}
                     onChange={e => setFormData({ ...formData, calculationPrompt: e.target.value })}
-                    className="w-full p-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
+                    className="w-full px-2.5 py-1.5 rounded-md bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-xs focus:outline-none focus:ring-1 focus:ring-slate-900"
                   />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
-                    <label className="block text-slate-400 mb-1">Expected Numeric Result</label>
+                    <label className="block text-slate-500 dark:text-slate-400 mb-1">Expected numeric result</label>
                     <input
                       type="number"
                       step="0.001"
                       value={formData.correctCalculationValue}
                       onChange={e => setFormData({ ...formData, correctCalculationValue: Number(e.target.value) })}
-                      className="w-full p-2 rounded-lg bg-slate-900 border border-slate-700 text-white font-mono"
+                      className="w-full px-2.5 py-1.5 rounded-md bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-mono text-xs focus:outline-none focus:ring-1 focus:ring-slate-900"
                     />
                   </div>
                   <div>
-                    <label className="block text-slate-400 mb-1">Accepted Error Margin (±)</label>
+                    <label className="block text-slate-500 dark:text-slate-400 mb-1">Accepted error margin (±)</label>
                     <input
                       type="number"
                       step="0.001"
                       value={formData.calculationTolerance}
                       onChange={e => setFormData({ ...formData, calculationTolerance: Number(e.target.value) })}
-                      className="w-full p-2 rounded-lg bg-slate-900 border border-slate-700 text-white font-mono"
+                      className="w-full px-2.5 py-1.5 rounded-md bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-mono text-xs focus:outline-none focus:ring-1 focus:ring-slate-900"
                     />
                   </div>
                   <div>
-                    <label className="block text-slate-400 mb-1">Result Unit</label>
+                    <label className="block text-slate-500 dark:text-slate-400 mb-1">Result unit</label>
                     <input
                       type="text"
                       value={formData.calculationUnit}
                       onChange={e => setFormData({ ...formData, calculationUnit: e.target.value })}
-                      placeholder="e.g. mol/L or Ω or Joules"
-                      className="w-full p-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
+                      placeholder="e.g. mol/L"
+                      className="w-full px-2.5 py-1.5 rounded-md bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-xs focus:outline-none focus:ring-1 focus:ring-slate-900"
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-slate-400 mb-1">Marking Formula Hint</label>
+                  <label className="block text-slate-500 dark:text-slate-400 mb-1">Formula hint</label>
                   <input
                     type="text"
                     value={formData.formulaHint}
                     onChange={e => setFormData({ ...formData, formulaHint: e.target.value })}
-                    className="w-full p-2 rounded-lg bg-slate-900 border border-slate-700 text-white font-mono text-[11px]"
+                    className="w-full px-2.5 py-1.5 rounded-md bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-mono text-xs focus:outline-none focus:ring-1 focus:ring-slate-900"
                   />
                 </div>
               </div>
 
               {/* Observation & Inference keywords */}
-              <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
-                <span className="font-bold text-white text-xs block">
-                  3. Observation & Inference Marking Scheme
+              <div className="p-3 rounded-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2.5">
+                <span className="font-medium text-slate-900 dark:text-slate-100 text-xs block">
+                  3. Observation & inference keywords
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-slate-400 mb-1">Expected Observation Keywords (comma separated)</label>
+                    <label className="block text-slate-500 dark:text-slate-400 mb-1">Observation keywords (comma separated)</label>
                     <input
                       type="text"
                       value={formData.observationKeywords}
                       onChange={e => setFormData({ ...formData, observationKeywords: e.target.value })}
                       placeholder="e.g. pink to colourless, clear solution"
-                      className="w-full p-2 rounded-lg bg-slate-900 border border-slate-700 text-white text-[11px]"
+                      className="w-full px-2.5 py-1.5 rounded-md bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-xs focus:outline-none focus:ring-1 focus:ring-slate-900"
                     />
                   </div>
                   <div>
-                    <label className="block text-slate-400 mb-1">Expected Inference Keywords (comma separated)</label>
+                    <label className="block text-slate-500 dark:text-slate-400 mb-1">Inference keywords (comma separated)</label>
                     <input
                       type="text"
                       value={formData.inferenceKeywords}
                       onChange={e => setFormData({ ...formData, inferenceKeywords: e.target.value })}
                       placeholder="e.g. neutralisation, equivalence point"
-                      className="w-full p-2 rounded-lg bg-slate-900 border border-slate-700 text-white text-[11px]"
+                      className="w-full px-2.5 py-1.5 rounded-md bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-xs focus:outline-none focus:ring-1 focus:ring-slate-900"
                     />
                   </div>
                 </div>
@@ -1118,19 +1089,18 @@ export const ExperimentBuilder: React.FC = () => {
 
             </div>
 
-            <div className="pt-4 flex justify-between border-t border-slate-700">
+            <div className="pt-4 flex justify-between border-t border-slate-100 dark:border-slate-800">
               <button
                 onClick={() => setBuilderStep(3)}
-                className="px-4 py-2 rounded-xl bg-slate-700 text-slate-300 font-semibold"
+                className="px-3 py-1.5 rounded-md border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
               >
-                ← Back to Steps
+                ← Back
               </button>
               <button
                 onClick={handlePublish}
-                className="px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold flex items-center space-x-2 shadow-xl shadow-emerald-600/30 text-sm"
+                className="px-4 py-1.5 rounded-md bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 text-white dark:text-slate-900 font-medium text-xs shadow-sm transition-colors"
               >
-                <Save className="w-4 h-4" />
-                <span>{editingExperiment ? 'Save Modifications & Update Practical' : 'Publish Custom Practical to Catalog'}</span>
+                {editingExperiment ? 'Save modifications' : 'Publish practical'}
               </button>
             </div>
 

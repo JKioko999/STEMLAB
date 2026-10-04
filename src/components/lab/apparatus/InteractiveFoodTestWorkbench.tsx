@@ -4,7 +4,6 @@ import {
   Flame, 
   RotateCcw, 
   CheckCircle2, 
-  Sparkles, 
   Thermometer, 
   Clock,
   PlusCircle,
@@ -504,9 +503,9 @@ export const InteractiveFoodTestWorkbench: React.FC<InteractiveFoodTestWorkbench
       {/* Header Banner */}
       <div className="bg-slate-800/90 border border-slate-700/80 p-4 rounded-2xl flex flex-wrap items-center justify-between gap-3 shadow-lg">
         <div>
-          <div className="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
-            <Sparkles className="w-4 h-4" />
-            <span>Interactive Biochemical Food Tests Workbench • KCSE Biology Paper 3</span>
+          <div className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+            <Flame className="w-4 h-4 text-amber-400" />
+            <span>Biochemical food tests workbench • Biology practical</span>
           </div>
           <p className="text-xs text-slate-300 mt-0.5">
             Tubes are <strong>movable via drag & drop</strong>. Drag any tube into the boiling water bath beaker to heat, or drag it back onto the wooden rack to inspect.
@@ -902,7 +901,7 @@ export const InteractiveFoodTestWorkbench: React.FC<InteractiveFoodTestWorkbench
 
                   {/* Status tag */}
                   <div className="mt-1 bg-slate-900/90 border border-slate-700 px-1.5 py-0.5 rounded text-[8px] font-mono font-bold text-white whitespace-nowrap shadow">
-                    {t.isInWaterBath ? 'In Water Bath 🔥' : `${totalVol.toFixed(1)} cm³`}
+                    {t.isInWaterBath ? 'In water bath' : `${totalVol.toFixed(1)} cm³`}
                   </div>
                 </div>
               );

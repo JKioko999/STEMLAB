@@ -16,14 +16,10 @@ import {
   ChevronRight, 
   ChevronLeft,
   ArrowLeft, 
-  RotateCcw, 
   Award, 
-  Sparkles, 
-  Zap, 
   FileCheck,
   PanelLeftClose,
-  PanelLeftOpen,
-  Maximize2
+  PanelLeftOpen
 } from 'lucide-react';
 import { StepLogEntry, StudentAnswer, Attempt } from '../../types';
 
@@ -39,10 +35,13 @@ export const LabWorkspace: React.FC = () => {
 
   if (!activeExperiment) {
     return (
-      <div className="p-8 text-center text-slate-400">
-        <p>No active experiment selected.</p>
-        <button onClick={() => setCurrentView('dashboard')} className="mt-4 px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold">
-          Return to Dashboard
+      <div className="p-8 text-center text-slate-500">
+        <p className="text-sm">No active experiment selected.</p>
+        <button 
+          onClick={() => setCurrentView('dashboard')} 
+          className="mt-3 px-3 py-1.5 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded text-xs font-medium hover:bg-slate-800 dark:hover:bg-white transition"
+        >
+          Return to dashboard
         </button>
       </div>
     );
@@ -62,10 +61,10 @@ export const LabWorkspace: React.FC = () => {
   // Live Experiment Telemetry from the active workbench
   const [liveTelemetry, setLiveTelemetry] = useState<any>(null);
 
-  // Form State Persistence: Answers are NEVER wiped when switching tabs
+  // Form State Persistence: Answers are preserved when switching tabs
   const [persistedAnswersState, setPersistedAnswersState] = useState<Record<string, any>>({});
 
-  // Exam Countdown Timer (KCSE Paper 3 Standard: 45 to 135 mins)
+  // Exam Countdown Timer
   const initialSeconds = (activeAssignment?.timeLimitMinutes || activeExperiment.estimatedDurationMinutes || 45) * 60;
   const [secondsRemaining, setSecondsRemaining] = useState(initialSeconds);
 
@@ -116,7 +115,7 @@ export const LabWorkspace: React.FC = () => {
     }
   };
 
-  // Handler: Force-Push mechanism (Section 3.1.2)
+  // Handler: Force-Push mechanism
   const handleForcePushConfirm = () => {
     if (!currentStep) return;
 
@@ -181,83 +180,83 @@ export const LabWorkspace: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 pb-12">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 pb-12">
       
       {/* Top Navigation & Status Bar */}
-      <div className="bg-slate-850 border-b border-slate-800 sticky top-16 z-30 px-4 sm:px-6 lg:px-8 py-3">
+      <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-14 z-30 px-4 sm:px-6 lg:px-8 py-2.5">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-3">
           
           <div className="flex items-center space-x-3">
             <button
               onClick={() => setCurrentView('dashboard')}
-              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition"
-              title="Return to Dashboard"
+              className="p-1.5 rounded border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition"
+              title="Return to dashboard"
             >
               <ArrowLeft className="w-4 h-4" />
             </button>
 
             <div>
               <div className="flex items-center space-x-2">
-                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                <span className={`px-1.5 py-0.2 rounded text-[10px] font-medium border ${
                   isExamMode 
-                    ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' 
-                    : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                    ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 border-rose-200 dark:border-rose-900' 
+                    : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700'
                 }`}>
-                  {isExamMode ? 'KCSE Exam Mode' : 'Practice Mode'}
+                  {isExamMode ? 'Exam mode' : 'Practice mode'}
                 </span>
-                <span className="text-xs text-slate-400 font-mono">{activeExperiment.kcsePaper}</span>
+                <span className="text-xs text-slate-500 font-mono">{activeExperiment.kcsePaper}</span>
               </div>
-              <h1 className="text-sm sm:text-base font-extrabold text-white leading-tight mt-0.5">
+              <h1 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mt-0.5">
                 {activeExperiment.title}
               </h1>
             </div>
           </div>
 
-          <div className="flex items-center space-x-3 self-end md:self-auto">
-            {/* Exam Countdown Timer */}
+          <div className="flex items-center space-x-2.5 self-end md:self-auto">
+            {/* Countdown timer */}
             {isExamMode && (
-              <div className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-rose-950/80 border border-rose-500/40 text-rose-300 text-xs font-mono font-bold shadow">
-                <Clock className="w-3.5 h-3.5 animate-pulse text-rose-400" />
+              <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded border border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 text-xs font-mono font-medium">
+                <Clock className="w-3.5 h-3.5" />
                 <span>Timer: {formatTimer(secondsRemaining)}</span>
               </div>
             )}
 
-            {/* Toggle Guided Steps Sidebar Button */}
+            {/* Toggle guided steps */}
             <button
               onClick={() => setIsLeftPanelCollapsed(!isLeftPanelCollapsed)}
-              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition hidden md:flex items-center gap-1 text-xs border border-slate-700 font-medium"
+              className="px-2.5 py-1.5 rounded border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 text-xs font-medium transition hidden md:flex items-center gap-1.5"
               title={isLeftPanelCollapsed ? 'Show guided steps panel' : 'Collapse steps for full-width workbench'}
             >
-              {isLeftPanelCollapsed ? <PanelLeftOpen className="w-4 h-4 text-emerald-400" /> : <PanelLeftClose className="w-4 h-4 text-slate-400" />}
-              <span>{isLeftPanelCollapsed ? 'Show Steps' : 'Full Canvas'}</span>
+              {isLeftPanelCollapsed ? <PanelLeftOpen className="w-3.5 h-3.5" /> : <PanelLeftClose className="w-3.5 h-3.5" />}
+              <span>{isLeftPanelCollapsed ? 'Show steps' : 'Hide steps'}</span>
             </button>
 
-            {/* View Switcher: Simulation Canvas vs Answer Sheet */}
-            <div className="flex p-1 bg-slate-800 rounded-xl border border-slate-700 text-xs font-semibold shadow-inner">
+            {/* View Switcher: Tabs with clean underline */}
+            <div className="flex border border-slate-200 dark:border-slate-800 rounded bg-slate-100 dark:bg-slate-800 p-0.5 text-xs font-medium">
               <button
                 onClick={() => setActiveTab('simulation')}
-                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg transition ${
+                className={`flex items-center space-x-1.5 px-3 py-1 rounded transition ${
                   activeTab === 'simulation'
-                    ? 'bg-emerald-600 text-white shadow'
-                    : 'text-slate-400 hover:text-white'
+                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 <FlaskConical className="w-3.5 h-3.5" />
-                <span>Lab Apparatus</span>
+                <span>Workbench</span>
               </button>
 
               <button
                 onClick={() => setActiveTab('answersheet')}
-                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg transition ${
+                className={`flex items-center space-x-1.5 px-3 py-1 rounded transition ${
                   activeTab === 'answersheet'
-                    ? 'bg-emerald-600 text-white shadow'
-                    : 'text-slate-400 hover:text-white'
+                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 <FileCheck className="w-3.5 h-3.5" />
-                <span>Digital Answer Sheet</span>
+                <span>Answer sheet</span>
                 {Object.keys(persistedAnswersState).length > 0 && (
-                  <span className="w-2 h-2 rounded-full bg-cyan-400 ml-1" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-slate-500 ml-1" />
                 )}
               </button>
             </div>
@@ -273,71 +272,70 @@ export const LabWorkspace: React.FC = () => {
           {/* LEFT PANEL: Step-by-Step Guided Instructions */}
           {!isLeftPanelCollapsed && (
             <div className="lg:col-span-4 space-y-4">
-              <div className="bg-slate-800/90 border border-slate-700/80 rounded-2xl p-5 shadow-lg space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-700 pb-3">
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                    Guided Practical Steps
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2.5">
+                  <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">
+                    Procedure
                   </span>
-                  <span className="text-xs text-emerald-400 font-mono font-semibold">
+                  <span className="text-xs text-slate-500 font-mono font-medium">
                     Step {currentStepIndex + 1} of {activeExperiment.steps.length}
                   </span>
                 </div>
 
                 {/* Current Active Step Box */}
                 {currentStep && (
-                  <div className="p-4 rounded-xl bg-slate-900 border border-emerald-500/40 space-y-3 shadow-inner">
+                  <div className="p-3.5 rounded border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 space-y-2.5">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                        Step {currentStep.id} • [{currentStep.marks} Marks]
+                      <span className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                        Step {currentStep.id} • {currentStep.marks} marks
                       </span>
                       {completedSteps.includes(currentStep.id) && (
-                        <span className="text-xs text-emerald-400 flex items-center gap-1 font-semibold">
+                        <span className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-medium">
                           <CheckCircle className="w-3.5 h-3.5" /> Validated
                         </span>
                       )}
                     </div>
 
-                    <p className="text-sm font-medium text-white leading-relaxed">
+                    <p className="text-xs sm:text-sm text-slate-900 dark:text-slate-100 leading-relaxed">
                       {currentStep.instruction}
                     </p>
 
                     {/* Hint in Practice Mode */}
                     {!isExamMode && currentStep.hint && (
-                      <div className="pt-2 border-t border-slate-800">
+                      <div className="pt-2 border-t border-slate-200 dark:border-slate-800">
                         {showHint ? (
-                          <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-start space-x-2">
-                            <HelpCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                          <div className="p-2.5 rounded border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-300 text-xs flex items-start space-x-2">
+                            <HelpCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
                             <span>{currentStep.hint}</span>
                           </div>
                         ) : (
                           <button
                             onClick={() => setShowHint(true)}
-                            className="text-xs text-amber-400 hover:text-amber-300 font-medium flex items-center gap-1"
+                            className="text-xs text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-medium flex items-center gap-1"
                           >
                             <HelpCircle className="w-3.5 h-3.5" />
-                            <span>Show Step Hint</span>
+                            <span>Show hint</span>
                           </button>
                         )}
                       </div>
                     )}
 
                     {/* Step Navigation & Reverse Step in Guided Steps */}
-                    <div className="pt-3 border-t border-slate-800 flex items-center justify-between">
+                    <div className="pt-2.5 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
                       <button
                         onClick={() => setIsForcePushModalOpen(true)}
-                        className="text-[11px] font-semibold text-rose-400 hover:text-rose-300 flex items-center gap-1 transition"
+                        className="text-xs text-rose-600 dark:text-rose-400 hover:underline flex items-center gap-1"
                       >
-                        <AlertTriangle className="w-3.5 h-3.5" />
-                        <span>Force-Push</span>
+                        <AlertTriangle className="w-3 h-3" />
+                        <span>Force-push step</span>
                       </button>
 
                       <div className="flex items-center space-x-1.5">
-                        {/* Reverse Step / Previous Step Button */}
                         {currentStepIndex > 0 && (
                           <button
                             onClick={() => setCurrentStepIndex(prev => Math.max(0, prev - 1))}
-                            className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-750 text-slate-300 text-xs font-semibold transition flex items-center gap-1"
-                            title="Go to previous step instruction"
+                            className="px-2 py-1 rounded border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium flex items-center gap-1"
+                            title="Previous step"
                           >
                             <ChevronLeft className="w-3.5 h-3.5" />
                             <span>Prev</span>
@@ -347,7 +345,7 @@ export const LabWorkspace: React.FC = () => {
                         {currentStepIndex < activeExperiment.steps.length - 1 && (
                           <button
                             onClick={() => setCurrentStepIndex(prev => prev + 1)}
-                            className="px-2.5 py-1 rounded-lg bg-slate-700 hover:bg-slate-650 text-white text-xs font-semibold transition flex items-center gap-1"
+                            className="px-2 py-1 rounded border border-slate-300 dark:border-slate-750 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-750 text-slate-900 dark:text-slate-100 text-xs font-medium flex items-center gap-1"
                           >
                             <span>Next</span>
                             <ChevronRight className="w-3.5 h-3.5" />
@@ -359,11 +357,11 @@ export const LabWorkspace: React.FC = () => {
                 )}
 
                 {/* All Steps Stepper Checklist */}
-                <div className="space-y-2 pt-2">
-                  <span className="text-[11px] font-bold uppercase text-slate-500 tracking-wider">
-                    Full Sequence Checklist
+                <div className="space-y-1.5 pt-1">
+                  <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider block">
+                    Step checklist
                   </span>
-                  <div className="space-y-1.5 max-h-52 overflow-y-auto pr-1">
+                  <div className="space-y-1 max-h-52 overflow-y-auto pr-1">
                     {activeExperiment.steps.map((st, sIdx) => {
                       const isDone = completedSteps.includes(st.id);
                       const isCurrent = sIdx === currentStepIndex;
@@ -372,43 +370,43 @@ export const LabWorkspace: React.FC = () => {
                         <div
                           key={st.id}
                           onClick={() => setCurrentStepIndex(sIdx)}
-                          className={`p-2.5 rounded-xl border text-xs cursor-pointer transition flex items-center justify-between ${
+                          className={`p-2 rounded border text-xs cursor-pointer transition flex items-center justify-between ${
                             isCurrent
-                              ? 'bg-slate-750 border-emerald-500/80 text-white font-semibold'
+                              ? 'bg-slate-100 dark:bg-slate-800 border-slate-400 dark:border-slate-600 font-medium'
                               : isDone
-                              ? 'bg-slate-900/60 border-slate-750 text-slate-300'
-                              : 'bg-slate-900/30 border-slate-800 text-slate-500'
+                              ? 'bg-white dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300'
+                              : 'bg-white dark:bg-slate-900/30 border-slate-200 dark:border-slate-850 text-slate-400'
                           }`}
                         >
-                          <div className="flex items-center space-x-2">
-                            <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                              isDone ? 'bg-emerald-500 text-slate-950' : 'bg-slate-700 text-slate-300'
+                          <div className="flex items-center space-x-2 truncate">
+                            <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-medium ${
+                              isDone ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900' : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
                             }`}>
                               {isDone ? '✓' : st.id}
                             </span>
-                            <span className="line-clamp-1">{st.instruction}</span>
+                            <span className="truncate">{st.instruction}</span>
                           </div>
-                          <span className="text-[10px] font-mono text-slate-400">{st.marks}m</span>
+                          <span className="text-[10px] font-mono text-slate-400 ml-2">{st.marks}m</span>
                         </div>
                       );
                     })}
                   </div>
                 </div>
 
-                {/* Apparatus in Sidebar */}
-                <div className="pt-3 border-t border-slate-700/60">
-                  <span className="text-[11px] font-bold uppercase text-slate-400 tracking-wider block mb-2">
-                    Apparatus List ({activeExperiment.apparatus.length})
+                {/* Apparatus list in Sidebar */}
+                <div className="pt-3 border-t border-slate-200 dark:border-slate-800">
+                  <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider block mb-2">
+                    Apparatus ({activeExperiment.apparatus.length})
                   </span>
-                  <div className="grid grid-cols-2 gap-2 text-[11px]">
+                  <div className="grid grid-cols-2 gap-1.5 text-xs">
                     {activeExperiment.apparatus.map(app => (
                       <div 
                         key={app.id}
-                        className={`p-2 rounded-lg border text-slate-300 flex items-center space-x-1.5 ${
-                          app.isDistractor ? 'border-dashed border-slate-700 bg-slate-900/40 opacity-70' : 'border-slate-700 bg-slate-900/80'
+                        className={`p-1.5 rounded border text-slate-700 dark:text-slate-300 flex items-center space-x-1.5 ${
+                          app.isDistractor ? 'border-dashed border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 opacity-70' : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900'
                         }`}
                       >
-                        <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
                         <span className="truncate">{app.name}</span>
                       </div>
                     ))}
@@ -419,10 +417,10 @@ export const LabWorkspace: React.FC = () => {
             </div>
           )}
 
-          {/* RIGHT / MAIN PANEL: Active Simulator and Digital Answer Sheet (Both kept mounted!) */}
-          <div className={`${isLeftPanelCollapsed ? 'lg:col-span-12' : 'lg:col-span-8'} space-y-6`}>
+          {/* MAIN PANEL: Active Simulator and Digital Answer Sheet */}
+          <div className={`${isLeftPanelCollapsed ? 'lg:col-span-12' : 'lg:col-span-8'} space-y-4`}>
             
-            {/* Simulation Workbench View (Preserved in DOM) */}
+            {/* Simulation Workbench View */}
             <div className={activeTab === 'simulation' ? 'space-y-4' : 'hidden'}>
               {activeExperiment.simulationType === 'titration' && (
                 <InteractiveTitrationWorkbench
@@ -471,21 +469,21 @@ export const LabWorkspace: React.FC = () => {
               )}
 
               {/* Quick Switch to Answer Sheet Banner */}
-              <div className="bg-slate-800/80 border border-slate-700 p-4 rounded-2xl flex items-center justify-between shadow-lg">
-                <div className="text-xs text-slate-300">
-                  Ready to record your results? All your apparatus setups, readings, and liquids are safely preserved when you fill in the answer sheet.
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3.5 rounded flex items-center justify-between">
+                <div className="text-xs text-slate-600 dark:text-slate-400">
+                  Ready to record your results? All apparatus setups and readings remain saved when you switch to the answer sheet.
                 </div>
                 <button
                   onClick={() => setActiveTab('answersheet')}
-                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition flex items-center space-x-1.5 shrink-0 ml-4 shadow-lg shadow-emerald-600/30"
+                  className="px-3 py-1.5 rounded bg-slate-900 dark:bg-slate-100 hover:bg-slate-800 dark:hover:bg-white text-white dark:text-slate-900 font-medium text-xs transition flex items-center space-x-1.5 shrink-0 ml-4"
                 >
-                  <span>Go to Digital Answer Sheet</span>
+                  <span>Go to answer sheet</span>
                   <ChevronRight className="w-3.5 h-3.5" />
                 </button>
               </div>
             </div>
 
-            {/* Answer Sheet View (Preserved in DOM with live telemetry reference!) */}
+            {/* Answer Sheet View */}
             <div className={activeTab === 'answersheet' ? 'space-y-4' : 'hidden'}>
               <DigitalAnswerSheet
                 questions={activeExperiment.answerSheet}
@@ -503,37 +501,37 @@ export const LabWorkspace: React.FC = () => {
         </div>
       </div>
 
-      {/* Force Push Warning Modal (Section 3.1.2) */}
+      {/* Force Push Modal */}
       {isForcePushModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
-          <div className="bg-slate-800 border border-rose-500/40 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
-            <div className="flex items-center space-x-3 text-rose-400">
-              <AlertTriangle className="w-6 h-6 shrink-0" />
-              <h3 className="text-base font-bold text-white">Override Step Warning (Force-Push)</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-xs">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded max-w-md w-full p-5 space-y-4 shadow-lg">
+            <div className="flex items-center space-x-2 text-rose-600 dark:text-rose-400">
+              <AlertTriangle className="w-5 h-5 shrink-0" />
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Skip step confirmation</h3>
             </div>
 
-            <p className="text-xs text-slate-300 leading-relaxed">
-              In accordance with KNEC KCSE rules, skipping or overriding this step will:
+            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+              Skipping or overriding this procedural step will:
             </p>
 
-            <ul className="text-xs text-slate-400 space-y-1.5 pl-4 list-disc">
-              <li>Record a <strong className="text-rose-400">zero mark</strong> for this specific procedural step.</li>
-              <li>Propagate potential downstream inaccuracies into your final measurement calculations.</li>
-              <li>Log a permanent <strong className="text-amber-400">Force-Pushed Flag</strong> visible to your teacher ({currentUser?.teacherName}).</li>
+            <ul className="text-xs text-slate-600 dark:text-slate-400 space-y-1 pl-4 list-disc">
+              <li>Record 0 marks for this procedural step.</li>
+              <li>May affect subsequent readings in the experiment.</li>
+              <li>Log a force-pushed status on your submission record.</li>
             </ul>
 
-            <div className="pt-2 flex gap-3">
+            <div className="pt-2 flex justify-end gap-2">
               <button
                 onClick={() => setIsForcePushModalOpen(false)}
-                className="flex-1 py-2 rounded-xl bg-slate-700 text-slate-300 text-xs font-semibold"
+                className="px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium hover:bg-slate-50 dark:hover:bg-slate-750"
               >
-                Go Back & Retry
+                Go back
               </button>
               <button
                 onClick={handleForcePushConfirm}
-                className="flex-1 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold"
+                className="px-3 py-1.5 rounded bg-rose-600 hover:bg-rose-500 text-white text-xs font-medium"
               >
-                Continue Anyway
+                Confirm skip
               </button>
             </div>
           </div>
@@ -542,45 +540,43 @@ export const LabWorkspace: React.FC = () => {
 
       {/* Results / Submission Receipt Modal */}
       {submittedAttempt && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md">
-          <div className="bg-slate-800 border border-emerald-500/40 rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-5 animate-in zoom-in-95">
-            <div className="text-center space-y-2">
-              <div className="w-14 h-14 rounded-2xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center mx-auto text-emerald-400 shadow-lg">
-                <Award className="w-8 h-8" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-xs">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded max-w-md w-full p-6 space-y-4 shadow-xl">
+            <div className="text-center space-y-1">
+              <div className="w-10 h-10 rounded border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto text-slate-700 dark:text-slate-300">
+                <Award className="w-5 h-5" />
               </div>
-              <h2 className="text-xl font-black text-white">Practical Attempt Submitted!</h2>
-              <p className="text-xs text-slate-400">
-                {activeExperiment.title} • {isExamMode ? 'Official KCSE Exam Mode' : 'Practice Run'}
+              <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">Attempt submitted</h2>
+              <p className="text-xs text-slate-500">
+                {activeExperiment.title} • {isExamMode ? 'Exam mode' : 'Practice mode'}
               </p>
             </div>
 
-            {/* Score pill */}
-            <div className="bg-slate-900/90 p-4 rounded-2xl border border-slate-700/80 text-center space-y-1">
-              <span className="text-xs uppercase font-bold text-slate-400">Preliminary Auto-Score</span>
-              <div className="text-3xl font-black text-emerald-400">
+            <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded border border-slate-200 dark:border-slate-800 text-center space-y-1">
+              <span className="text-[10px] uppercase font-medium text-slate-500 tracking-wider">Score</span>
+              <div className="text-2xl font-mono font-semibold text-slate-900 dark:text-slate-100">
                 {submittedAttempt.totalScore} / {submittedAttempt.maxScore}
-                <span className="text-lg text-slate-400 ml-2">({submittedAttempt.percentage}%)</span>
+                <span className="text-sm text-slate-500 font-normal ml-2">({submittedAttempt.percentage}%)</span>
               </div>
               <p className="text-[11px] text-slate-500">
                 {isExamMode 
-                  ? 'Your answers, step logs, and laboratory observations are submitted to your teacher for final evaluation.'
-                  : 'Practice mode score recorded with instant feedback.'}
+                  ? 'Your answers, step logs, and readings are recorded for teacher review.'
+                  : 'Practice mode score recorded.'}
               </p>
             </div>
 
-            {/* Step breakdown */}
-            <div className="space-y-2 text-xs">
-              <div className="text-slate-400 font-semibold uppercase text-[10px]">Procedural Step Summary:</div>
+            <div className="space-y-1 text-xs">
+              <div className="text-slate-500 font-medium text-[10px] uppercase tracking-wider">Step summary:</div>
               <div className="grid grid-cols-2 gap-2 text-center">
-                <div className="p-2 rounded-xl bg-slate-900 border border-slate-750">
-                  <span className="text-slate-400 block text-[10px]">Steps Validated</span>
-                  <span className="font-bold text-emerald-400 text-sm">
+                <div className="p-2 rounded border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
+                  <span className="text-slate-500 block text-[10px]">Validated</span>
+                  <span className="font-semibold text-slate-900 dark:text-slate-100 text-xs">
                     {submittedAttempt.stepLogs.filter(s => s.status === 'passed').length} / {submittedAttempt.stepLogs.length}
                   </span>
                 </div>
-                <div className="p-2 rounded-xl bg-slate-900 border border-slate-750">
-                  <span className="text-slate-400 block text-[10px]">Force-Pushed Steps</span>
-                  <span className="font-bold text-amber-400 text-sm">
+                <div className="p-2 rounded border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
+                  <span className="text-slate-500 block text-[10px]">Skipped</span>
+                  <span className="font-semibold text-slate-900 dark:text-slate-100 text-xs">
                     {submittedAttempt.stepLogs.filter(s => s.status === 'force_pushed').length}
                   </span>
                 </div>
@@ -593,9 +589,9 @@ export const LabWorkspace: React.FC = () => {
                   setSubmittedAttempt(null);
                   setCurrentView('dashboard');
                 }}
-                className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition shadow-lg shadow-emerald-600/30"
+                className="w-full py-2 rounded bg-slate-900 dark:bg-slate-100 hover:bg-slate-800 dark:hover:bg-white text-white dark:text-slate-900 font-medium text-xs transition"
               >
-                Return to Dashboard
+                Return to dashboard
               </button>
             </div>
           </div>

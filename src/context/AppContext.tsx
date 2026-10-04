@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { School, User, ClassGroup, Assignment, Attempt, ExperimentSpec, EmailDispatch } from '../types';
 import { INITIAL_EXPERIMENTS } from '../data/experimentSpecs';
 import { SEED_SCHOOLS, SEED_USERS, SEED_CLASSES, SEED_ASSIGNMENTS, SEED_ATTEMPTS, SEED_SCHOOL_EXPERIMENT } from '../data/seedData';
+import { api } from '../services/api';
 
 interface AppContextType {
   currentUser: User | null;
@@ -23,6 +24,8 @@ interface AppContextType {
   activeAssignment: Assignment | null;
   activeLabMode: 'practice' | 'exam';
   reviewingAttempt: Attempt | null;
+  theme: 'light' | 'dark';
+  toggleTheme: () => void;
 
   // Actions
   login: (user: User) => void;
@@ -132,8 +135,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return SEED_USERS[0]; // Super Admin
   });
 
-  // UI Flow State
-  const [currentView, setCurrentView] = useState<'dashboard' | 'lab' | 'builder' | 'review_attempt' | 'auth' | 'landing'>('dashboard');
+  // UI Flow State with initial URL detection
+  const [currentView, setCurrentView] = useState<'dashboard' | 'lab' | 'builder' | 'review_attempt' | 'auth' | 'landing'>(() => {
+    if (typeof window !== 'undefined') {
+      const path = window.location.pathname;
+      if (path === '/auth') return 'auth';
+      if (path === '/landing' || path === '/') return 'dashboard'; // or dashboard for quick access
+      if (path === '/lab') return 'lab';
+      if (path === '/builder') return 'builder';
+      if (path === '/review') return 'review_attempt';
+    }
+    return 'dashboard';
+  });
+
   const [authMode, setAuthMode] = useState<'login' | 'register_student' | 'register_school'>('login');
   const [activeExperiment, setActiveExperiment] = useState<ExperimentSpec | null>(null);
   const [activeAssignment, setActiveAssignment] = useState<Assignment | null>(null);
@@ -141,10 +155,143 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [reviewingAttempt, setReviewingAttempt] = useState<Attempt | null>(null);
   const [editingExperiment, setEditingExperiment] = useState<ExperimentSpec | null>(null);
 
+  // Theme State - Default to light
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('stem_spark_theme');
+      if (saved === 'dark' || saved === 'light') return saved;
+    }
+    return 'light';
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem('stem_spark_theme', theme);
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'light' ? 'dark' : 'light');
+  };
+
+  // Helper to sync clean web URL to browser address bar
+  const syncUrlToView = (
+    view: 'dashboard' | 'lab' | 'builder' | 'review_attempt' | 'auth' | 'landing',
+    extra?: { experimentId?: string; attemptId?: string; mode?: string }
+  ) => {
+    if (typeof window === 'undefined') return;
+
+    let targetPath = '/dashboard';
+    const params = new URLSearchParams();
+
+    if (view === 'landing') {
+      targetPath = '/';
+    } else if (view === 'auth') {
+      targetPath = '/auth';
+    } else if (view === 'dashboard') {
+      targetPath = '/dashboard';
+    } else if (view === 'lab') {
+      targetPath = '/lab';
+      if (extra?.experimentId) params.set('experimentId', extra.experimentId);
+      if (extra?.mode) params.set('mode', extra.mode);
+    } else if (view === 'builder') {
+      targetPath = '/builder';
+      if (extra?.experimentId) params.set('experimentId', extra.experimentId);
+    } else if (view === 'review_attempt') {
+      targetPath = '/review';
+      if (extra?.attemptId) params.set('attemptId', extra.attemptId);
+    }
+
+    const queryStr = params.toString() ? `?${params.toString()}` : '';
+    const fullUrl = `${targetPath}${queryStr}`;
+
+    if (window.location.pathname + window.location.search !== fullUrl) {
+      window.history.pushState({ view, ...extra }, '', fullUrl);
+    }
+  };
+
+  const setViewWithUrl = (view: 'dashboard' | 'lab' | 'builder' | 'review_attempt' | 'auth' | 'landing') => {
+    setCurrentView(view);
+    syncUrlToView(view);
+  };
+
   const openExperimentEditor = (exp?: ExperimentSpec | null) => {
     setEditingExperiment(exp || null);
     setCurrentView('builder');
+    syncUrlToView('builder', { experimentId: exp?.id });
   };
+
+  // Sync with Backend /api on mount
+  useEffect(() => {
+    const loadBackendData = async () => {
+      try {
+        const [schs, usrs, clss, exps, asgs, atts, emls] = await Promise.all([
+          api.schools.getAll().catch(() => null),
+          api.users.getAll().catch(() => null),
+          api.classes.getAll().catch(() => null),
+          api.experiments.getAll().catch(() => null),
+          api.assignments.getAll().catch(() => null),
+          api.attempts.getAll().catch(() => null),
+          api.emails.getAll().catch(() => null),
+        ]);
+
+        if (schs && schs.length > 0) setSchools(schs);
+        if (usrs && usrs.length > 0) setUsers(usrs);
+        if (clss && clss.length > 0) setClasses(clss);
+        if (exps && exps.length > 0) setExperiments(exps);
+        if (asgs && asgs.length > 0) setAssignments(asgs);
+        if (atts && atts.length > 0) setAttempts(atts);
+        if (emls && emls.length > 0) setSentEmails(emls);
+      } catch (err) {
+        console.warn('Initial backend sync completed or using stored data.');
+      }
+    };
+
+    loadBackendData();
+  }, []);
+
+  // Listen to browser Back/Forward navigation
+  useEffect(() => {
+    const handlePopState = () => {
+      const pathname = window.location.pathname;
+      const searchParams = new URLSearchParams(window.location.search);
+      const experimentId = searchParams.get('experimentId');
+      const attemptId = searchParams.get('attemptId');
+
+      if (pathname === '/lab') {
+        if (experimentId) {
+          const foundExp = experiments.find(e => e.id === experimentId);
+          if (foundExp) setActiveExperiment(foundExp);
+        }
+        setCurrentView('lab');
+      } else if (pathname === '/builder') {
+        if (experimentId) {
+          const foundExp = experiments.find(e => e.id === experimentId);
+          setEditingExperiment(foundExp || null);
+        }
+        setCurrentView('builder');
+      } else if (pathname === '/review') {
+        if (attemptId) {
+          const foundAttempt = attempts.find(a => a.id === attemptId);
+          if (foundAttempt) setReviewingAttempt(foundAttempt);
+        }
+        setCurrentView('review_attempt');
+      } else if (pathname === '/auth') {
+        setCurrentView('auth');
+      } else if (pathname === '/' || pathname === '/landing') {
+        setCurrentView('landing');
+      } else {
+        setCurrentView('dashboard');
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [experiments, attempts]);
 
   // Sync state to localStorage
   useEffect(() => {
@@ -185,12 +332,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const login = (user: User) => {
     setCurrentUser(user);
-    setCurrentView('dashboard');
+    setViewWithUrl('dashboard');
   };
 
   const logout = () => {
     setCurrentUser(null);
-    setCurrentView('auth');
+    setViewWithUrl('auth');
     setAuthMode('login');
   };
 
@@ -198,7 +345,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const target = users.find(u => u.id === userId);
     if (target) {
       setCurrentUser(target);
-      setCurrentView('dashboard');
+      setViewWithUrl('dashboard');
     }
   };
 
@@ -225,6 +372,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         tempPassword: undefined
       } : null);
     }
+
+    api.users.changePassword(userId, newPassword).catch(err => console.warn('API sync:', err));
   };
 
   // 1. Separate School Registration with Registration Number & Temporary Password Email
@@ -378,6 +527,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setClasses(prev => [newClass, ...prev]);
     // Increment school total students
     setSchools(prev => prev.map(s => s.id === classData.schoolId ? { ...s, totalStudents: s.totalStudents + studentCount } : s));
+
+    api.classes.create(classData).catch(err => console.warn('API sync:', err));
   };
 
   const promoteExperimentToSchool = (experimentId: string, schoolId: string) => {
@@ -395,6 +546,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     setExperiments(prev => [schoolExp, ...prev]);
+    api.experiments.promoteToSchool(experimentId, schoolId).catch(err => console.warn('API sync:', err));
   };
 
   const deleteSchool = (schoolId: string) => {
@@ -405,6 +557,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setExperiments(prev => prev.filter(e => e.schoolId !== schoolId));
     setAttempts(prev => prev.filter(a => a.schoolId !== schoolId));
     setSentEmails(prev => prev.filter(m => m.schoolName !== schools.find(s => s.id === schoolId)?.name));
+
+    api.schools.delete(schoolId).catch(err => console.warn('API sync:', err));
   };
 
   const deleteTeacher = (teacherId: string) => {
@@ -414,11 +568,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     setUsers(prev => prev.filter(u => u.id !== teacherId));
     setClasses(prev => prev.map(c => c.teacherId === teacherId ? { ...c, teacherId: '', teacherName: 'Unassigned' } : c));
+
+    api.users.deleteTeacher(teacherId).catch(err => console.warn('API sync:', err));
   };
 
   const deleteExperiment = (experimentId: string) => {
     setExperiments(prev => prev.filter(e => e.id !== experimentId));
     setAssignments(prev => prev.filter(a => a.experimentId !== experimentId));
+
+    api.experiments.delete(experimentId).catch(err => console.warn('API sync:', err));
   };
 
   const createAssignment = (assignmentData: Omit<Assignment, 'id' | 'assignedAt' | 'submittedCount'>): Assignment => {
@@ -429,11 +587,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       submittedCount: 0
     };
     setAssignments(prev => [newAssignment, ...prev]);
+
+    api.assignments.create(assignmentData).catch(err => console.warn('API sync:', err));
+
     return newAssignment;
   };
 
   const createExperiment = (spec: ExperimentSpec) => {
     setExperiments(prev => [spec, ...prev]);
+    api.experiments.create(spec).catch(err => console.warn('API sync:', err));
   };
 
   const updateExperiment = (updatedSpec: ExperimentSpec) => {
@@ -441,6 +603,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (editingExperiment?.id === updatedSpec.id) {
       setEditingExperiment(updatedSpec);
     }
+    api.experiments.update(updatedSpec.id, updatedSpec).catch(err => console.warn('API sync:', err));
   };
 
   const cloneExperiment = (sourceId: string, authorTeacher: User): ExperimentSpec => {
@@ -460,6 +623,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     setExperiments(prev => [cloned, ...prev]);
+    api.experiments.clone(sourceId, authorTeacher).catch(err => console.warn('API sync:', err));
     return cloned;
   };
 
@@ -499,6 +663,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         teacherFeedbackReleased: true
       };
     }));
+
+    api.attempts.grade(attemptId, scoreUpdates, teacherComments).catch(err => console.warn('API sync:', err));
   };
 
   const releaseGrades = (assignmentId: string) => {
@@ -508,6 +674,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       return att;
     }));
+
+    api.attempts.releaseGrades(assignmentId).catch(err => console.warn('API sync:', err));
   };
 
   const startExperiment = (
@@ -519,6 +687,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setActiveAssignment(assignment || null);
     setActiveLabMode(mode || (assignment ? assignment.mode : 'practice'));
     setCurrentView('lab');
+    syncUrlToView('lab', { experimentId: experiment.id, mode: mode || 'practice' });
   };
 
   const submitExperimentAttempt = (
@@ -542,12 +711,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }));
     }
 
+    api.attempts.submit(attemptData).catch(err => console.warn('API sync:', err));
+
     return newAttempt;
   };
 
   const openAttemptReview = (attempt: Attempt) => {
     setReviewingAttempt(attempt);
     setCurrentView('review_attempt');
+    syncUrlToView('review_attempt', { attemptId: attempt.id });
   };
 
   const resetAllToDefaults = () => {
@@ -566,7 +738,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setAssignments(SEED_ASSIGNMENTS);
     setAttempts(SEED_ATTEMPTS);
     setCurrentUser(SEED_USERS[0]);
-    setCurrentView('dashboard');
+    setViewWithUrl('dashboard');
+
+    api.health.reset().catch(err => console.warn('API reset:', err));
   };
 
   return (
@@ -589,10 +763,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         activeAssignment,
         activeLabMode,
         reviewingAttempt,
+        theme,
+        toggleTheme,
         login,
         logout,
         switchUser,
-        setCurrentView,
+        setCurrentView: setViewWithUrl,
         setAuthMode,
         registerSchool,
         registerStudent,

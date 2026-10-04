@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   RotateCcw, 
   CheckCircle2, 
-  Sparkles, 
   Weight, 
   Ruler, 
   PlusCircle, 
@@ -218,9 +217,9 @@ export const InteractiveHookesLawWorkbench: React.FC<InteractiveHookesLawWorkben
       {/* Header Banner */}
       <div className="bg-slate-800/90 border border-slate-700/80 p-4 rounded-2xl flex flex-wrap items-center justify-between gap-3 shadow-lg">
         <div>
-          <div className="text-xs font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-1.5">
-            <Sparkles className="w-4 h-4" />
-            <span>Interactive Hooke's Law Mechanics Workbench • KCSE Physics Paper 3</span>
+          <div className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+            <Weight className="w-4 h-4 text-cyan-400" />
+            <span>Hooke's law mechanics workbench • Physics practical</span>
           </div>
           <p className="text-xs text-slate-300 mt-0.5">
             Suspend slotted masses onto the helical spring. Exceeding 350g causes plastic deformation; viewing off eye-level introduces parallax error.

@@ -5,7 +5,6 @@ import {
   CheckCircle2, 
   HelpCircle, 
   PlusCircle, 
-  Sparkles,
   AlertTriangle,
   Beaker,
   History,
@@ -491,9 +490,9 @@ export const InteractiveTitrationWorkbench: React.FC<InteractiveTitrationWorkben
       {/* Top Banner */}
       <div className="bg-slate-800/90 border border-slate-700/80 p-4 rounded-2xl flex flex-wrap items-center justify-between gap-3 shadow-lg">
         <div>
-          <div className="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
-            <Sparkles className="w-4 h-4" />
-            <span>Interactive Volumetric Lab Workbench • KCSE 233/3 Chemistry</span>
+          <div className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+            <Beaker className="w-4 h-4 text-emerald-400" />
+            <span>Volumetric analysis workbench • Chemistry practical</span>
           </div>
           <p className="text-xs text-slate-300 mt-0.5">
             Assemble the apparatus on the workbench step-by-step. Inaccurate volumes, excess indicator, or over-titration produce realistic laboratory consequences.
@@ -1047,7 +1046,7 @@ export const InteractiveTitrationWorkbench: React.FC<InteractiveTitrationWorkben
                     ? 'text-emerald-400' 
                     : 'text-amber-400'
                 }`}>
-                  {isOvertitrated ? 'Overtitrated ⚠️' : isNeutralized ? 'Neutralized ✓' : 'Alkaline'}
+                  {isOvertitrated ? 'Overtitrated' : isNeutralized ? 'Neutralized' : 'Alkaline'}
                 </span>
               </div>
             </div>

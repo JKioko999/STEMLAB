@@ -2,21 +2,12 @@ import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { StatsCard } from '../shared/StatsCard';
 import { 
-  School as SchoolIcon, 
-  Users, 
-  BookOpen, 
-  FlaskConical, 
   Plus, 
-  CheckCircle, 
   ExternalLink, 
   FolderPlus, 
-  Award, 
-  Calendar,
-  Layers,
-  Sparkles,
-  ArrowRight,
   Trash2,
-  AlertTriangle
+  AlertTriangle,
+  X
 } from 'lucide-react';
 import { User, ExperimentSpec } from '../../types';
 
@@ -57,7 +48,7 @@ export const SchoolAdminDashboard: React.FC = () => {
     formYear: 3,
     teacherId: '',
     subject: 'Chemistry' as const,
-    studentCount: 42
+    studentCount: 40
   });
 
   // Filter scoped data
@@ -68,19 +59,18 @@ export const SchoolAdminDashboard: React.FC = () => {
   const schoolAttempts = attempts.filter(a => a.schoolId === currentSchool.id);
 
   // Experiments visible in this school:
-  // Global experiments + School experiments for this school
   const schoolTierExperiments = experiments.filter(e => e.ownerType === 'school' && e.schoolId === currentSchool.id);
   const globalExperiments = experiments.filter(e => e.ownerType === 'global');
 
   const handleAddTeacher = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!teacherForm.name || !teacherForm.email) return;
+    if (!teacherForm.name.trim() || !teacherForm.email.trim()) return;
 
     registerTeacher({
-      name: teacherForm.name,
-      email: teacherForm.email,
+      name: teacherForm.name.trim(),
+      email: teacherForm.email.trim(),
       schoolId: currentSchool.id,
-      subjectSpecialization: teacherForm.subjectSpecialization
+      subjectSpecialization: teacherForm.subjectSpecialization.trim()
     });
 
     setIsAddTeacherOpen(false);
@@ -89,13 +79,13 @@ export const SchoolAdminDashboard: React.FC = () => {
 
   const handleAddClass = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!classForm.name) return;
+    if (!classForm.name.trim()) return;
 
     const assignedTeacher = schoolTeachers.find(t => t.id === classForm.teacherId) || schoolTeachers[0];
 
     addClass({
       schoolId: currentSchool.id,
-      name: classForm.name,
+      name: classForm.name.trim(),
       formYear: Number(classForm.formYear),
       teacherId: assignedTeacher?.id || '',
       teacherName: assignedTeacher?.name || 'Unassigned',
@@ -104,129 +94,115 @@ export const SchoolAdminDashboard: React.FC = () => {
     });
 
     setIsAddClassOpen(false);
-    setClassForm({ name: '', formYear: 3, teacherId: '', subject: 'Chemistry', studentCount: 42 });
+    setClassForm({ name: '', formYear: 3, teacherId: '', subject: 'Chemistry', studentCount: 40 });
   };
 
+  // Real computed stats
+  const averageSchoolScore = schoolAttempts.length > 0 
+    ? Math.round(schoolAttempts.reduce((acc, a) => acc + a.percentage, 0) / schoolAttempts.length)
+    : null;
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       
       {/* School Header */}
-      <div className="bg-gradient-to-r from-blue-950/50 via-slate-850 to-slate-900 border border-blue-500/20 p-6 rounded-3xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-slate-200 dark:border-slate-800">
         <div>
-          <div className="flex items-center space-x-2 text-xs font-bold uppercase tracking-wider text-blue-400">
-            <SchoolIcon className="w-4 h-4" />
-            <span>Institution Science Department Portal</span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-black text-white mt-1 flex items-center gap-2 flex-wrap">
-            <span>{currentSchool.name}</span>
-            <span className="text-xs px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 font-mono font-bold">
-              {currentSchool.registrationNumber || 'MOE/REG/PENDING'}
-            </span>
+          <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-100 tracking-tight">
+            {currentSchool.name}
           </h1>
-          <p className="text-slate-400 text-sm mt-1">
-            {currentSchool.category} Secondary School • {currentSchool.county} County • Principal / Science HOD: {currentUser?.name}
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+            {currentSchool.county} County · {currentSchool.category} · {currentSchool.registrationNumber || 'Pending code'} · Admin: {currentUser?.name}
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex items-center gap-2">
           <button
             onClick={() => setIsAddTeacherOpen(true)}
-            className="flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs transition shadow-lg shadow-blue-600/30"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 text-white dark:text-slate-900 text-xs font-medium transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-slate-400"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>Add Science Teacher</span>
+            <span>Add teacher</span>
           </button>
 
           <button
             onClick={() => setIsAddClassOpen(true)}
-            className="flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold text-xs transition"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-slate-400"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>Create Form Stream</span>
+            <span>Create stream</span>
           </button>
         </div>
       </div>
 
-      {/* Metrics */}
+      {/* Metrics Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatsCard
-          title="Appointed Teachers"
+          title="Appointed teachers"
           value={schoolTeachers.length}
-          subtitle="Physics, Chemistry & Biology"
-          icon={<BookOpen className="w-5 h-5" />}
-          color="amber"
+          subtitle="Physics, chemistry, biology"
         />
         <StatsCard
-          title="Form Classes"
+          title="Class streams"
           value={schoolClasses.length}
-          subtitle="Active science streams"
-          icon={<SchoolIcon className="w-5 h-5" />}
-          color="blue"
+          subtitle="Active candidate cohorts"
         />
         <StatsCard
-          title="Enrolled Candidates"
+          title="Enrolled students"
           value={schoolStudents.length > 0 ? schoolStudents.length : currentSchool.totalStudents}
-          subtitle="KCSE practical students"
-          icon={<Users className="w-5 h-5" />}
-          color="violet"
+          subtitle="Registered science candidates"
         />
         <StatsCard
-          title="Lab Attempts"
+          title="Completed attempts"
           value={schoolAttempts.length}
-          subtitle="Assignments submitted & graded"
-          icon={<FlaskConical className="w-5 h-5" />}
-          color="emerald"
+          subtitle={averageSchoolScore !== null ? `Average score: ${averageSchoolScore}%` : 'No attempts logged yet'}
         />
       </div>
 
-      {/* Tab Navigation */}
-      <div className="border-b border-slate-800 flex space-x-6 text-sm font-semibold">
+      {/* Plain Tabs */}
+      <div className="flex space-x-6 border-b border-slate-200 dark:border-slate-800 text-sm font-medium">
         <button
           onClick={() => setActiveTab('teachers')}
-          className={`pb-3 flex items-center space-x-2 border-b-2 transition ${
+          className={`pb-2.5 -mb-px transition-colors ${
             activeTab === 'teachers'
-              ? 'border-blue-500 text-blue-400'
-              : 'border-transparent text-slate-400 hover:text-slate-200'
+              ? 'border-b-2 border-slate-900 dark:border-slate-100 text-slate-900 dark:text-slate-100 font-semibold'
+              : 'border-b-2 border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
           }`}
         >
-          <BookOpen className="w-4 h-4" />
-          <span>Teachers Directory ({schoolTeachers.length})</span>
+          Teachers ({schoolTeachers.length})
         </button>
 
         <button
           onClick={() => setActiveTab('classes')}
-          className={`pb-3 flex items-center space-x-2 border-b-2 transition ${
+          className={`pb-2.5 -mb-px transition-colors ${
             activeTab === 'classes'
-              ? 'border-blue-500 text-blue-400'
-              : 'border-transparent text-slate-400 hover:text-slate-200'
+              ? 'border-b-2 border-slate-900 dark:border-slate-100 text-slate-900 dark:text-slate-100 font-semibold'
+              : 'border-b-2 border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
           }`}
         >
-          <SchoolIcon className="w-4 h-4" />
-          <span>Form Classes & Streams ({schoolClasses.length})</span>
+          Streams ({schoolClasses.length})
         </button>
 
         <button
           onClick={() => setActiveTab('school_experiments')}
-          className={`pb-3 flex items-center space-x-2 border-b-2 transition ${
+          className={`pb-2.5 -mb-px transition-colors ${
             activeTab === 'school_experiments'
-              ? 'border-blue-500 text-blue-400'
-              : 'border-transparent text-slate-400 hover:text-slate-200'
+              ? 'border-b-2 border-slate-900 dark:border-slate-100 text-slate-900 dark:text-slate-100 font-semibold'
+              : 'border-b-2 border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
           }`}
         >
-          <Layers className="w-4 h-4" />
-          <span>School Practical Repository ({schoolTierExperiments.length + globalExperiments.length})</span>
+          Practicals repository ({schoolTierExperiments.length + globalExperiments.length})
         </button>
 
         <button
           onClick={() => setActiveTab('reports')}
-          className={`pb-3 flex items-center space-x-2 border-b-2 transition ${
+          className={`pb-2.5 -mb-px transition-colors ${
             activeTab === 'reports'
-              ? 'border-blue-500 text-blue-400'
-              : 'border-transparent text-slate-400 hover:text-slate-200'
+              ? 'border-b-2 border-slate-900 dark:border-slate-100 text-slate-900 dark:text-slate-100 font-semibold'
+              : 'border-b-2 border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
           }`}
         >
-          <Award className="w-4 h-4" />
-          <span>School KCSE Lab Performance</span>
+          Assessment summary
         </button>
       </div>
 
@@ -235,75 +211,69 @@ export const SchoolAdminDashboard: React.FC = () => {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-base font-bold text-white">Science Faculty Members</h2>
-              <p className="text-xs text-slate-400">
-                Teachers who can assign virtual practicals, monitor real-time force pushes, and review KCSE answer sheets.
+              <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">Science faculty members</h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Teachers authorized to assign virtual practicals and review candidate submissions.
               </p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {schoolTeachers.map(teacher => {
-              const teacherClasses = schoolClasses.filter(c => c.teacherId === teacher.id);
-              const teacherAssignments = schoolAssignments.filter(a => a.teacherId === teacher.id);
+          <div className="bg-white dark:bg-slate-900 rounded-md border border-slate-200 dark:border-slate-800 overflow-hidden">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
+                <tr>
+                  <th className="px-4 py-2.5">Teacher</th>
+                  <th className="px-4 py-2.5">Specialization</th>
+                  <th className="px-4 py-2.5">Assigned streams</th>
+                  <th className="px-4 py-2.5 text-right">Practicals set</th>
+                  <th className="px-4 py-2.5 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                {schoolTeachers.map(teacher => {
+                  const teacherClasses = schoolClasses.filter(c => c.teacherId === teacher.id);
+                  const teacherAssignments = schoolAssignments.filter(a => a.teacherId === teacher.id);
 
-              return (
-                <div key={teacher.id} className="bg-slate-800/90 rounded-2xl border border-slate-700/80 p-5 shadow">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold ${teacher.avatarColor || 'bg-amber-600'}`}>
-                        {teacher.name.charAt(0)}
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-white text-sm">{teacher.name}</h3>
-                        <p className="text-xs text-slate-400">{teacher.email}</p>
-                      </div>
-                    </div>
+                  return (
+                    <tr key={teacher.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                      <td className="px-4 py-3">
+                        <div className="font-medium text-slate-900 dark:text-slate-100">{teacher.name}</div>
+                        <div className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">{teacher.email}</div>
+                      </td>
+                      <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
+                        {teacher.subjectSpecialization}
+                      </td>
+                      <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
+                        {teacherClasses.map(c => c.name).join(', ') || 'None assigned'}
+                      </td>
+                      <td className="px-4 py-3 text-right text-slate-900 dark:text-slate-100 font-medium">
+                        {teacherAssignments.length}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex items-center justify-end space-x-1.5">
+                          <button
+                            onClick={() => switchUser(teacher.id)}
+                            className="px-2 py-1 rounded text-[11px] font-medium border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors inline-flex items-center gap-1"
+                            title="View as teacher"
+                          >
+                            <span>Switch</span>
+                            <ExternalLink className="w-3 h-3 text-slate-400" />
+                          </button>
 
-                    {teacher.mustChangePassword && (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                        Temp Password Active
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="mt-4 pt-3 border-t border-slate-700/60 space-y-2 text-xs">
-                    <div className="flex justify-between text-slate-400">
-                      <span>Specialization:</span>
-                      <span className="text-slate-200 font-semibold">{teacher.subjectSpecialization}</span>
-                    </div>
-                    <div className="flex justify-between text-slate-400">
-                      <span>Assigned Streams:</span>
-                      <span className="text-slate-200 font-semibold">
-                        {teacherClasses.map(c => c.name).join(', ') || 'None yet'}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-slate-400">
-                      <span>Active Practicals Set:</span>
-                      <span className="text-slate-200 font-semibold">{teacherAssignments.length}</span>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 pt-3 border-t border-slate-700/60 flex items-center justify-between gap-2">
-                    <button
-                      onClick={() => switchUser(teacher.id)}
-                      className="flex-1 py-2 rounded-xl bg-slate-700/80 hover:bg-slate-700 text-xs font-semibold text-white transition flex items-center justify-center space-x-1.5"
-                    >
-                      <span>Switch to {teacher.name.split(' ')[1] || 'Teacher'} View</span>
-                      <ExternalLink className="w-3 h-3" />
-                    </button>
-
-                    <button
-                      onClick={() => setTeacherToDelete(teacher)}
-                      className="p-2 rounded-xl bg-rose-500/10 hover:bg-rose-500 text-rose-400 hover:text-white border border-rose-500/20 transition"
-                      title={`Remove ${teacher.name}`}
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
+                          <button
+                            onClick={() => setTeacherToDelete(teacher)}
+                            className="p-1 rounded text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                            title={`Remove ${teacher.name}`}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
@@ -313,9 +283,9 @@ export const SchoolAdminDashboard: React.FC = () => {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-base font-bold text-white">Form Streams & Student Enrollment</h2>
-              <p className="text-xs text-slate-400">
-                Form 3 and Form 4 laboratory cohorts registered under {currentSchool.name}.
+              <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">Class streams and enrollment</h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Registered science class cohorts under {currentSchool.name}.
               </p>
             </div>
           </div>
@@ -324,31 +294,33 @@ export const SchoolAdminDashboard: React.FC = () => {
             {schoolClasses.map(cls => {
               const studentsInClass = schoolStudents.filter(s => s.classId === cls.id);
               return (
-                <div key={cls.id} className="bg-slate-800/90 rounded-2xl border border-slate-700/80 p-5 shadow">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">
-                      Form {cls.formYear} • {cls.subject}
+                <div key={cls.id} className="bg-white dark:bg-slate-900 rounded-md border border-slate-200 dark:border-slate-800 p-4 transition-colors">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs text-slate-500 dark:text-slate-400">
+                      Form {cls.formYear} · {cls.subject}
                     </span>
-                    <span className="text-xs text-slate-400">{cls.studentCount || studentsInClass.length} students</span>
+                    <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">
+                      {cls.studentCount || studentsInClass.length} students
+                    </span>
                   </div>
 
-                  <h3 className="font-extrabold text-white text-lg mt-2">{cls.name}</h3>
-                  <p className="text-xs text-slate-400 mt-1">
-                    Subject Head: <span className="text-slate-200 font-semibold">{cls.teacherName}</span>
+                  <h3 className="font-semibold text-slate-900 dark:text-slate-100 text-base">{cls.name}</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    Teacher: {cls.teacherName}
                   </p>
 
-                  <div className="mt-4 pt-3 border-t border-slate-700/60">
-                    <div className="text-[11px] font-semibold text-slate-400 mb-2">Registered Students:</div>
-                    <div className="space-y-1.5 max-h-32 overflow-y-auto pr-1">
+                  <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+                    <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1.5">Enrolled students:</div>
+                    <div className="space-y-1 max-h-32 overflow-y-auto pr-1">
                       {studentsInClass.length > 0 ? (
                         studentsInClass.map(st => (
-                          <div key={st.id} className="flex items-center justify-between text-xs bg-slate-900/60 p-1.5 rounded-lg">
-                            <span className="text-slate-200 font-medium">{st.name}</span>
-                            <span className="text-slate-500 font-mono text-[10px]">{st.admissionNumber}</span>
+                          <div key={st.id} className="flex items-center justify-between text-xs py-0.5">
+                            <span className="text-slate-800 dark:text-slate-200">{st.name}</span>
+                            <span className="text-slate-400 font-mono text-[10px]">{st.admissionNumber}</span>
                           </div>
                         ))
                       ) : (
-                        <div className="text-xs text-slate-500 italic">Enrolled students appear here</div>
+                        <div className="text-xs text-slate-400 italic">No candidates enrolled directly yet</div>
                       )}
                     </div>
                   </div>
@@ -361,75 +333,69 @@ export const SchoolAdminDashboard: React.FC = () => {
 
       {/* TAB 3: SCHOOL LAB REPOSITORY */}
       {activeTab === 'school_experiments' && (
-        <div className="space-y-4">
-          <div className="bg-slate-800/80 p-4 rounded-2xl border border-slate-700/80">
-            <h2 className="text-base font-bold text-white">School Experiment Projects & Curriculum Repository</h2>
-            <p className="text-xs text-slate-400 mt-1">
-              As School Admin, you load and approve practical projects for science teachers across {currentSchool.name}. Teachers can immediately pick these approved experiments to assign to their Form 3 & Form 4 cohorts.
-            </p>
-          </div>
-
+        <div className="space-y-6">
           <div className="space-y-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              School-Specific Approved Projects ({schoolTierExperiments.length})
+            <h3 className="text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              School-approved practicals ({schoolTierExperiments.length})
             </h3>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {schoolTierExperiments.map(exp => (
-                <div key={exp.id} className="bg-slate-800/90 rounded-2xl border border-blue-500/30 p-5 shadow flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 text-[10px] font-bold uppercase border border-blue-500/30">
-                        School Approved
-                      </span>
-                      <span className="text-xs text-slate-400">Author: {exp.authorName}</span>
+            {schoolTierExperiments.length === 0 ? (
+              <div className="p-6 text-center bg-white dark:bg-slate-900 rounded-md border border-slate-200 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400">
+                No school-specific practicals loaded yet. You can load practicals from the standard curriculum catalog below.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {schoolTierExperiments.map(exp => (
+                  <div key={exp.id} className="bg-white dark:bg-slate-900 rounded-md border border-slate-200 dark:border-slate-800 p-4 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between mb-1 text-xs text-slate-500 dark:text-slate-400">
+                        <span>{exp.subject} · {exp.kcsePaper}</span>
+                        <span>Author: {exp.authorName}</span>
+                      </div>
+                      <h4 className="font-semibold text-slate-900 dark:text-slate-100 text-sm mt-1">{exp.title}</h4>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">{exp.topic}</p>
                     </div>
-                    <h4 className="font-bold text-white text-base">{exp.title}</h4>
-                    <p className="text-xs text-slate-400 mt-1">{exp.topic}</p>
-                  </div>
 
-                  <div className="mt-4 pt-3 border-t border-slate-700/60 flex items-center justify-end">
-                    <button
-                      onClick={() => setProjectToDelete(exp)}
-                      className="px-3 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500 text-rose-400 hover:text-white border border-rose-500/20 text-xs font-semibold flex items-center gap-1.5 transition"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span>Delete Practical</span>
-                    </button>
+                    <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end">
+                      <button
+                        onClick={() => setProjectToDelete(exp)}
+                        className="px-2 py-1 rounded text-[11px] font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/20 border border-slate-200 dark:border-slate-700 transition-colors inline-flex items-center gap-1"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        <span>Delete practical</span>
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
 
-          <div className="pt-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                National Global KCSE Library (Available to Load into School)
-              </h3>
-            </div>
+          <div className="pt-2 space-y-3">
+            <h3 className="text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              Curriculum catalog (available to load into school)
+            </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {globalExperiments.map(exp => (
-                <div key={exp.id} className="bg-slate-800/90 rounded-2xl border border-slate-700/80 p-4 flex flex-col justify-between">
+                <div key={exp.id} className="bg-white dark:bg-slate-900 rounded-md border border-slate-200 dark:border-slate-800 p-4 flex flex-col justify-between">
                   <div>
-                    <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-slate-700 text-slate-300">
-                      {exp.subject} • {exp.kcsePaper}
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                      {exp.subject} · {exp.kcsePaper.split(' ')[0]}
                     </span>
-                    <h4 className="font-bold text-white text-sm mt-2">{exp.title}</h4>
-                    <p className="text-xs text-slate-400 mt-1 line-clamp-2">{exp.topic}</p>
+                    <h4 className="font-semibold text-slate-900 dark:text-slate-100 text-sm mt-1">{exp.title}</h4>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">{exp.topic}</p>
                   </div>
 
-                  <div className="mt-4 pt-3 border-t border-slate-700/60 flex items-center justify-between">
+                  <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
                     <button
                       onClick={() => {
                         promoteExperimentToSchool(exp.id, currentSchool.id);
-                        alert(`Loaded "${exp.title}" into ${currentSchool.name} School Library!`);
                       }}
-                      className="w-full py-1.5 rounded-lg bg-blue-600/30 hover:bg-blue-600 text-blue-300 hover:text-white border border-blue-500/30 text-xs font-semibold transition flex items-center justify-center space-x-1.5"
+                      className="w-full py-1.5 px-2 rounded-md bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-medium transition-colors flex items-center justify-center space-x-1.5"
                     >
                       <FolderPlus className="w-3.5 h-3.5" />
-                      <span>Load into School Projects</span>
+                      <span>Load into school catalog</span>
                     </button>
                   </div>
                 </div>
@@ -441,104 +407,108 @@ export const SchoolAdminDashboard: React.FC = () => {
 
       {/* TAB 4: REPORTS */}
       {activeTab === 'reports' && (
-        <div className="bg-slate-800/90 rounded-2xl border border-slate-700/80 p-6 space-y-6">
+        <div className="bg-white dark:bg-slate-900 rounded-md border border-slate-200 dark:border-slate-800 p-5 space-y-4">
           <div>
-            <h2 className="text-base font-bold text-white">School KCSE Paper 3 Performance Summary</h2>
-            <p className="text-xs text-slate-400">
+            <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">Assessment summary</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
               Aggregated assessment analytics for {currentSchool.name}.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-slate-900/90 p-4 rounded-xl border border-slate-700">
-              <span className="text-xs text-slate-400 font-semibold uppercase">Form 3 East Practical Mean</span>
-              <div className="text-2xl font-bold text-emerald-400 mt-1">18.4 / 20 (92%)</div>
-              <p className="text-xs text-slate-400 mt-1">Chemistry Titration Standardization</p>
+          {schoolAttempts.length === 0 ? (
+            <div className="p-8 text-center text-xs text-slate-500 dark:text-slate-400 border border-dashed border-slate-200 dark:border-slate-800 rounded-md">
+              No student submissions logged yet. Performance metrics will appear once candidates complete practical assignments.
             </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="p-4 rounded-md border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
+                <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Average school score</span>
+                <div className="text-2xl font-semibold text-slate-900 dark:text-slate-100 mt-1">{averageSchoolScore}%</div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Across {schoolAttempts.length} candidate attempts</p>
+              </div>
 
-            <div className="bg-slate-900/90 p-4 rounded-xl border border-slate-700">
-              <span className="text-xs text-slate-400 font-semibold uppercase">Form 4 Science Practical Mean</span>
-              <div className="text-2xl font-bold text-cyan-400 mt-1">16.8 / 20 (84%)</div>
-              <p className="text-xs text-slate-400 mt-1">Physics Ohm's Law Circuit Practical</p>
-            </div>
+              <div className="p-4 rounded-md border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
+                <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Active practical assignments</span>
+                <div className="text-2xl font-semibold text-slate-900 dark:text-slate-100 mt-1">{schoolAssignments.length}</div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Assignments posted by teachers</p>
+              </div>
 
-            <div className="bg-slate-900/90 p-4 rounded-xl border border-slate-700">
-              <span className="text-xs text-slate-400 font-semibold uppercase">Syllabus Practical Coverage</span>
-              <div className="text-2xl font-bold text-purple-400 mt-1">85% Complete</div>
-              <p className="text-xs text-slate-400 mt-1">KCSE Paper 3 readiness index</p>
+              <div className="p-4 rounded-md border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
+                <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Candidate completion rate</span>
+                <div className="text-2xl font-semibold text-slate-900 dark:text-slate-100 mt-1">
+                  {schoolAssignments.length > 0 ? `${Math.round((schoolAttempts.length / (schoolAssignments.length * 40)) * 100)}%` : '0%'}
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Submissions versus class capacity</p>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
 
-      {/* Add Teacher Modal */}
+      {/* MODAL: ADD TEACHER */}
       {isAddTeacherOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
-          <div className="bg-slate-800 border border-slate-700 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-700 pb-3">
-              <h3 className="text-base font-bold text-white">Add Science Teacher</h3>
-              <button onClick={() => setIsAddTeacherOpen(false)} className="text-slate-400 hover:text-white">✕</button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md max-w-md w-full p-6 shadow-xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">Add teacher</h3>
+              <button 
+                onClick={() => setIsAddTeacherOpen(false)} 
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
 
-            <form onSubmit={handleAddTeacher} className="space-y-4 text-xs">
+            <form onSubmit={handleAddTeacher} className="space-y-3 text-xs">
               <div>
-                <label className="block text-slate-300 font-medium mb-1">Teacher Full Name *</label>
+                <label className="block text-slate-700 dark:text-slate-300 font-medium mb-1">Teacher full name *</label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Mr. Peter Kamau"
+                  placeholder="e.g. Peter Kamau"
                   value={teacherForm.name}
                   onChange={e => setTeacherForm({ ...teacherForm, name: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white focus:outline-none focus:border-blue-500"
+                  className="w-full px-3 py-1.5 rounded-md bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-slate-900"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-300 font-medium mb-1">Email Address *</label>
+                <label className="block text-slate-700 dark:text-slate-300 font-medium mb-1">Email address *</label>
                 <input
                   type="email"
                   required
-                  placeholder="e.g. chem.teacher@school.ac.ke"
+                  placeholder="e.g. teacher@school.ac.ke"
                   value={teacherForm.email}
                   onChange={e => setTeacherForm({ ...teacherForm, email: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white focus:outline-none focus:border-blue-500"
+                  className="w-full px-3 py-1.5 rounded-md bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-slate-900"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-300 font-medium mb-1">Subject Specialization</label>
+                <label className="block text-slate-700 dark:text-slate-300 font-medium mb-1">Subject specialization</label>
                 <input
                   type="text"
                   required
                   placeholder="e.g. Chemistry (Form 3 & 4)"
                   value={teacherForm.subjectSpecialization}
                   onChange={e => setTeacherForm({ ...teacherForm, subjectSpecialization: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white focus:outline-none focus:border-blue-500"
+                  className="w-full px-3 py-1.5 rounded-md bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-slate-900"
                 />
               </div>
 
-              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-[11px] text-slate-300 space-y-1">
-                <div className="flex items-center gap-1.5 text-blue-400 font-bold">
-                  <span>✉ Automated Teacher Invitation:</span>
-                </div>
-                <p className="text-slate-400">
-                  An appointment email containing an auto-generated temporary password will be immediately dispatched to <strong>{teacherForm.email || 'the teacher email'}</strong>. The teacher will be required to change this password on their first login.
-                </p>
-              </div>
-
-              <div className="flex gap-2 pt-2">
+              <div className="flex gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setIsAddTeacherOpen(false)}
-                  className="flex-1 py-2 rounded-xl bg-slate-700 text-slate-300 font-semibold"
+                  className="flex-1 py-1.5 rounded-md border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold"
+                  className="flex-1 py-1.5 rounded-md bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 text-white dark:text-slate-900 font-medium shadow-sm"
                 >
-                  Appoint Teacher
+                  Add teacher
                 </button>
               </div>
             </form>
@@ -546,35 +516,40 @@ export const SchoolAdminDashboard: React.FC = () => {
         </div>
       )}
 
-      {/* Add Class Modal */}
+      {/* MODAL: ADD CLASS */}
       {isAddClassOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
-          <div className="bg-slate-800 border border-slate-700 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-700 pb-3">
-              <h3 className="text-base font-bold text-white">Create Form Stream</h3>
-              <button onClick={() => setIsAddClassOpen(false)} className="text-slate-400 hover:text-white">✕</button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md max-w-md w-full p-6 shadow-xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">Create stream</h3>
+              <button 
+                onClick={() => setIsAddClassOpen(false)} 
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
 
-            <form onSubmit={handleAddClass} className="space-y-4 text-xs">
+            <form onSubmit={handleAddClass} className="space-y-3 text-xs">
               <div>
-                <label className="block text-slate-300 font-medium mb-1">Stream Name *</label>
+                <label className="block text-slate-700 dark:text-slate-300 font-medium mb-1">Stream name *</label>
                 <input
                   type="text"
                   required
                   placeholder="e.g. Form 3 West or Form 4 Blue"
                   value={classForm.name}
                   onChange={e => setClassForm({ ...classForm, name: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white focus:outline-none focus:border-blue-500"
+                  className="w-full px-3 py-1.5 rounded-md bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-slate-900"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-slate-300 font-medium mb-1">Form Level</label>
+                  <label className="block text-slate-700 dark:text-slate-300 font-medium mb-1">Form level</label>
                   <select
                     value={classForm.formYear}
                     onChange={e => setClassForm({ ...classForm, formYear: Number(e.target.value) })}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white focus:outline-none focus:border-blue-500"
+                    className="w-full px-3 py-1.5 rounded-md bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-slate-900"
                   >
                     <option value={1}>Form 1</option>
                     <option value={2}>Form 2</option>
@@ -584,11 +559,11 @@ export const SchoolAdminDashboard: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-slate-300 font-medium mb-1">Subject</label>
+                  <label className="block text-slate-700 dark:text-slate-300 font-medium mb-1">Subject</label>
                   <select
                     value={classForm.subject}
                     onChange={e => setClassForm({ ...classForm, subject: e.target.value as any })}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white focus:outline-none focus:border-blue-500"
+                    className="w-full px-3 py-1.5 rounded-md bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-slate-900"
                   >
                     <option value="Chemistry">Chemistry</option>
                     <option value="Physics">Physics</option>
@@ -598,51 +573,48 @@ export const SchoolAdminDashboard: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-slate-300 font-medium mb-1">
-                  Number of Enrolled Students *
+                <label className="block text-slate-700 dark:text-slate-300 font-medium mb-1">
+                  Enrolled candidate capacity *
                 </label>
                 <input
                   type="number"
                   min={1}
                   max={120}
                   required
-                  placeholder="e.g. 42"
+                  placeholder="e.g. 40"
                   value={classForm.studentCount}
                   onChange={e => setClassForm({ ...classForm, studentCount: Number(e.target.value) })}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white focus:outline-none focus:border-blue-500 font-mono"
+                  className="w-full px-3 py-1.5 rounded-md bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-slate-900 font-mono"
                 />
-                <p className="text-[10px] text-slate-400 mt-0.5">
-                  Initial student capacity / candidate count for this stream
-                </p>
               </div>
 
               <div>
-                <label className="block text-slate-300 font-medium mb-1">Assign Subject Teacher</label>
+                <label className="block text-slate-700 dark:text-slate-300 font-medium mb-1">Assign teacher</label>
                 <select
                   value={classForm.teacherId}
                   onChange={e => setClassForm({ ...classForm, teacherId: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white focus:outline-none focus:border-blue-500"
+                  className="w-full px-3 py-1.5 rounded-md bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-slate-900"
                 >
-                  <option value="">Select a teacher...</option>
+                  <option value="">Select teacher...</option>
                   {schoolTeachers.map(t => (
                     <option key={t.id} value={t.id}>{t.name} ({t.subjectSpecialization})</option>
                   ))}
                 </select>
               </div>
 
-              <div className="flex gap-2 pt-2">
+              <div className="flex gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setIsAddClassOpen(false)}
-                  className="flex-1 py-2 rounded-xl bg-slate-700 text-slate-300 font-semibold"
+                  className="flex-1 py-1.5 rounded-md border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold"
+                  className="flex-1 py-1.5 rounded-md bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 text-white dark:text-slate-900 font-medium shadow-sm"
                 >
-                  Create Stream
+                  Create stream
                 </button>
               </div>
             </form>
@@ -650,34 +622,22 @@ export const SchoolAdminDashboard: React.FC = () => {
         </div>
       )}
 
-      {/* Delete Teacher Confirmation Modal */}
+      {/* MODAL: DELETE TEACHER */}
       {teacherToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-slate-900 border border-rose-500/40 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 text-xs text-slate-300">
-            <div className="flex items-center space-x-2.5 text-rose-400">
-              <div className="w-10 h-10 rounded-xl bg-rose-500/20 border border-rose-500/30 flex items-center justify-center">
-                <AlertTriangle className="w-5 h-5 text-rose-400" />
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-white">Remove Science Teacher</h3>
-                <span className="text-[11px] text-rose-300">Faculty roster update</span>
-              </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md max-w-md w-full p-5 shadow-xl space-y-4 text-xs">
+            <div>
+              <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">Remove teacher</h3>
+              <p className="text-slate-500 dark:text-slate-400 mt-1">
+                Are you sure you want to remove <strong className="text-slate-900 dark:text-slate-100">{teacherToDelete.name}</strong> from {currentSchool.name}?
+              </p>
             </div>
 
-            <p className="text-slate-300 leading-relaxed">
-              Are you sure you want to remove <strong>{teacherToDelete.name}</strong> ({teacherToDelete.subjectSpecialization}) from {currentSchool.name}?
-            </p>
-
-            <div className="p-3 rounded-xl bg-rose-950/30 border border-rose-500/30 text-rose-200 text-[11px] space-y-1">
-              <div>• Their assigned class streams will be marked as unassigned.</div>
-              <div>• Previous student exam submissions and marks will be preserved.</div>
-            </div>
-
-            <div className="flex gap-2.5 pt-2">
+            <div className="flex justify-end gap-2 pt-2">
               <button
                 type="button"
                 onClick={() => setTeacherToDelete(null)}
-                className="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold"
+                className="px-3 py-1.5 rounded-md border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
               >
                 Cancel
               </button>
@@ -687,43 +647,32 @@ export const SchoolAdminDashboard: React.FC = () => {
                   deleteTeacher(teacherToDelete.id);
                   setTeacherToDelete(null);
                 }}
-                className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold shadow-lg shadow-rose-600/30 flex items-center justify-center gap-1.5"
+                className="px-3 py-1.5 rounded-md bg-rose-600 hover:bg-rose-700 text-white font-medium shadow-sm flex items-center gap-1"
               >
-                <Trash2 className="w-4 h-4" />
-                <span>Remove Teacher</span>
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Remove</span>
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Delete Project Confirmation Modal */}
+      {/* MODAL: DELETE PROJECT */}
       {projectToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-slate-900 border border-rose-500/40 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 text-xs text-slate-300">
-            <div className="flex items-center space-x-2.5 text-rose-400">
-              <div className="w-10 h-10 rounded-xl bg-rose-500/20 border border-rose-500/30 flex items-center justify-center">
-                <AlertTriangle className="w-5 h-5 text-rose-400" />
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-white">Delete Practical Project</h3>
-                <span className="text-[11px] text-rose-300">Curriculum catalog modification</span>
-              </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md max-w-md w-full p-5 shadow-xl space-y-4 text-xs">
+            <div>
+              <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">Delete practical</h3>
+              <p className="text-slate-500 dark:text-slate-400 mt-1">
+                Are you sure you want to remove <strong className="text-slate-900 dark:text-slate-100">{projectToDelete.title}</strong> from {currentSchool.name}&apos;s repository?
+              </p>
             </div>
 
-            <p className="text-slate-300 leading-relaxed">
-              Are you sure you want to remove <strong>{projectToDelete.title}</strong> from {currentSchool.name}&apos;s approved practical library?
-            </p>
-
-            <div className="p-3 rounded-xl bg-rose-950/30 border border-rose-500/30 text-rose-200 text-[11px]">
-              This experiment will no longer appear in your school-specific catalog for assignment.
-            </div>
-
-            <div className="flex gap-2.5 pt-2">
+            <div className="flex justify-end gap-2 pt-2">
               <button
                 type="button"
                 onClick={() => setProjectToDelete(null)}
-                className="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold"
+                className="px-3 py-1.5 rounded-md border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
               >
                 Cancel
               </button>
@@ -733,10 +682,10 @@ export const SchoolAdminDashboard: React.FC = () => {
                   deleteExperiment(projectToDelete.id);
                   setProjectToDelete(null);
                 }}
-                className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold shadow-lg shadow-rose-600/30 flex items-center justify-center gap-1.5"
+                className="px-3 py-1.5 rounded-md bg-rose-600 hover:bg-rose-700 text-white font-medium shadow-sm flex items-center gap-1"
               >
-                <Trash2 className="w-4 h-4" />
-                <span>Delete Project</span>
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Delete</span>
               </button>
             </div>
           </div>

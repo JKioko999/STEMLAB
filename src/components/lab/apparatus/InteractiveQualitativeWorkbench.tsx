@@ -8,7 +8,6 @@ import {
   Trash2, 
   AlertCircle,
   HelpCircle,
-  Sparkles,
   History,
   AlertTriangle,
   Info,
@@ -642,9 +641,9 @@ export const InteractiveQualitativeWorkbench: React.FC<InteractiveQualitativeWor
       {/* Workbench Header Banner */}
       <div className="bg-slate-800/90 border border-slate-700/80 p-4 rounded-2xl flex flex-wrap items-center justify-between gap-3 shadow-lg">
         <div>
-          <div className="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
-            <Sparkles className="w-4 h-4" />
-            <span>Interactive Qualitative Analysis Workbench • KCSE 233/3 (Question 2)</span>
+          <div className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+            <Droplet className="w-4 h-4 text-amber-400" />
+            <span>Qualitative analysis workbench • Chemistry practical</span>
           </div>
           <p className="text-xs text-slate-300 mt-0.5">
             Test tubes are <strong>movable via drag & drop</strong>. Drag any tube between the wooden rack and the white ceramic inspection tile to test reagents up close!
@@ -1070,7 +1069,7 @@ export const InteractiveQualitativeWorkbench: React.FC<InteractiveQualitativeWor
 
                   {/* Volume / Tile Status Badge */}
                   <div className="mt-1 bg-slate-900/90 border border-slate-700 px-1.5 py-0.5 rounded text-[8px] font-mono font-bold text-white whitespace-nowrap shadow">
-                    {t.isOnTile ? 'On Tile ✨' : `${t.liquidVolumeMl.toFixed(1)} cm³`}
+                    {t.isOnTile ? 'On tile' : `${t.liquidVolumeMl.toFixed(1)} cm³`}
                   </div>
                 </div>
               );

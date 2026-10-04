@@ -6,7 +6,6 @@ import {
   Flame, 
   Activity, 
   CheckCircle, 
-  Sparkles, 
   RotateCcw, 
   Plus, 
   Trash2, 

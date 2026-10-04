@@ -1022,14 +1022,14 @@ export const InteractiveOhmsLawWorkbench: React.FC<InteractiveOhmsLawWorkbenchPr
 
               <div className="bg-slate-900 px-3 py-2 rounded-xl border border-slate-750">
                 <span className="text-[10px] uppercase font-bold text-slate-400 block">Circuit State</span>
-                <span className={`text-xs font-bold ${
+                <span className={`text-xs font-semibold ${
                   isDirectBatteryShort 
                     ? 'text-rose-400' 
                     : isCircuitActive 
                     ? 'text-emerald-400' 
                     : 'text-slate-400'
                 }`}>
-                  {isDirectBatteryShort ? '💥 SHORT CIRCUIT' : isCircuitActive ? '⚡ LIVE CURRENT FLOW' : 'OFF (Open / Incomplete)'}
+                  {isDirectBatteryShort ? 'Short circuit' : isCircuitActive ? 'Live current flow' : 'Open / incomplete'}
                 </span>
               </div>
             </div>
@@ -1050,9 +1050,9 @@ export const InteractiveOhmsLawWorkbench: React.FC<InteractiveOhmsLawWorkbenchPr
                 setBenchMessage({ text: `Recorded to Table 2: I = ${currentI.toFixed(3)} A, V = ${voltageV.toFixed(2)} V`, type: 'success' });
               }}
               disabled={!isCircuitActive}
-              className="py-2.5 px-4 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs transition shadow-lg shadow-cyan-600/30 disabled:opacity-50 flex items-center justify-center space-x-1.5"
+              className="py-2 px-3.5 rounded bg-slate-900 dark:bg-slate-100 hover:bg-slate-800 dark:hover:bg-white text-white dark:text-slate-900 font-medium text-xs transition disabled:opacity-40 flex items-center justify-center space-x-1.5"
             >
-              <span>Record Reading into Answer Sheet</span>
+              <span>Record reading into answer sheet</span>
             </button>
           </div>
 

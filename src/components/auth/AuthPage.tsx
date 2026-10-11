@@ -234,14 +234,26 @@ export const AuthPage: React.FC = () => {
 
             <button
               type="button"
+              onClick={() => { setAuthMode('register_admin'); setLoginError(''); setRegistrationError(''); }}
+              className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
+                authMode === 'register_admin'
+                  ? 'bg-indigo-600 text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
+              }`}
+            >
+              Platform Owner / Admin Setup
+            </button>
+
+            <button
+              type="button"
               onClick={() => { setAuthMode('register_student'); setLoginError(''); setRegistrationError(''); }}
-              className={`px-3 py-1 rounded text-xs font-semibold transition-colors ${
+              className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
                 authMode === 'register_student'
                   ? 'bg-emerald-600 text-white shadow-xs'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
               }`}
             >
-              Register student account
+              Register student
             </button>
           </div>
         </div>
@@ -609,22 +621,25 @@ export const AuthPage: React.FC = () => {
             </div>
           )}
 
-          {/* 3. REGISTER PLATFORM ADMIN */}
+          {/* 3. REGISTER PLATFORM ADMIN / OWNER */}
           {authMode === 'register_admin' && (
             <div className="space-y-5">
               <div>
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 text-[11px] font-semibold mb-2">
+                  Platform Owner Access
+                </div>
                 <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-                  Register platform administrator
+                  Set Up Platform Owner Account
                 </h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Set up platform-level coordination access to monitor institutional registrations, curriculum repositories, and metrics.
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                  Register your master credentials here as the owner of STEM Spark Lab. Once created, you will have Super Administrator authority across all schools, teachers, students, practical curriculum repositories, and analytics.
                 </p>
               </div>
 
               <form onSubmit={handleAdminSubmit} className="space-y-4 max-w-md">
                 <div>
                   <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
-                    Full name *
+                    Your full name *
                   </label>
                   <input
                     type="text"
@@ -637,7 +652,7 @@ export const AuthPage: React.FC = () => {
 
                 <div>
                   <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
-                    Administrator email *
+                    Your platform email address *
                   </label>
                   <input
                     type="email"
@@ -646,27 +661,42 @@ export const AuthPage: React.FC = () => {
                     onChange={e => setAdminForm({ ...adminForm, email: e.target.value })}
                     className="w-full px-3 py-1.5 rounded-md bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-xs focus:outline-none focus:ring-1 focus:ring-slate-900"
                   />
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                    This will be the email you use to sign in.
+                  </p>
                 </div>
 
                 <div>
                   <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
-                    Password (optional)
+                    Master password *
                   </label>
                   <input
                     type="password"
-                    placeholder="••••••••"
+                    required
                     value={adminForm.password}
                     onChange={e => setAdminForm({ ...adminForm, password: e.target.value })}
                     className="w-full px-3 py-1.5 rounded-md bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-xs focus:outline-none focus:ring-1 focus:ring-slate-900"
                   />
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                    Choose a secure password to protect platform-level controls.
+                  </p>
                 </div>
 
-                <button
-                  type="submit"
-                  className="w-full py-2 px-4 rounded-md bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 text-white dark:text-slate-900 font-medium text-xs transition-colors shadow-sm"
-                >
-                  Create platform administrator account
-                </button>
+                <div className="pt-2 flex flex-col gap-2">
+                  <button
+                    type="submit"
+                    className="w-full py-2.5 px-4 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs transition-colors shadow-sm"
+                  >
+                    Save credentials & log in as Platform Owner
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAuthMode('login')}
+                    className="w-full py-1.5 px-4 text-center text-xs text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-colors"
+                  >
+                    Already created your credentials? Sign in here
+                  </button>
+                </div>
               </form>
             </div>
           )}
@@ -723,6 +753,16 @@ export const AuthPage: React.FC = () => {
                 >
                   {isSubmitting ? 'Authenticating...' : 'Sign in'}
                 </button>
+
+                <div className="pt-2 text-center border-t border-slate-100 dark:border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => { setAuthMode('register_admin'); setLoginError(''); setRegistrationError(''); }}
+                    className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-medium"
+                  >
+                    Are you the Platform Owner? Set or reset your master credentials →
+                  </button>
+                </div>
               </form>
             </div>
           )}

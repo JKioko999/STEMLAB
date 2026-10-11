@@ -127,8 +127,8 @@ router.post('/', async (req: Request, res: Response) => {
     if (isSupabaseConfigured()) {
       const supabase = getSupabaseClient();
       if (supabase) {
-        await supabase.from('schools').insert([schoolToDb(newSchool)]);
-        await supabase.from('users').insert([userToDb(adminUser)]);
+        await supabase.from('schools').upsert(schoolToDb(newSchool), { onConflict: 'id' });
+        await supabase.from('users').upsert(userToDb(adminUser), { onConflict: 'email' });
         await supabase.from('dispatched_emails').insert([emailToDb(emailDispatch)]);
       }
     }

@@ -12,9 +12,13 @@ import {
   Copy, 
   Trash2, 
   Eye, 
-  X 
+  X,
+  Users as UsersIcon,
+  ShieldCheck,
+  GraduationCap,
+  BookOpen
 } from 'lucide-react';
-import { ExperimentSpec, School } from '../../types';
+import { ExperimentSpec, School, User } from '../../types';
 
 export const SuperAdminDashboard: React.FC = () => {
   const { 
@@ -25,12 +29,15 @@ export const SuperAdminDashboard: React.FC = () => {
     sentEmails,
     registerSchool, 
     deleteSchool,
+    deleteUser,
     startExperiment, 
     switchUser 
   } = useApp();
 
-  const [activeTab, setActiveTab] = useState<'schools' | 'experiments' | 'analytics' | 'outbox'>('schools');
+  const [activeTab, setActiveTab] = useState<'schools' | 'users' | 'experiments' | 'analytics' | 'outbox'>('schools');
   const [searchTerm, setSearchTerm] = useState('');
+  const [userRoleFilter, setUserRoleFilter] = useState<string>('all');
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [selectedCounty, setSelectedCounty] = useState('all');
   const [isAddSchoolModalOpen, setIsAddSchoolModalOpen] = useState(false);
   const [selectedSchoolForDetails, setSelectedSchoolForDetails] = useState<School | null>(null);
@@ -139,10 +146,10 @@ export const SuperAdminDashboard: React.FC = () => {
       </div>
 
       {/* Main Tabs */}
-      <div className="flex space-x-6 border-b border-slate-200 dark:border-slate-800 text-sm font-medium">
+      <div className="flex space-x-6 border-b border-slate-200 dark:border-slate-800 text-sm font-medium overflow-x-auto">
         <button
           onClick={() => setActiveTab('schools')}
-          className={`pb-2.5 -mb-px transition-colors ${
+          className={`pb-2.5 -mb-px whitespace-nowrap transition-colors ${
             activeTab === 'schools'
               ? 'border-b-2 border-slate-900 dark:border-slate-100 text-slate-900 dark:text-slate-100 font-semibold'
               : 'border-b-2 border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
@@ -152,8 +159,19 @@ export const SuperAdminDashboard: React.FC = () => {
         </button>
 
         <button
+          onClick={() => setActiveTab('users')}
+          className={`pb-2.5 -mb-px whitespace-nowrap transition-colors ${
+            activeTab === 'users'
+              ? 'border-b-2 border-slate-900 dark:border-slate-100 text-slate-900 dark:text-slate-100 font-semibold'
+              : 'border-b-2 border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+          }`}
+        >
+          Registered Users ({users.length})
+        </button>
+
+        <button
           onClick={() => setActiveTab('experiments')}
-          className={`pb-2.5 -mb-px transition-colors ${
+          className={`pb-2.5 -mb-px whitespace-nowrap transition-colors ${
             activeTab === 'experiments'
               ? 'border-b-2 border-slate-900 dark:border-slate-100 text-slate-900 dark:text-slate-100 font-semibold'
               : 'border-b-2 border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
@@ -164,7 +182,7 @@ export const SuperAdminDashboard: React.FC = () => {
 
         <button
           onClick={() => setActiveTab('analytics')}
-          className={`pb-2.5 -mb-px transition-colors ${
+          className={`pb-2.5 -mb-px whitespace-nowrap transition-colors ${
             activeTab === 'analytics'
               ? 'border-b-2 border-slate-900 dark:border-slate-100 text-slate-900 dark:text-slate-100 font-semibold'
               : 'border-b-2 border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
@@ -175,7 +193,7 @@ export const SuperAdminDashboard: React.FC = () => {
 
         <button
           onClick={() => setActiveTab('outbox')}
-          className={`pb-2.5 -mb-px transition-colors ${
+          className={`pb-2.5 -mb-px whitespace-nowrap transition-colors ${
             activeTab === 'outbox'
               ? 'border-b-2 border-slate-900 dark:border-slate-100 text-slate-900 dark:text-slate-100 font-semibold'
               : 'border-b-2 border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
@@ -306,6 +324,126 @@ export const SuperAdminDashboard: React.FC = () => {
                   })}
                 </tbody>
               </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB: ALL REGISTERED USERS ACROSS PLATFORM */}
+      {activeTab === 'users' && (
+        <div className="space-y-3">
+          
+          {/* User Search & Role Filter Bar */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white dark:bg-slate-900 p-3 rounded-md border border-slate-200 dark:border-slate-800">
+            <div className="relative w-full sm:w-80">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+              <input
+                type="text"
+                placeholder="Search user name or email..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="w-full pl-8 pr-3 py-1.5 rounded-md bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-400"
+              />
+            </div>
+
+            <div className="flex items-center space-x-2 w-full sm:w-auto">
+              <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                <Filter className="w-3 h-3" /> Role:
+              </span>
+              <select
+                value={userRoleFilter}
+                onChange={e => setUserRoleFilter(e.target.value)}
+                className="px-2.5 py-1.5 rounded-md bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs text-slate-800 dark:text-slate-200 focus:outline-none"
+              >
+                <option value="all">All roles ({users.length})</option>
+                <option value="super_admin">Platform Owner ({users.filter(u => u.role === 'super_admin').length})</option>
+                <option value="school_admin">School Admin ({users.filter(u => u.role === 'school_admin').length})</option>
+                <option value="teacher">Teachers ({users.filter(u => u.role === 'teacher').length})</option>
+                <option value="student">Students ({users.filter(u => u.role === 'student').length})</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Users Table */}
+          <div className="bg-white dark:bg-slate-900 rounded-md border border-slate-200 dark:border-slate-800 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
+                  <tr>
+                    <th className="px-4 py-2.5">User</th>
+                    <th className="px-4 py-2.5">Role</th>
+                    <th className="px-4 py-2.5">Affiliated School</th>
+                    <th className="px-4 py-2.5">Details</th>
+                    <th className="px-4 py-2.5 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {users
+                    .filter(u => {
+                      const term = searchTerm.toLowerCase();
+                      const matchesSearch = u.name.toLowerCase().includes(term) || u.email.toLowerCase().includes(term);
+                      const matchesRole = userRoleFilter === 'all' || u.role === userRoleFilter;
+                      return matchesSearch && matchesRole;
+                    })
+                    .map(u => {
+                      const userSchool = schools.find(s => s.id === u.schoolId);
+                      return (
+                        <tr key={u.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                          <td className="px-4 py-3">
+                            <div className="font-medium text-slate-900 dark:text-slate-100">{u.name}</div>
+                            <div className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">{u.email}</div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-medium border ${
+                              u.role === 'super_admin'
+                                ? 'bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300 border-purple-200 dark:border-purple-800'
+                                : u.role === 'school_admin'
+                                ? 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300 border-blue-200 dark:border-blue-800'
+                                : u.role === 'teacher'
+                                ? 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300 border-amber-200 dark:border-amber-800'
+                                : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+                            }`}>
+                              {u.role === 'super_admin' ? 'Platform Owner' : u.role === 'school_admin' ? 'School Admin' : u.role === 'teacher' ? 'Teacher' : 'Student'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
+                            {userSchool ? userSchool.name : (u.role === 'super_admin' ? 'System-Wide' : 'Unassigned')}
+                          </td>
+                          <td className="px-4 py-3 text-slate-500 dark:text-slate-400 text-[11px]">
+                            {u.role === 'student' && u.admissionNumber && `Adm: ${u.admissionNumber} • ${u.className || ''}`}
+                            {u.role === 'teacher' && (u.subjectSpecialization || 'Science Teacher')}
+                            {u.role === 'school_admin' && 'Principal / Institutional Lead'}
+                            {u.role === 'super_admin' && 'Master Platform Administrator'}
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <div className="flex items-center justify-end space-x-1">
+                              <button
+                                onClick={() => switchUser(u.id)}
+                                className="px-2 py-1 rounded text-[11px] font-medium border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors inline-flex items-center gap-1"
+                                title={`Switch to ${u.name}`}
+                              >
+                                <span>Switch</span>
+                                <ExternalLink className="w-3 h-3 text-slate-400" />
+                              </button>
+                              <button
+                                onClick={() => setUserToDelete(u)}
+                                className="p-1 rounded text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                title={`Delete ${u.name}`}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                </tbody>
+              </table>
+              {users.length === 0 && (
+                <div className="p-8 text-center text-slate-400 text-xs">
+                  No registered users in the database yet.
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -623,6 +761,40 @@ export const SuperAdminDashboard: React.FC = () => {
                 className="px-3 py-1.5 rounded-md bg-rose-600 hover:bg-rose-700 text-white text-xs font-medium shadow-sm"
               >
                 Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: USER DELETE CONFIRMATION */}
+      {userToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md max-w-md w-full p-5 shadow-xl space-y-4">
+            <div>
+              <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">Delete user</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                Are you sure you want to remove <strong className="text-slate-900 dark:text-slate-100">{userToDelete.name}</strong> ({userToDelete.email}) from the system and Supabase database?
+              </p>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setUserToDelete(null)}
+                className="px-3 py-1.5 rounded-md border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  deleteUser(userToDelete.id);
+                  setUserToDelete(null);
+                }}
+                className="px-3 py-1.5 rounded-md bg-rose-600 hover:bg-rose-700 text-white text-xs font-medium shadow-sm"
+              >
+                Delete User
               </button>
             </div>
           </div>

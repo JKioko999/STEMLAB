@@ -13,7 +13,7 @@ import { User, EmailDispatch, ClassGroup, School } from '../../src/types/index.j
 
 const router = Router();
 
-// GET /api/users - List users (supports ?schoolId= & ?role=)
+// GET /api/users - List users (supports ?schoolId= & ?role= & ?email=)
 router.get('/', async (req: Request, res: Response) => {
   try {
     const { schoolId, role, email } = req.query;
@@ -24,7 +24,7 @@ router.get('/', async (req: Request, res: Response) => {
         let query = supabase.from('users').select('*');
         if (schoolId) query = query.eq('school_id', schoolId);
         if (role) query = query.eq('role', role);
-        if (email) query = query.eq('email', email);
+        if (email) query = query.ilike('email', String(email).trim());
         const { data, error } = await query;
         if (!error && data) {
           return res.json(data.map(userFromDb));
@@ -40,7 +40,7 @@ router.get('/', async (req: Request, res: Response) => {
       results = results.filter(u => u.role === role);
     }
     if (email) {
-      results = results.filter(u => u.email.toLowerCase() === String(email).toLowerCase());
+      results = results.filter(u => u.email.toLowerCase() === String(email).trim().toLowerCase());
     }
 
     return res.json(results);
@@ -49,7 +49,7 @@ router.get('/', async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/users/admin - Register a Platform Super Administrator
+// POST /api/users/admin - Register or update a Platform Super Administrator
 router.post('/admin', async (req: Request, res: Response) => {
   try {
     const { id, name, email, password } = req.body;
@@ -69,12 +69,20 @@ router.post('/admin', async (req: Request, res: Response) => {
       tempPassword: password || undefined
     };
 
+    // Remove any existing user with same email in memory store
+    store.users = store.users.filter(u => u.email.toLowerCase() !== newAdmin.email);
     store.users.unshift(newAdmin);
 
     if (isSupabaseConfigured()) {
       const supabase = getSupabaseClient();
       if (supabase) {
-        await supabase.from('users').insert([userToDb(newAdmin)]);
+        // Upsert by email so duplicate email registers/updates existing platform owner cleanly
+        const { error: upsertErr } = await supabase
+          .from('users')
+          .upsert(userToDb(newAdmin), { onConflict: 'email' });
+        if (upsertErr) {
+          console.error('[SUPABASE] Admin upsert error:', upsertErr);
+        }
       }
     }
 
@@ -127,7 +135,12 @@ router.post('/student', async (req: Request, res: Response) => {
     if (isSupabaseConfigured()) {
       const supabase = getSupabaseClient();
       if (supabase) {
-        await supabase.from('users').insert([userToDb(newStudentUser)]);
+        const { error: insErr } = await supabase
+          .from('users')
+          .upsert(userToDb(newStudentUser), { onConflict: 'email' });
+        if (insErr) {
+          console.error('[SUPABASE] Student registration error:', insErr);
+        }
         // Sync actual student count in class
         const { count: clsCount } = await supabase.from('users').select('*', { count: 'exact', head: true }).eq('class_id', classId).eq('role', 'student');
         if (clsCount !== null) {
@@ -191,6 +204,7 @@ router.post('/teacher', async (req: Request, res: Response) => {
       messageBody: `Dear Teacher ${name},\n\nYou have been registered as a Science Teacher (${newTeacher.subjectSpecialization}) at ${targetSchool?.name || 'your institution'} on STEM-SPARK-LAB.\n\nYour temporary password: ${tempPassword}\nPlease update your password on initial sign in.`
     };
 
+    store.users = store.users.filter(u => u.email.toLowerCase() !== newTeacher.email);
     store.users.unshift(newTeacher);
     store.emails.unshift(emailDispatch);
     store.schools = store.schools.map(s => s.id === schoolId ? { ...s, totalTeachers: s.totalTeachers + 1 } : s);
@@ -198,7 +212,12 @@ router.post('/teacher', async (req: Request, res: Response) => {
     if (isSupabaseConfigured()) {
       const supabase = getSupabaseClient();
       if (supabase) {
-        await supabase.from('users').insert([userToDb(newTeacher)]);
+        const { error: tchrErr } = await supabase
+          .from('users')
+          .upsert(userToDb(newTeacher), { onConflict: 'email' });
+        if (tchrErr) {
+          console.error('[SUPABASE] Teacher registration error:', tchrErr);
+        }
         await supabase.from('dispatched_emails').insert([emailToDb(emailDispatch)]);
         // Sync actual teacher count
         const { count: tchrCount } = await supabase.from('users').select('*', { count: 'exact', head: true }).eq('school_id', schoolId).eq('role', 'teacher');

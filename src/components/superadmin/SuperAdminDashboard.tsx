@@ -630,7 +630,7 @@ export const SuperAdminDashboard: React.FC = () => {
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Alliance High School"
+                    placeholder="Enter official school name"
                     value={newSchoolForm.name}
                     onChange={e => setNewSchoolForm({ ...newSchoolForm, name: e.target.value })}
                     className="w-full px-3 py-1.5 rounded-md bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-slate-900"

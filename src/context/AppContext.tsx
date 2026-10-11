@@ -96,107 +96,22 @@ const generateTempPassword = (prefix: 'Stem' | 'Tchr') => {
   return `${prefix}@${num}!`;
 };
 
-const DEFAULT_SCHOOLS: School[] = [
-  {
-    id: 'sch-alliance-science',
-    name: 'Alliance High Science Wing',
-    registrationNumber: 'MOE/REG/00101/2026',
-    county: 'Kiambu',
-    subCounty: 'Kikuyu',
-    category: 'National',
-    subscriptionPlan: 'Institutional Pro',
-    adminName: 'Dr. David Ochieng',
-    adminEmail: 'principal@alliancehigh.ac.ke',
-    phone: '+254 711 000 111',
-    totalStudents: 160,
-    totalTeachers: 3,
-    createdAt: '2026-01-10',
-    status: 'active'
-  },
-  {
-    id: 'sch-kenya-high',
-    name: 'The Kenya High Laboratory',
-    registrationNumber: 'MOE/REG/00102/2026',
-    county: 'Nairobi',
-    subCounty: 'Westlands',
-    category: 'National',
-    subscriptionPlan: 'Institutional Pro',
-    adminName: 'Mrs. Mary Ouko',
-    adminEmail: 'admin@kenyahigh.ac.ke',
-    phone: '+254 722 000 222',
-    totalStudents: 180,
-    totalTeachers: 4,
-    createdAt: '2026-01-15',
-    status: 'active'
-  }
-];
-
-const DEFAULT_CLASSES: ClassGroup[] = [
-  {
-    id: 'cls-f4-chem',
-    schoolId: 'sch-alliance-science',
-    name: 'Form 4 East (KCSE Chemistry Candidate)',
-    formYear: 4,
-    teacherId: 'usr-teacher-chem',
-    teacherName: 'Mdm. Grace Kamau',
-    subject: 'Chemistry',
-    studentCount: 40
-  },
-  {
-    id: 'cls-f4-phys',
-    schoolId: 'sch-alliance-science',
-    name: 'Form 4 West (KCSE Physics Candidate)',
-    formYear: 4,
-    teacherId: 'usr-teacher-phys',
-    teacherName: 'Mr. Peter Otieno',
-    subject: 'Physics',
-    studentCount: 38
-  },
-  {
-    id: 'cls-f4-bio',
-    schoolId: 'sch-alliance-science',
-    name: 'Form 4 North (KCSE Biology Candidate)',
-    formYear: 4,
-    teacherId: 'usr-teacher-bio',
-    teacherName: 'Mrs. Sarah Ndwiga',
-    subject: 'Biology',
-    studentCount: 42
-  },
-  {
-    id: 'cls-f3-chem',
-    schoolId: 'sch-alliance-science',
-    name: 'Form 3 Central (Practical Chemistry)',
-    formYear: 3,
-    teacherId: 'usr-teacher-chem',
-    teacherName: 'Mdm. Grace Kamau',
-    subject: 'Chemistry',
-    studentCount: 40
-  },
-  {
-    id: 'cls-kh-f4-chem',
-    schoolId: 'sch-kenya-high',
-    name: 'Form 4 Platinum (KCSE Chemistry Candidate)',
-    formYear: 4,
-    teacherId: 'usr-teacher-chem-2',
-    teacherName: 'Mr. Andrew Barasa',
-    subject: 'Chemistry',
-    studentCount: 45
-  }
-];
-
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Clean live state: experiments remain, all others start clean and populate dynamically or from live DB
+  // Clean live state: experiments remain, all others start completely clean and populate dynamically from live DB
   const [schools, setSchools] = useState<School[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.SCHOOLS);
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        // Only return if it doesn't contain hardcoded mock IDs
+        if (Array.isArray(parsed) && parsed.length > 0 && !parsed.some(s => s.id === 'sch-alliance-science' || s.id === 'sch-kenya-high')) {
+          return parsed;
+        }
       } catch (e) {}
     }
-    return DEFAULT_SCHOOLS;
+    return [];
   });
 
   const [users, setUsers] = useState<User[]>(() => {
@@ -209,10 +124,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0 && !parsed.some(c => c.id === 'cls-f4-chem' || c.schoolId === 'sch-alliance-science')) {
+          return parsed;
+        }
       } catch (e) {}
     }
-    return DEFAULT_CLASSES;
+    return [];
   });
 
   const [experiments, setExperiments] = useState<ExperimentSpec[]>(() => {

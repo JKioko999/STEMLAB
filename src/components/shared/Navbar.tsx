@@ -80,11 +80,21 @@ export const Navbar: React.FC = () => {
           {/* Theme Toggle Button */}
           <button
             onClick={toggleTheme}
-            className="p-1.5 rounded-md border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-slate-400"
+            className="px-2.5 py-1.5 rounded-md border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-slate-400 flex items-center gap-1.5 text-xs shadow-2xs cursor-pointer"
             title={`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`}
             aria-label="Toggle theme"
           >
-            {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+            {theme === 'light' ? (
+              <>
+                <Moon className="w-3.5 h-3.5 text-slate-600" />
+                <span className="text-[11px] font-medium hidden sm:inline text-slate-700">Dark mode</span>
+              </>
+            ) : (
+              <>
+                <Sun className="w-3.5 h-3.5 text-amber-400" />
+                <span className="text-[11px] font-medium hidden sm:inline text-slate-200">Light mode</span>
+              </>
+            )}
           </button>
 
           {currentUser ? (
@@ -127,6 +137,26 @@ export const Navbar: React.FC = () => {
                       <LayoutDashboard className="w-3.5 h-3.5 text-slate-400" />
                       <span>Dashboard</span>
                     </button>
+
+                    <button
+                      onClick={() => {
+                        toggleTheme();
+                        setUserMenuOpen(false);
+                      }}
+                      className="w-full text-left px-3 py-1.5 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-between"
+                    >
+                      <div className="flex items-center gap-2">
+                        {theme === 'light' ? (
+                          <Moon className="w-3.5 h-3.5 text-slate-500" />
+                        ) : (
+                          <Sun className="w-3.5 h-3.5 text-amber-400" />
+                        )}
+                        <span>Appearance</span>
+                      </div>
+                      <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800">
+                        {theme === 'light' ? 'White & Grey' : 'Dark'}
+                      </span>
+                    </button>
                   </div>
 
                   <div className="border-t border-slate-100 dark:border-slate-800 pt-1">
@@ -145,7 +175,7 @@ export const Navbar: React.FC = () => {
               )}
             </div>
           ) : (
-            <div className="flex items-center space-x-1.5">
+            <div className="flex items-center space-x-2">
               <button
                 onClick={() => {
                   setAuthMode('login');
@@ -157,12 +187,12 @@ export const Navbar: React.FC = () => {
               </button>
               <button
                 onClick={() => {
-                  setAuthMode('register_school');
+                  setAuthMode('register_student');
                   setCurrentView('auth');
                 }}
-                className="px-3 py-1.5 text-xs font-medium rounded-md bg-slate-900 dark:bg-slate-100 hover:bg-slate-800 dark:hover:bg-slate-200 text-white dark:text-slate-900 transition-colors"
+                className="px-3 py-1.5 text-xs font-semibold rounded-md bg-emerald-600 hover:bg-emerald-700 text-white transition-colors shadow-xs"
               >
-                Register school
+                Register student account
               </button>
             </div>
           )}

@@ -1,6 +1,11 @@
 import { Router, Request, Response } from 'express';
 import { store } from '../db/store.js';
-import { isSupabaseConfigured, getSupabaseClient } from '../db/supabase.js';
+import { 
+  isSupabaseConfigured, 
+  getSupabaseClient, 
+  attemptFromDb, 
+  attemptToDb 
+} from '../db/supabase.js';
 import { Attempt } from '../../src/types/index.js';
 
 const router = Router();
@@ -8,27 +13,26 @@ const router = Router();
 // GET /api/attempts - List attempts
 router.get('/', async (req: Request, res: Response) => {
   try {
-    const { assignmentId, studentId, teacherId, schoolId } = req.query;
-    let results = [...store.attempts];
-
-    if (assignmentId) results = results.filter(a => a.assignmentId === assignmentId);
-    if (studentId) results = results.filter(a => a.studentId === studentId);
-    if (teacherId) results = results.filter(a => a.teacherId === teacherId);
-    if (schoolId) results = results.filter(a => a.schoolId === schoolId);
+    const { assignmentId, studentId, schoolId } = req.query;
 
     if (isSupabaseConfigured()) {
       const supabase = getSupabaseClient();
       if (supabase) {
-        let query = supabase.from('attempts').select('*');
+        let query = supabase.from('attempts').select('*').order('started_at', { ascending: false });
         if (assignmentId) query = query.eq('assignment_id', assignmentId);
         if (studentId) query = query.eq('student_id', studentId);
         if (schoolId) query = query.eq('school_id', schoolId);
         const { data, error } = await query;
-        if (!error && data && data.length > 0) {
-          return res.json(data);
+        if (!error && data) {
+          return res.json(data.map(attemptFromDb));
         }
       }
     }
+
+    let results = [...store.attempts];
+    if (assignmentId) results = results.filter(a => a.assignmentId === assignmentId);
+    if (studentId) results = results.filter(a => a.studentId === studentId);
+    if (schoolId) results = results.filter(a => a.schoolId === schoolId);
 
     return res.json(results);
   } catch (err: any) {
@@ -40,8 +44,8 @@ router.get('/', async (req: Request, res: Response) => {
 router.post('/', async (req: Request, res: Response) => {
   try {
     const attemptData = req.body;
-    if (!attemptData.experimentId || !attemptData.studentId) {
-      return res.status(400).json({ error: 'Missing experimentId or studentId' });
+    if (!attemptData.experimentId) {
+      return res.status(400).json({ error: 'Missing experimentId' });
     }
 
     const newAttempt: Attempt = {
@@ -64,31 +68,13 @@ router.post('/', async (req: Request, res: Response) => {
     if (isSupabaseConfigured()) {
       const supabase = getSupabaseClient();
       if (supabase) {
-        await supabase.from('attempts').insert([{
-          id: newAttempt.id,
-          school_id: newAttempt.schoolId,
-          assignment_id: newAttempt.assignmentId,
-          is_practice_open_lab: newAttempt.isPracticeOpenLab,
-          experiment_id: newAttempt.experimentId,
-          experiment_title: newAttempt.experimentTitle,
-          subject: newAttempt.subject,
-          student_id: newAttempt.studentId,
-          student_name: newAttempt.studentName,
-          student_admission: newAttempt.studentAdmission,
-          teacher_id: newAttempt.teacherId,
-          teacher_name: newAttempt.teacherName,
-          class_id: newAttempt.classId,
-          class_name: newAttempt.className,
-          mode: newAttempt.mode,
-          started_at: newAttempt.startedAt,
-          submitted_at: newAttempt.submittedAt,
-          status: newAttempt.status,
-          step_logs: newAttempt.stepLogs,
-          answers: newAttempt.answers,
-          total_score: newAttempt.totalScore,
-          max_score: newAttempt.maxScore,
-          percentage: newAttempt.percentage
-        }]);
+        await supabase.from('attempts').insert([attemptToDb(newAttempt)]);
+        if (newAttempt.assignmentId) {
+          const { count } = await supabase.from('attempts').select('*', { count: 'exact', head: true }).eq('assignment_id', newAttempt.assignmentId);
+          if (count !== null) {
+            await supabase.from('assignments').update({ submitted_count: count }).eq('id', newAttempt.assignmentId);
+          }
+        }
       }
     }
 
@@ -98,51 +84,65 @@ router.post('/', async (req: Request, res: Response) => {
   }
 });
 
-// PUT /api/attempts/:id/grade - Teacher grading override and feedback release
-router.put('/:id/grade', async (req: Request, res: Response) => {
+// PATCH /api/attempts/:id/grade - Teacher evaluates and updates scores
+router.patch('/:id/grade', async (req: Request, res: Response) => {
   const { id } = req.params;
-  const { scoreUpdates, teacherComments } = req.body;
   try {
-    let updatedAttempt: Attempt | null = null;
+    const { scoreUpdates, teacherComments } = req.body;
 
-    store.attempts = store.attempts.map(att => {
-      if (att.id !== id) return att;
+    let attempt: Attempt | undefined = store.attempts.find(a => a.id === id);
 
-      const updatedAnswers = att.answers.map(ans => {
-        const update = (scoreUpdates || []).find((u: any) => u.questionId === ans.questionId);
-        if (update) {
-          return {
-            ...ans,
-            teacherScore: update.teacherScore,
-            feedback: update.feedback
-          };
-        }
-        return ans;
-      });
+    if (!attempt && isSupabaseConfigured()) {
+      const supabase = getSupabaseClient();
+      if (supabase) {
+        const { data: attData } = await supabase.from('attempts').select('*').eq('id', id).maybeSingle();
+        if (attData) attempt = attemptFromDb(attData);
+      }
+    }
 
-      const stepScore = att.stepLogs.reduce((acc, curr) => acc + curr.marksEarned, 0);
-      const answerScore = updatedAnswers.reduce((acc, curr) => {
-        const score = curr.teacherScore !== undefined ? curr.teacherScore : curr.autoScore;
-        return acc + score;
-      }, 0);
+    if (!attempt) {
+      return res.status(404).json({ error: 'Attempt not found' });
+    }
 
-      const totalScore = Math.min(att.maxScore, stepScore + answerScore);
-      const percentage = Math.round((totalScore / att.maxScore) * 100);
-
-      updatedAttempt = {
-        ...att,
-        answers: updatedAnswers,
-        totalScore,
-        percentage,
-        teacherComments,
-        status: 'graded'
-      };
-
-      return updatedAttempt;
+    const updatedAnswers = attempt.answers.map(ans => {
+      const update = scoreUpdates?.find((u: any) => u.questionId === ans.questionId);
+      if (update) {
+        return {
+          ...ans,
+          teacherScore: update.teacherScore,
+          feedback: update.feedback || ans.feedback
+        };
+      }
+      return ans;
     });
 
-    if (!updatedAttempt) {
-      return res.status(404).json({ error: 'Attempt not found' });
+    const questionMarks = updatedAnswers.reduce((acc, a) => acc + (a.teacherScore !== undefined ? a.teacherScore : a.autoScore), 0);
+    const proceduralMarks = attempt.stepLogs.reduce((acc, l) => acc + l.marksEarned, 0);
+    const newTotal = questionMarks + proceduralMarks;
+    const newPercentage = Math.round((newTotal / attempt.maxScore) * 100);
+
+    const updatedAttempt: Attempt = {
+      ...attempt,
+      answers: updatedAnswers,
+      totalScore: newTotal,
+      percentage: newPercentage,
+      teacherComments: teacherComments || attempt.teacherComments,
+      status: 'graded'
+    };
+
+    store.attempts = store.attempts.map(a => a.id === id ? updatedAttempt : a);
+
+    if (isSupabaseConfigured()) {
+      const supabase = getSupabaseClient();
+      if (supabase) {
+        await supabase.from('attempts').update({
+          answers: updatedAttempt.answers,
+          total_score: updatedAttempt.totalScore,
+          percentage: updatedAttempt.percentage,
+          teacher_comments: updatedAttempt.teacherComments,
+          status: 'graded'
+        }).eq('id', id);
+      }
     }
 
     return res.json(updatedAttempt);
@@ -151,19 +151,22 @@ router.put('/:id/grade', async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/attempts/release-grades - Release graded marks to students
+// POST /api/attempts/release-grades - Release feedback to students
 router.post('/release-grades', async (req: Request, res: Response) => {
-  const { assignmentId } = req.body;
   try {
-    store.attempts = store.attempts.map(att => {
-      if (att.assignmentId === assignmentId) {
-        return {
-          ...att,
-          teacherFeedbackReleased: true
-        };
+    const { assignmentId } = req.body;
+    if (!assignmentId) {
+      return res.status(400).json({ error: 'Missing assignmentId' });
+    }
+
+    store.attempts = store.attempts.map(a => a.assignmentId === assignmentId ? { ...a, teacherFeedbackReleased: true } : a);
+
+    if (isSupabaseConfigured()) {
+      const supabase = getSupabaseClient();
+      if (supabase) {
+        await supabase.from('attempts').update({ teacher_feedback_released: true }).eq('assignment_id', assignmentId);
       }
-      return att;
-    });
+    }
 
     return res.json({ success: true, assignmentId });
   } catch (err: any) {

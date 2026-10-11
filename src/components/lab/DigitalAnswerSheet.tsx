@@ -9,6 +9,7 @@ import {
   Check, 
   AlertTriangle 
 } from 'lucide-react';
+import { GraphPlottingQuestion } from './GraphPlottingQuestion';
 
 interface DigitalAnswerSheetProps {
   questions: AnswerSheetQuestion[];
@@ -88,8 +89,29 @@ export const DigitalAnswerSheet: React.FC<DigitalAnswerSheetProps> = ({
     if (!liveTelemetry) return;
 
     if (qType === 'data_table') {
-      if (liveTelemetry.titre !== undefined) {
-        const titreVal = liveTelemetry.titre;
+      // Check if this table has recorded trials (solubility, rate of reaction, or custom trials)
+      if (liveTelemetry.recordedTrials && Array.isArray(liveTelemetry.recordedTrials) && liveTelemetry.recordedTrials.length > 0) {
+        const tableState: Record<string, any> = {};
+        liveTelemetry.recordedTrials.forEach((tr: any, idx: number) => {
+          tableState[`t${idx + 1}`] = {
+            col_1: tr.col_1 ?? tr.solubility ?? tr.time ?? tr.temp,
+            col_2: tr.col_2 ?? tr.temp ?? tr.observation,
+            col_3: tr.col_3 ?? tr.observation ?? '',
+            solubility: tr.solubility,
+            temp: tr.temp,
+            time: tr.time
+          };
+        });
+        setAnswersState(prev => ({
+          ...prev,
+          [questionId]: {
+            ...prev[questionId],
+            ...tableState
+          }
+        }));
+        setCopiedNotification('Recorded live readings into table.');
+      } else if (liveTelemetry.titrationTitre !== undefined || liveTelemetry.titre !== undefined) {
+        const titreVal = liveTelemetry.titrationTitre ?? liveTelemetry.titre;
         setAnswersState(prev => ({
           ...prev,
           [questionId]: {
@@ -118,12 +140,19 @@ export const DigitalAnswerSheet: React.FC<DigitalAnswerSheetProps> = ({
         setCopiedNotification('Pasted workbench observation note into answer field.');
       }
     } else if (qType === 'calculation') {
-      if (liveTelemetry.titre !== undefined) {
+      const vol = liveTelemetry.titrationTitre ?? liveTelemetry.titre;
+      if (vol !== undefined) {
         setAnswersState(prev => ({
           ...prev,
-          [questionId]: liveTelemetry.titre
+          [questionId]: vol
         }));
-        setCopiedNotification(`Pasted live volume (${liveTelemetry.titre} cm³) into calculation.`);
+        setCopiedNotification(`Pasted live volume (${vol} cm³) into calculation.`);
+      } else if (liveTelemetry.crystallizationTemp !== undefined && liveTelemetry.crystallizationTemp !== null) {
+        setAnswersState(prev => ({
+          ...prev,
+          [questionId]: liveTelemetry.crystallizationTemp
+        }));
+        setCopiedNotification(`Pasted live crystallization temp (${liveTelemetry.crystallizationTemp}°C).`);
       }
     }
 
@@ -141,22 +170,47 @@ export const DigitalAnswerSheet: React.FC<DigitalAnswerSheetProps> = ({
       if (q.type === 'data_table') {
         if (val && Object.keys(val).length >= (q.tableRows?.length || 3)) {
           const rowKeys = Object.keys(val);
-          let allConsistent = true;
-          let withinAccuracy = true;
-          const standardTitre = q.tableRows?.[0]?.simulatedValue || 24.50;
+          const hasTitre = rowKeys.some(k => val[k]?.titre !== undefined);
 
-          rowKeys.forEach(k => {
-            const r = val[k];
-            if (r && r.titre !== undefined) {
-              const diff = Math.abs(r.titre - standardTitre);
-              if (diff > 0.40) withinAccuracy = false;
+          if (hasTitre) {
+            let withinAccuracy = true;
+            const standardTitre = q.tableRows?.[0]?.simulatedValue || 24.50;
+
+            rowKeys.forEach(k => {
+              const r = val[k];
+              if (r && r.titre !== undefined) {
+                const diff = Math.abs(r.titre - standardTitre);
+                if (diff > 0.40) withinAccuracy = false;
+              }
+            });
+
+            if (withinAccuracy) {
+              autoScore = q.maxMarks;
+            } else {
+              autoScore = Math.max(1, Math.round(q.maxMarks * 0.6));
             }
-          });
-
-          if (withinAccuracy) {
-            autoScore = q.maxMarks;
           } else {
-            autoScore = Math.max(1, Math.round(q.maxMarks * 0.6));
+            // General / Solubility table grading: evaluate rows against simulatedValue
+            let accurateCount = 0;
+            const totalRows = q.tableRows?.length || rowKeys.length;
+
+            (q.tableRows || []).forEach((r, idx) => {
+              const rowKey = `t${idx + 1}`;
+              const studentRow = val[rowKey];
+              if (studentRow) {
+                const enteredVal = Number(studentRow.col_2 ?? studentRow.temp ?? studentRow.col_1 ?? studentRow.solubility);
+                const target = r.simulatedValue;
+                const tol = r.tolerance || 2.0;
+
+                if (!isNaN(enteredVal) && Math.abs(enteredVal - target) <= tol) {
+                  accurateCount++;
+                } else if (!isNaN(enteredVal) && Math.abs(enteredVal - target) <= tol * 2) {
+                  accurateCount += 0.5;
+                }
+              }
+            });
+
+            autoScore = Math.max(1, Math.round((accurateCount / totalRows) * q.maxMarks));
           }
         }
       } else if (q.type === 'calculation') {
@@ -194,16 +248,40 @@ export const DigitalAnswerSheet: React.FC<DigitalAnswerSheetProps> = ({
         }
       } else if (q.type === 'short_answer') {
         const text = String(val || '').toLowerCase();
-        let matched = false;
         const keywords = [
+          ...(q.acceptedKeywords || []),
           ...(q.observationAcceptedKeywords || []),
           ...(q.inferenceAcceptedKeywords || [])
         ];
+        
+        if (keywords.length === 0 && q.modelAnswer) {
+          const tokens = q.modelAnswer.split(/[\s,()+=->]+/).filter(t => t.length > 2);
+          keywords.push(...tokens);
+        }
+
+        let matchedCount = 0;
         keywords.forEach((kw: string) => {
-          if (text.includes(kw.toLowerCase())) matched = true;
+          if (text.includes(kw.toLowerCase())) matchedCount++;
         });
-        if (matched) autoScore = q.maxMarks;
-        else if (text.trim().length > 5) autoScore = 1;
+
+        if (keywords.length > 0 && matchedCount >= Math.min(2, keywords.length)) {
+          autoScore = q.maxMarks;
+        } else if (matchedCount >= 1) {
+          autoScore = Math.max(1, Math.ceil(q.maxMarks * 0.5));
+        } else if (text.trim().length > 10) {
+          autoScore = Math.max(1, Math.floor(q.maxMarks * 0.4));
+        }
+      } else if (q.type === 'graph' || q.type === 'graph_plotting') {
+        const graphVal = val as { points?: any[]; hasCurve?: boolean } | undefined;
+        const ptCount = graphVal?.points?.length || 0;
+        const hasCurve = graphVal?.hasCurve ?? false;
+        if (ptCount >= 4 && hasCurve) {
+          autoScore = q.maxMarks;
+        } else if (ptCount >= 3) {
+          autoScore = Math.max(1, Math.round(q.maxMarks * 0.67));
+        } else if (ptCount >= 1) {
+          autoScore = 1;
+        }
       }
 
       return {
@@ -376,61 +454,126 @@ export const DigitalAnswerSheet: React.FC<DigitalAnswerSheetProps> = ({
             </div>
 
             {/* DATA TABLE QUESTION */}
-            {q.type === 'data_table' && (
-              <div className="overflow-x-auto pt-2">
-                <table className="w-full text-xs text-left border border-slate-200 dark:border-slate-800 rounded">
-                  <thead className="bg-slate-50 dark:bg-slate-850 text-slate-600 dark:text-slate-400 font-medium border-b border-slate-200 dark:border-slate-800">
-                    <tr>
-                      <th className="p-2.5">Trial</th>
-                      <th className="p-2.5">Final reading (cm³)</th>
-                      <th className="p-2.5">Initial reading (cm³)</th>
-                      <th className="p-2.5">Volume used (cm³)</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-                    {(q.tableRows || [
-                      { label: 'Titre I (Trial)', simulatedValue: 24.50, tolerance: 0.20 },
-                      { label: 'Titre II (Accurate)', simulatedValue: 24.50, tolerance: 0.10 },
-                      { label: 'Titre III (Accurate)', simulatedValue: 24.40, tolerance: 0.10 }
-                    ]).map((row, rIdx) => {
-                      const rowKey = `t${rIdx + 1}`;
-                      const rowVal = answersState[q.id]?.[rowKey] || { initial: 0.00, final: '', titre: '' };
-                      return (
-                        <tr key={rIdx} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition">
-                          <td className="p-2.5 font-medium text-slate-900 dark:text-slate-200">
-                            {row.label}
-                          </td>
-                          <td className="p-2.5">
-                            <input
-                              type="number"
-                              step="0.05"
-                              disabled={isReadOnly}
-                              placeholder="e.g. 24.50"
-                              value={rowVal.final || ''}
-                              onChange={e => handleTableChange(q.id, rowKey, 'final', Number(e.target.value))}
-                              className="w-28 px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-750 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-mono text-xs focus:outline-none focus:ring-1 focus:ring-slate-400"
-                            />
-                          </td>
-                          <td className="p-2.5">
-                            <input
-                              type="number"
-                              step="0.05"
-                              disabled={isReadOnly}
-                              value={rowVal.initial ?? 0.00}
-                              onChange={e => handleTableChange(q.id, rowKey, 'initial', Number(e.target.value))}
-                              className="w-28 px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-750 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-mono text-xs focus:outline-none focus:ring-1 focus:ring-slate-400"
-                            />
-                          </td>
-                          <td className="p-2.5 font-mono font-medium text-slate-900 dark:text-slate-100">
-                            {rowVal.titre ? `${rowVal.titre} cm³` : '—'}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
+            {q.type === 'data_table' && (() => {
+              const headers = (q.tableHeaders && q.tableHeaders.length > 0)
+                ? q.tableHeaders 
+                : ['Trial', 'Final reading (cm³)', 'Initial reading (cm³)', 'Volume used (cm³)'];
+              
+              const isTitration4Col = headers.length === 4 && 
+                headers.some(h => h.toLowerCase().includes('final') || h.toLowerCase().includes('initial') || h.toLowerCase().includes('burette'));
+
+              return (
+                <div className="overflow-x-auto pt-2">
+                  <table className="w-full text-xs text-left border border-slate-200 dark:border-slate-800 rounded">
+                    <thead className="bg-slate-50 dark:bg-slate-850 text-slate-600 dark:text-slate-400 font-medium border-b border-slate-200 dark:border-slate-800">
+                      <tr>
+                        {headers.map((h, i) => (
+                          <th key={i} className="p-2.5 font-semibold text-slate-700 dark:text-slate-300">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+                      {(q.tableRows || [
+                        { label: 'Titre I (Trial)', simulatedValue: 24.50, tolerance: 0.20 },
+                        { label: 'Titre II (Accurate)', simulatedValue: 24.50, tolerance: 0.10 },
+                        { label: 'Titre III (Accurate)', simulatedValue: 24.40, tolerance: 0.10 }
+                      ]).map((row, rIdx) => {
+                        const rowKey = `t${rIdx + 1}`;
+                        const rowVal = answersState[q.id]?.[rowKey] || {};
+
+                        if (isTitration4Col) {
+                          return (
+                            <tr key={rIdx} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition">
+                              <td className="p-2.5 font-medium text-slate-900 dark:text-slate-200">
+                                {row.label}
+                              </td>
+                              <td className="p-2.5">
+                                <input
+                                  type="number"
+                                  step="0.05"
+                                  disabled={isReadOnly}
+                                  placeholder="e.g. 24.50"
+                                  value={rowVal.final ?? ''}
+                                  onChange={e => handleTableChange(q.id, rowKey, 'final', Number(e.target.value))}
+                                  className="w-28 px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-750 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-mono text-xs focus:outline-none focus:ring-1 focus:ring-slate-400"
+                                />
+                              </td>
+                              <td className="p-2.5">
+                                <input
+                                  type="number"
+                                  step="0.05"
+                                  disabled={isReadOnly}
+                                  value={rowVal.initial ?? 0.00}
+                                  onChange={e => handleTableChange(q.id, rowKey, 'initial', Number(e.target.value))}
+                                  className="w-28 px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-750 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-mono text-xs focus:outline-none focus:ring-1 focus:ring-slate-400"
+                                />
+                              </td>
+                              <td className="p-2.5 font-mono font-medium text-slate-900 dark:text-slate-100">
+                                {rowVal.titre ? `${rowVal.titre} cm³` : '—'}
+                              </td>
+                            </tr>
+                          );
+                        }
+
+                        // Custom Multi-Column Table (e.g. Table I: Volume, Solubility, Crystallization Temp)
+                        return (
+                          <tr key={rIdx} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition">
+                            <td className="p-2.5 font-medium text-slate-900 dark:text-slate-200">
+                              {row.label}
+                            </td>
+                            {headers.slice(1).map((headerName, colIdx) => {
+                              const cNum = colIdx + 1;
+                              const valKey = `col_${cNum}`;
+                              const isTextCol = /observation|inference|state|colour|color|appearance|effervescence|deduction/i.test(headerName);
+                              const cellVal = rowVal[valKey] ?? (cNum === 1 && rowVal.solubility !== undefined ? rowVal.solubility : (cNum === 2 && rowVal.temp !== undefined ? rowVal.temp : ''));
+                              
+                              return (
+                                <td key={colIdx} className="p-2.5">
+                                  <input
+                                    type={isTextCol ? "text" : "number"}
+                                    step={isTextCol ? undefined : "0.1"}
+                                    disabled={isReadOnly}
+                                    placeholder={
+                                      isTextCol 
+                                        ? "e.g. Rapid bubbling, effervescence" 
+                                        : cNum === 1 && headerName?.toLowerCase().includes('solubil') 
+                                          ? 'e.g. 150.0' 
+                                          : 'e.g. 68.0'
+                                    }
+                                    value={cellVal ?? ''}
+                                    onChange={e => {
+                                      const raw = e.target.value;
+                                      const val = isTextCol ? raw : (raw === '' ? '' : Number(raw));
+                                      setAnswersState(prev => {
+                                        const cur = prev[q.id] || {};
+                                        const curRow = cur[rowKey] || {};
+                                        return {
+                                          ...prev,
+                                          [q.id]: {
+                                            ...cur,
+                                            [rowKey]: {
+                                              ...curRow,
+                                              [valKey]: val,
+                                              ...(!isTextCol && cNum === 1 ? { solubility: typeof val === 'number' ? val : 0 } : {}),
+                                              ...(!isTextCol && cNum === 2 ? { temp: typeof val === 'number' ? val : 0 } : {})
+                                            }
+                                          }
+                                        };
+                                      });
+                                    }}
+                                    className={`${isTextCol ? 'w-48 sm:w-64' : 'w-28 sm:w-32'} px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-750 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-mono text-xs focus:outline-none focus:ring-1 focus:ring-slate-400`}
+                                  />
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })()}
 
             {/* OBSERVATION + INFERENCE QUESTION */}
             {q.type === 'observation_inference' && (
@@ -475,18 +618,68 @@ export const DigitalAnswerSheet: React.FC<DigitalAnswerSheetProps> = ({
               </div>
             )}
 
-            {/* SHORT ANSWER QUESTION */}
+            {/* SHORT ANSWER / WRITING QUESTION */}
             {q.type === 'short_answer' && (
               <div className="space-y-2 pt-1">
-                <input
-                  type="text"
-                  disabled={isReadOnly}
-                  placeholder="Type your scientific deduction..."
-                  value={answersState[q.id] || ''}
-                  onChange={e => handleTextChange(q.id, e.target.value)}
-                  className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-750 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 text-xs focus:outline-none focus:ring-1 focus:ring-slate-400"
-                />
+                {!isReadOnly && (
+                  <div className="flex flex-wrap items-center gap-1 text-[11px]">
+                    <span className="text-[10px] text-slate-400 mr-1 font-mono">Insert symbol:</span>
+                    {['⁺', '⁻', '²⁺', '³⁺', '₂', '₃', '₄', '->', '(aq)', '(s)', '(l)', '(g)'].map(sym => (
+                      <button
+                        key={sym}
+                        type="button"
+                        onClick={() => {
+                          const cur = answersState[q.id] || '';
+                          handleTextChange(q.id, cur + sym);
+                        }}
+                        className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-mono text-[10px] border border-slate-300 dark:border-slate-700 transition"
+                      >
+                        {sym}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {q.writingType === 'single_line' ? (
+                  <input
+                    type="text"
+                    disabled={isReadOnly}
+                    placeholder="Type your scientific deduction or chemical formula..."
+                    value={answersState[q.id] || ''}
+                    onChange={e => handleTextChange(q.id, e.target.value)}
+                    className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-750 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 text-xs focus:outline-none focus:ring-1 focus:ring-slate-400 font-mono"
+                  />
+                ) : (
+                  <textarea
+                    rows={3}
+                    disabled={isReadOnly}
+                    placeholder="Write your scientific deduction, chemical equation, or explanation here..."
+                    value={answersState[q.id] || ''}
+                    onChange={e => handleTextChange(q.id, e.target.value)}
+                    className="w-full p-2.5 rounded border border-slate-300 dark:border-slate-750 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 text-xs focus:outline-none focus:ring-1 focus:ring-slate-400 font-mono leading-relaxed"
+                  />
+                )}
+
+                {isReadOnly && q.modelAnswer && (
+                  <div className="p-2.5 rounded bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 text-[11px] text-emerald-800 dark:text-emerald-300 space-y-0.5">
+                    <span className="font-bold block">Teacher Model Answer & Marking Scheme:</span>
+                    <p className="font-mono">{q.modelAnswer}</p>
+                  </div>
+                )}
               </div>
+            )}
+
+            {/* GRAPH PLOTTING QUESTION (ON MILLIMETER GRID) */}
+            {(q.type === 'graph' || q.type === 'graph_plotting') && (
+              <GraphPlottingQuestion
+                question={q}
+                value={answersState[q.id]}
+                onChange={val => {
+                  setAnswersState(prev => ({ ...prev, [q.id]: val }));
+                }}
+                isReadOnly={isReadOnly}
+                tableData={answersState}
+              />
             )}
           </div>
         ))}

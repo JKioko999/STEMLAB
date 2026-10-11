@@ -53,10 +53,14 @@ export const api = {
   schools: {
     getAll: () => fetchJSON<School[]>(`${BASE_URL}/schools`),
     getById: (id: string) => fetchJSON<{ school: School; teachers: User[]; classes: ClassGroup[]; studentCount: number }>(`${BASE_URL}/schools/${id}`),
-    create: (schoolData: Omit<School, 'id' | 'createdAt' | 'status' | 'totalStudents' | 'totalTeachers'>, adminPassword?: string) =>
+    create: (
+      schoolData: Omit<School, 'id' | 'createdAt' | 'status' | 'totalStudents' | 'totalTeachers'> & { id?: string },
+      adminPassword?: string,
+      extra?: { schoolId?: string; adminUserId?: string }
+    ) =>
       fetchJSON<{ school: School; adminUser: User; emailDispatch: EmailDispatch }>(`${BASE_URL}/schools`, {
         method: 'POST',
-        body: JSON.stringify({ schoolData, adminPassword }),
+        body: JSON.stringify({ schoolData, adminPassword, ...extra }),
       }),
     delete: (id: string) =>
       fetchJSON<{ success: boolean; deletedSchoolId: string }>(`${BASE_URL}/schools/${id}`, {
@@ -66,16 +70,21 @@ export const api = {
 
   // Users (Teachers, Students, Administrators)
   users: {
-    getAll: (params?: { schoolId?: string; role?: string }) => {
+    getAll: (params?: { schoolId?: string; role?: string; email?: string }) => {
       const query = new URLSearchParams(params as any).toString();
       return fetchJSON<User[]>(`${BASE_URL}/users${query ? `?${query}` : ''}`);
     },
-    registerStudent: (studentData: { name: string; email: string; schoolId: string; classId: string; admissionNumber: string }) =>
+    registerAdmin: (adminData: { id?: string; name: string; email: string; password?: string }) =>
+      fetchJSON<User>(`${BASE_URL}/users/admin`, {
+        method: 'POST',
+        body: JSON.stringify(adminData),
+      }),
+    registerStudent: (studentData: { id?: string; name: string; email: string; schoolId: string; classId: string; admissionNumber: string; password?: string }) =>
       fetchJSON<User>(`${BASE_URL}/users/student`, {
         method: 'POST',
         body: JSON.stringify(studentData),
       }),
-    registerTeacher: (teacherData: { name: string; email: string; schoolId: string; subjectSpecialization: string }) =>
+    registerTeacher: (teacherData: { id?: string; name: string; email: string; schoolId: string; subjectSpecialization: string; tempPassword?: string }) =>
       fetchJSON<{ teacher: User; emailDispatch: EmailDispatch }>(`${BASE_URL}/users/teacher`, {
         method: 'POST',
         body: JSON.stringify(teacherData),
@@ -84,10 +93,14 @@ export const api = {
       fetchJSON<{ success: boolean; deletedTeacherId: string }>(`${BASE_URL}/users/teacher/${teacherId}`, {
         method: 'DELETE',
       }),
-    changePassword: (userId: string, newPassword: string) =>
+    delete: (userId: string) =>
+      fetchJSON<{ success: boolean; deletedUserId: string }>(`${BASE_URL}/users/${userId}`, {
+        method: 'DELETE',
+      }),
+    changePassword: (userId: string, newPassword: string, email?: string) =>
       fetchJSON<{ success: boolean }>(`${BASE_URL}/users/change-password`, {
         method: 'POST',
-        body: JSON.stringify({ userId, newPassword }),
+        body: JSON.stringify({ userId, newPassword, email }),
       }),
   },
 
@@ -134,6 +147,11 @@ export const api = {
       fetchJSON<ExperimentSpec>(`${BASE_URL}/experiments/${id}/promote`, {
         method: 'POST',
         body: JSON.stringify({ schoolId }),
+      }),
+    parseAI: (text: string) =>
+      fetchJSON<{ success: boolean; source: string; experiment: any }>(`${BASE_URL}/experiments/parse-ai`, {
+        method: 'POST',
+        body: JSON.stringify({ text }),
       }),
   },
 

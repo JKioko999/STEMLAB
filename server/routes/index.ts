@@ -1,4 +1,6 @@
 import { Router, Request, Response } from 'express';
+import fs from 'fs';
+import path from 'path';
 import schoolsRouter from './schools.js';
 import usersRouter from './users.js';
 import classesRouter from './classes.js';
@@ -34,6 +36,18 @@ apiRouter.get('/health', (req: Request, res: Response) => {
 apiRouter.post('/reset', (req: Request, res: Response) => {
   store.resetToDefaults();
   return res.json({ success: true, message: 'Database reset to initial KCSE curriculum defaults' });
+});
+
+// Download Corporate BRD/DRD Word Document (.docx)
+apiRouter.get('/download-brd', (req: Request, res: Response) => {
+  const filePath = path.resolve('public', 'STEM_SPARK_VIRTUAL_LAB_BRD_DRD_SPECIFICATION.docx');
+  if (fs.existsSync(filePath)) {
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    res.setHeader('Content-Disposition', 'attachment; filename="STEM_SPARK_VIRTUAL_LAB_BRD_DRD_SPECIFICATION.docx"');
+    return res.sendFile(filePath);
+  } else {
+    return res.status(404).json({ error: 'Specification document not found on server' });
+  }
 });
 
 // Sub-routers

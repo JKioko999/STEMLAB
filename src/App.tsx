@@ -1,7 +1,6 @@
 import React from 'react';
 import { AppProvider, useApp } from './context/AppContext';
 import { Navbar } from './components/shared/Navbar';
-import { RoleBanner } from './components/shared/RoleBanner';
 import { LandingPage } from './components/landing/LandingPage';
 import { AuthPage } from './components/auth/AuthPage';
 import { SuperAdminDashboard } from './components/superadmin/SuperAdminDashboard';
@@ -13,15 +12,17 @@ import { AttemptReviewView } from './components/teacher/AttemptReviewView';
 import { ExperimentBuilder } from './components/teacher/ExperimentBuilder';
 import { EmailDispatchModal } from './components/shared/EmailDispatchModal';
 import { PasswordChangeModal } from './components/shared/PasswordChangeModal';
-import { ShieldCheck, Award, Heart } from 'lucide-react';
 
 const AppContent: React.FC = () => {
   const { currentUser, currentView } = useApp();
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans antialiased transition-colors">
+    <div className={`min-h-screen flex flex-col font-sans antialiased transition-colors ${
+      currentUser
+        ? 'bg-slate-50/70 dark:bg-slate-950 text-slate-900 dark:text-slate-100'
+        : 'bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100'
+    }`}>
       <Navbar />
-      {currentUser && currentView !== 'landing' && <RoleBanner />}
 
       {/* Global Modals for Email Dispatch & Password Reset */}
       <EmailDispatchModal />
@@ -30,7 +31,7 @@ const AppContent: React.FC = () => {
       <main className="flex-1">
         {currentView === 'landing' && <LandingPage />}
         {currentView === 'auth' && <AuthPage />}
-        {!currentUser && currentView !== 'auth' && currentView !== 'landing' && <LandingPage />}
+        {!currentUser && currentView !== 'auth' && currentView !== 'landing' && currentView !== 'lab' && <LandingPage />}
         
         {currentUser && currentView === 'dashboard' && (
           <>
@@ -41,7 +42,7 @@ const AppContent: React.FC = () => {
           </>
         )}
 
-        {currentUser && currentView === 'lab' && <LabWorkspace />}
+        {currentView === 'lab' && <LabWorkspace />}
         {currentUser && currentView === 'review_attempt' && <AttemptReviewView />}
         {currentUser && currentView === 'builder' && <ExperimentBuilder />}
       </main>

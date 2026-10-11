@@ -59,7 +59,7 @@ export interface ClassGroup {
 
 export type SubjectType = 'chemistry' | 'physics' | 'biology';
 export type ExperimentTier = 'global' | 'school' | 'teacher';
-export type SimulationType = 'titration' | 'circuit' | 'qualitative' | 'food_test' | 'osmosis' | 'hookes_law' | 'general';
+export type SimulationType = 'titration' | 'solubility' | 'circuit' | 'qualitative' | 'food_test' | 'osmosis' | 'hookes_law' | 'thermochemistry' | 'universal' | 'general';
 
 export interface ApparatusItem {
   id: string;
@@ -73,24 +73,54 @@ export interface ApparatusItem {
 export interface ExperimentStep {
   id: number;
   instruction: string;
-  validationType: 'apparatus_placed' | 'connection_made' | 'volume_set' | 'reading_recorded' | 'reagent_added' | 'run_simulation';
+  validationType: 'apparatus_placed' | 'connection_made' | 'volume_set' | 'reading_recorded' | 'reagent_added' | 'run_simulation' | 'heated' | 'diluted' | 'filtered' | 'observation_made';
   validationDetail?: string;
   marks: number;
   hint?: string;
   allowForcePush: boolean;
+  procedureNumber?: number; // 1 for Procedure I, 2 for Procedure II, etc.
+  procedureTitle?: string;
+  expectedResult?: string; // Exact observation or result expected by the teacher for this step
+}
+
+export interface ProcedureSpec {
+  id: string; // e.g. "proc-1"
+  number: number; // 1, 2, ...
+  title: string; // e.g. "Procedure I: Titration of Solution C against Solution B"
+  description?: string;
+  steps: ExperimentStep[];
 }
 
 export interface AnswerSheetQuestion {
   id: string;
-  type: 'data_table' | 'observation_inference' | 'calculation' | 'short_answer' | 'multiple_choice';
+  type: 'data_table' | 'observation_inference' | 'calculation' | 'short_answer' | 'multiple_choice' | 'graph' | 'graph_plotting';
   prompt: string;
   maxMarks: number;
+  procedureNumber?: number; // Optional procedure linkage (e.g. 1 for Table A, 2 for Table B)
   // Specific config for data tables (e.g. burette readings: initial, final, volume used)
+  tableType?: 'titration' | 'temperature' | 'solubility' | 'custom';
   tableHeaders?: string[];
   tableRows?: { label: string; simulatedValue: number; tolerance: number }[];
+  // For graph plotting questions
+  graphConfig?: {
+    xLabel: string;
+    yLabel: string;
+    xMin: number;
+    xMax: number;
+    xStep?: number;
+    yMin: number;
+    yMax: number;
+    yStep?: number;
+    expectedPoints?: { x: number; y: number }[];
+    curveType?: 'smooth_curve' | 'best_fit_line';
+  };
+  // For written responses
+  writingType?: 'single_line' | 'multi_line';
+  acceptedKeywords?: string[];
   // For observation & inference
   observationAcceptedKeywords?: string[];
   inferenceAcceptedKeywords?: string[];
+  modelAnswer?: string;
   // For calculation
   correctNumericValue?: number;
   tolerance?: number;
@@ -111,6 +141,7 @@ export interface ExperimentSpec {
   estimatedDurationMinutes: number;
   apparatus: ApparatusItem[];
   steps: ExperimentStep[];
+  procedures?: ProcedureSpec[]; // Multi-procedure support (Procedure I, Procedure II, etc.)
   simulationType: SimulationType;
   simulationConfig: {
     // Titration params
@@ -119,8 +150,17 @@ export interface ExperimentSpec {
     unknownMolarity?: number; // target concentration e.g. 0.098 M
     indicator?: string; // 'Phenolphthalein' | 'Methyl Orange'
     equivalencePointCm3?: number; // e.g. 24.50 cm3
-    colorBefore?: string; // 'Pink'
-    colorAfter?: string; // 'Colourless'
+    colorBefore?: string; // e.g. 'Colourless' or 'Pink'
+    colorAfter?: string; // e.g. 'Bright yellow precipitate' or 'Blue-black' or 'Permanent pale pink'
+    colorHexBefore?: string; // e.g. '#e2e8f0'
+    colorHexAfter?: string; // e.g. '#facc15'
+    expectedObservation?: string; // teacher's exact expected observation
+    expectedGas?: string; // e.g. 'Hydrogen', 'Carbon dioxide', 'Oxygen', 'None'
+    precipitateName?: string; // e.g. 'Lead(II) iodide precipitate'
+    initialTemperature?: number;
+    finalTemperature?: number;
+    maxTemperature?: number;
+    reactionType?: string;
     
     // Circuit params (Ohm's Law)
     emfVoltage?: number; // e.g. 3.0 V

@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @layer base {
   :root {
     --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -11,10 +13,10 @@
     --radius-badge: 4px;
     --radius-input: 5px;
 
-    /* Light Theme (Default) */
-    --bg-page: #f8fafc;
+    /* Light Theme (Clean White with touches of soft grey) */
+    --bg-page: #ffffff;
     --bg-surface: #ffffff;
-    --bg-subtle: #f1f5f9;
+    --bg-subtle: #f8fafc;
     --border-subtle: #e2e8f0;
     --border-strong: #cbd5e1;
     --text-primary: #0f172a;

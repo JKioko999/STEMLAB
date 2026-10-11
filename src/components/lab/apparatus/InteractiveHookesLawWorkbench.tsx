@@ -393,15 +393,41 @@ export const InteractiveHookesLawWorkbench: React.FC<InteractiveHookesLawWorkben
         <div className="lg:col-span-8 space-y-4">
           <div 
             ref={benchRef}
-            className="relative w-full h-[520px] bg-slate-950/95 border-2 border-slate-800 rounded-3xl overflow-hidden shadow-2xl p-6 select-none"
+            className="relative w-full min-h-[660px] lg:min-h-[720px] rounded-3xl overflow-hidden border-2 border-slate-700/80 shadow-2xl p-6 select-none"
             style={{
-              backgroundImage: 'radial-gradient(rgba(148, 163, 184, 0.08) 1px, transparent 1px)',
-              backgroundSize: '24px 24px'
+              background: 'radial-gradient(ellipse at 50% 25%, #2a3447 0%, #111827 60%, #030712 100%)'
             }}
           >
+            {/* Laboratory Teak Workbench Table Surface at Bottom */}
+            <div 
+              className="absolute inset-x-0 bottom-0 h-[240px] border-t-4 border-amber-950/70 shadow-2xl z-0"
+              style={{
+                background: 'linear-gradient(180deg, #3d2417 0%, #28170d 45%, #180d07 100%)',
+                boxShadow: 'inset 0 10px 30px rgba(0,0,0,0.6)'
+              }}
+            >
+              {/* Teak Wood Grain Overlay lines */}
+              <div 
+                className="absolute inset-0 opacity-20 pointer-events-none"
+                style={{
+                  backgroundImage: 'repeating-linear-gradient(90deg, rgba(255,255,255,0.03) 0px, rgba(255,255,255,0.03) 2px, transparent 2px, transparent 40px)'
+                }}
+              />
+              {/* Table Lip Bevel */}
+              <div className="absolute top-0 inset-x-0 h-1 bg-amber-400/25" />
+            </div>
+
+            {/* Ambient Spotlight from Top */}
+            <div 
+              className="absolute inset-0 pointer-events-none opacity-40 z-0"
+              style={{
+                background: 'radial-gradient(circle at 45% 35%, rgba(147, 197, 253, 0.25) 0%, transparent 65%)'
+              }}
+            />
+
             {/* Header */}
-            <div className="absolute top-4 left-6 text-[10px] font-mono text-slate-500 uppercase tracking-widest pointer-events-none flex items-center space-x-2">
-              <span>SPRING APPARATUS & METRE RULE • KCSE MECHANICS</span>
+            <div className="absolute top-4 left-6 text-[10px] font-mono text-slate-400 uppercase tracking-widest pointer-events-none flex items-center space-x-2 z-20">
+              <span className="font-bold">SPRING APPARATUS & METRE RULE • REALISTIC LABORATORY BENCH</span>
               <span className="text-cyan-400 font-bold">• (Apparatus is movable via drag & drop)</span>
             </div>
 

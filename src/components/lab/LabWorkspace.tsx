@@ -6,6 +6,7 @@ import { InteractiveQualitativeWorkbench } from './apparatus/InteractiveQualitat
 import { InteractiveFoodTestWorkbench } from './apparatus/InteractiveFoodTestWorkbench';
 import { InteractiveHookesLawWorkbench } from './apparatus/InteractiveHookesLawWorkbench';
 import { InteractiveGeneralWorkbench } from './apparatus/InteractiveGeneralWorkbench';
+import { InteractiveUniversalWorkbench } from './apparatus/InteractiveUniversalWorkbench';
 import { DigitalAnswerSheet } from './DigitalAnswerSheet';
 import { 
   FlaskConical, 
@@ -147,15 +148,15 @@ export const LabWorkspace: React.FC = () => {
     const percentage = Math.round((totalEarned / maxScore) * 100);
 
     const attempt = submitExperimentAttempt({
-      schoolId: currentUser?.schoolId || 'sch-default',
+      schoolId: currentUser?.schoolId || '',
       assignmentId: activeAssignment?.id,
       isPracticeOpenLab: !activeAssignment,
       experimentId: activeExperiment.id,
       experimentTitle: activeExperiment.title,
       subject: activeExperiment.subject,
-      studentId: currentUser?.id || 'usr-guest',
-      studentName: currentUser?.name || 'Student Candidate',
-      studentAdmission: currentUser?.admissionNumber || 'NGH/2026/01',
+      studentId: currentUser?.id || `usr-guest-${Date.now().toString(36)}`,
+      studentName: currentUser?.name || 'Guest Candidate',
+      studentAdmission: currentUser?.admissionNumber || 'PRACTICE',
       teacherId: activeAssignment?.teacherId || currentUser?.teacherId,
       teacherName: activeAssignment?.teacherName || currentUser?.teacherName,
       classId: activeAssignment?.classId || currentUser?.classId,
@@ -221,14 +222,14 @@ export const LabWorkspace: React.FC = () => {
               </div>
             )}
 
-            {/* Toggle guided steps */}
+            {/* Toggle guided steps / Enlarge workbench */}
             <button
               onClick={() => setIsLeftPanelCollapsed(!isLeftPanelCollapsed)}
-              className="px-2.5 py-1.5 rounded border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 text-xs font-medium transition hidden md:flex items-center gap-1.5"
-              title={isLeftPanelCollapsed ? 'Show guided steps panel' : 'Collapse steps for full-width workbench'}
+              className="px-2.5 py-1.5 rounded border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium transition hidden md:flex items-center gap-1.5 shadow-2xs"
+              title={isLeftPanelCollapsed ? 'Show guided steps panel' : 'Enlarge workbench to full width'}
             >
-              {isLeftPanelCollapsed ? <PanelLeftOpen className="w-3.5 h-3.5" /> : <PanelLeftClose className="w-3.5 h-3.5" />}
-              <span>{isLeftPanelCollapsed ? 'Show steps' : 'Hide steps'}</span>
+              {isLeftPanelCollapsed ? <PanelLeftOpen className="w-3.5 h-3.5 text-emerald-600" /> : <PanelLeftClose className="w-3.5 h-3.5 text-indigo-600" />}
+              <span>{isLeftPanelCollapsed ? 'Show Steps' : 'Enlarge Workbench (Full Width)'}</span>
             </button>
 
             {/* View Switcher: Tabs with clean underline */}
@@ -266,8 +267,8 @@ export const LabWorkspace: React.FC = () => {
       </div>
 
       {/* Main Workspace Layout */}
-      <div className="max-w-[1550px] mx-auto px-4 sm:px-6 lg:px-8 pt-6">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="max-w-[1720px] 2xl:max-w-[1920px] w-full mx-auto px-3 sm:px-6 lg:px-8 pt-5">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
           
           {/* LEFT PANEL: Step-by-Step Guided Instructions */}
           {!isLeftPanelCollapsed && (
@@ -320,37 +321,49 @@ export const LabWorkspace: React.FC = () => {
                       </div>
                     )}
 
-                    {/* Step Navigation & Reverse Step in Guided Steps */}
-                    <div className="pt-2.5 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
-                      <button
-                        onClick={() => setIsForcePushModalOpen(true)}
-                        className="text-xs text-rose-600 dark:text-rose-400 hover:underline flex items-center gap-1"
-                      >
-                        <AlertTriangle className="w-3 h-3" />
-                        <span>Force-push step</span>
-                      </button>
+                    {/* Step Navigation & Validate in Guided Steps */}
+                    <div className="pt-2.5 border-t border-slate-200 dark:border-slate-800 space-y-2">
+                      {!completedSteps.includes(currentStep.id) && (
+                        <button
+                          onClick={() => handleSimulatorStepComplete(currentStep.id)}
+                          className="w-full py-1.5 px-3 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs flex items-center justify-center gap-1.5 shadow transition"
+                        >
+                          <CheckCircle className="w-3.5 h-3.5" />
+                          <span>Validate Step {currentStep.id} ({currentStep.marks} mark{currentStep.marks > 1 ? 's' : ''})</span>
+                        </button>
+                      )}
 
-                      <div className="flex items-center space-x-1.5">
-                        {currentStepIndex > 0 && (
-                          <button
-                            onClick={() => setCurrentStepIndex(prev => Math.max(0, prev - 1))}
-                            className="px-2 py-1 rounded border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium flex items-center gap-1"
-                            title="Previous step"
-                          >
-                            <ChevronLeft className="w-3.5 h-3.5" />
-                            <span>Prev</span>
-                          </button>
-                        )}
+                      <div className="flex items-center justify-between">
+                        <button
+                          onClick={() => setIsForcePushModalOpen(true)}
+                          className="text-xs text-rose-600 dark:text-rose-400 hover:underline flex items-center gap-1"
+                        >
+                          <AlertTriangle className="w-3 h-3" />
+                          <span>Force-push</span>
+                        </button>
 
-                        {currentStepIndex < activeExperiment.steps.length - 1 && (
-                          <button
-                            onClick={() => setCurrentStepIndex(prev => prev + 1)}
-                            className="px-2 py-1 rounded border border-slate-300 dark:border-slate-750 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-750 text-slate-900 dark:text-slate-100 text-xs font-medium flex items-center gap-1"
-                          >
-                            <span>Next</span>
-                            <ChevronRight className="w-3.5 h-3.5" />
-                          </button>
-                        )}
+                        <div className="flex items-center space-x-1.5">
+                          {currentStepIndex > 0 && (
+                            <button
+                              onClick={() => setCurrentStepIndex(prev => Math.max(0, prev - 1))}
+                              className="px-2 py-1 rounded border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium flex items-center gap-1"
+                              title="Previous step"
+                            >
+                              <ChevronLeft className="w-3.5 h-3.5" />
+                              <span>Prev</span>
+                            </button>
+                          )}
+
+                          {currentStepIndex < activeExperiment.steps.length - 1 && (
+                            <button
+                              onClick={() => setCurrentStepIndex(prev => prev + 1)}
+                              className="px-2 py-1 rounded border border-slate-300 dark:border-slate-750 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-750 text-slate-900 dark:text-slate-100 text-xs font-medium flex items-center gap-1"
+                            >
+                              <span>Next</span>
+                              <ChevronRight className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -422,49 +435,46 @@ export const LabWorkspace: React.FC = () => {
             
             {/* Simulation Workbench View */}
             <div className={activeTab === 'simulation' ? 'space-y-4' : 'hidden'}>
-              {activeExperiment.simulationType === 'titration' && (
-                <InteractiveTitrationWorkbench
-                  isExamMode={isExamMode}
-                  onStepComplete={handleSimulatorStepComplete}
-                  onTitrationUpdate={setLiveTelemetry}
-                />
-              )}
-
-              {activeExperiment.simulationType === 'circuit' && (
+              {/* Specialized specific engines */}
+              {activeExperiment.simulationType === 'circuit' ? (
                 <InteractiveOhmsLawWorkbench
                   currentStepIndex={currentStepIndex}
                   onStepComplete={handleSimulatorStepComplete}
                   onCircuitUpdate={setLiveTelemetry}
                 />
-              )}
-
-              {activeExperiment.simulationType === 'qualitative' && (
+              ) : activeExperiment.simulationType === 'qualitative' ? (
                 <InteractiveQualitativeWorkbench
                   onStepComplete={handleSimulatorStepComplete}
                   onQualitativeUpdate={setLiveTelemetry}
                 />
-              )}
-
-              {activeExperiment.simulationType === 'food_test' && (
+              ) : activeExperiment.simulationType === 'food_test' ? (
                 <InteractiveFoodTestWorkbench
                   onStepComplete={handleSimulatorStepComplete}
                   onFoodTestUpdate={setLiveTelemetry}
                 />
-              )}
-
-              {activeExperiment.simulationType === 'hookes_law' && (
+              ) : activeExperiment.simulationType === 'hookes_law' ? (
                 <InteractiveHookesLawWorkbench
                   onStepComplete={handleSimulatorStepComplete}
                   onHookesLawUpdate={setLiveTelemetry}
                 />
-              )}
-
-              {(activeExperiment.simulationType === 'general' || 
-                !['titration', 'circuit', 'qualitative', 'food_test', 'hookes_law'].includes(activeExperiment.simulationType)) && (
-                <InteractiveGeneralWorkbench
+              ) : activeExperiment.simulationType === 'titration' && !activeExperiment.title.toLowerCase().includes('solubility') ? (
+                <InteractiveTitrationWorkbench
+                  isExamMode={isExamMode}
                   currentStepIndex={currentStepIndex}
+                  activeExperiment={activeExperiment}
+                  completedSteps={completedSteps}
                   onStepComplete={handleSimulatorStepComplete}
-                  onUpdateTelemetry={setLiveTelemetry}
+                  onTitrationUpdate={setLiveTelemetry}
+                />
+              ) : (
+                /* Universal Adaptive Science Workbench for solubility, thermochemistry, rate of reaction, and ANY custom teacher experiment */
+                <InteractiveUniversalWorkbench
+                  isExamMode={isExamMode}
+                  currentStepIndex={currentStepIndex}
+                  activeExperiment={activeExperiment}
+                  completedSteps={completedSteps}
+                  onStepComplete={handleSimulatorStepComplete}
+                  onTelemetryUpdate={setLiveTelemetry}
                 />
               )}
 

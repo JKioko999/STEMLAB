@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { School, User, ClassGroup, Assignment, Attempt, ExperimentSpec, EmailDispatch } from '../types';
 import { INITIAL_EXPERIMENTS } from '../data/experimentSpecs';
-import { SEED_SCHOOLS, SEED_USERS, SEED_CLASSES, SEED_ASSIGNMENTS, SEED_ATTEMPTS, SEED_SCHOOL_EXPERIMENT } from '../data/seedData';
 import { api } from '../services/api';
 
 interface AppContextType {
@@ -19,7 +18,7 @@ interface AppContextType {
   
   // Navigation & Lab state
   currentView: 'dashboard' | 'lab' | 'builder' | 'review_attempt' | 'auth' | 'landing';
-  authMode: 'login' | 'register_student' | 'register_school';
+  authMode: 'login' | 'register_student' | 'register_school' | 'register_admin';
   activeExperiment: ExperimentSpec | null;
   activeAssignment: Assignment | null;
   activeLabMode: 'practice' | 'exam';
@@ -32,16 +31,18 @@ interface AppContextType {
   logout: () => void;
   switchUser: (userId: string) => void;
   setCurrentView: (view: 'dashboard' | 'lab' | 'builder' | 'review_attempt' | 'auth' | 'landing') => void;
-  setAuthMode: (mode: 'login' | 'register_student' | 'register_school') => void;
+  setAuthMode: (mode: 'login' | 'register_student' | 'register_school' | 'register_admin') => void;
   
   // Registration
   registerSchool: (schoolData: Omit<School, 'id' | 'createdAt' | 'status' | 'totalStudents' | 'totalTeachers'>, adminPassword?: string) => School;
+  registerSuperAdmin: (adminData: { name: string; email: string; password?: string }) => User;
   registerStudent: (studentData: { name: string; email: string; schoolId: string; classId: string; admissionNumber: string }) => User;
   registerTeacher: (teacherData: { name: string; email: string; schoolId: string; subjectSpecialization: string }) => User;
   
   // Deletion Actions
   deleteSchool: (schoolId: string) => void;
   deleteTeacher: (teacherId: string) => void;
+  deleteUser: (userId: string) => void;
   deleteExperiment: (experimentId: string) => void;
 
   // School Admin Actions
@@ -66,53 +67,167 @@ interface AppContextType {
 }
 
 const STORAGE_KEYS = {
-  CURRENT_USER: 'stem_spark_user_v2',
-  SCHOOLS: 'stem_spark_schools_v2',
-  USERS: 'stem_spark_users_v2',
-  CLASSES: 'stem_spark_classes_v2',
-  EXPERIMENTS: 'stem_spark_experiments_v2',
-  ASSIGNMENTS: 'stem_spark_assignments_v2',
-  ATTEMPTS: 'stem_spark_attempts_v2',
-  EMAILS: 'stem_spark_emails_v2'
+  CURRENT_USER: 'stem_spark_user_live_v4',
+  SCHOOLS: 'stem_spark_schools_live_v4',
+  USERS: 'stem_spark_users_live_v4',
+  CLASSES: 'stem_spark_classes_live_v4',
+  EXPERIMENTS: 'stem_spark_experiments_live_v4',
+  ASSIGNMENTS: 'stem_spark_assignments_live_v4',
+  ATTEMPTS: 'stem_spark_attempts_live_v4',
+  EMAILS: 'stem_spark_emails_live_v4'
 };
+
+// Purge any legacy dummy keys on app startup so users start with a clean production slate
+if (typeof window !== 'undefined') {
+  [
+    'stem_spark_user_v3', 'stem_spark_schools_v3', 'stem_spark_users_v3', 
+    'stem_spark_classes_v3', 'stem_spark_experiments_v3', 'stem_spark_assignments_v3', 
+    'stem_spark_attempts_v3', 'stem_spark_emails_v3',
+    'stem_spark_user_v2', 'stem_spark_schools_v2', 'stem_spark_users_v2',
+    'stem_spark_classes_v2', 'stem_spark_experiments_v2', 'stem_spark_assignments_v2',
+    'stem_spark_attempts_v2', 'stem_spark_emails_v2'
+  ].forEach(k => {
+    try { localStorage.removeItem(k); } catch (e) { /* ignore */ }
+  });
+}
 
 const generateTempPassword = (prefix: 'Stem' | 'Tchr') => {
   const num = Math.floor(1000 + Math.random() * 9000);
   return `${prefix}@${num}!`;
 };
 
+const DEFAULT_SCHOOLS: School[] = [
+  {
+    id: 'sch-alliance-science',
+    name: 'Alliance High Science Wing',
+    registrationNumber: 'MOE/REG/00101/2026',
+    county: 'Kiambu',
+    subCounty: 'Kikuyu',
+    category: 'National',
+    subscriptionPlan: 'Institutional Pro',
+    adminName: 'Dr. David Ochieng',
+    adminEmail: 'principal@alliancehigh.ac.ke',
+    phone: '+254 711 000 111',
+    totalStudents: 160,
+    totalTeachers: 3,
+    createdAt: '2026-01-10',
+    status: 'active'
+  },
+  {
+    id: 'sch-kenya-high',
+    name: 'The Kenya High Laboratory',
+    registrationNumber: 'MOE/REG/00102/2026',
+    county: 'Nairobi',
+    subCounty: 'Westlands',
+    category: 'National',
+    subscriptionPlan: 'Institutional Pro',
+    adminName: 'Mrs. Mary Ouko',
+    adminEmail: 'admin@kenyahigh.ac.ke',
+    phone: '+254 722 000 222',
+    totalStudents: 180,
+    totalTeachers: 4,
+    createdAt: '2026-01-15',
+    status: 'active'
+  }
+];
+
+const DEFAULT_CLASSES: ClassGroup[] = [
+  {
+    id: 'cls-f4-chem',
+    schoolId: 'sch-alliance-science',
+    name: 'Form 4 East (KCSE Chemistry Candidate)',
+    formYear: 4,
+    teacherId: 'usr-teacher-chem',
+    teacherName: 'Mdm. Grace Kamau',
+    subject: 'Chemistry',
+    studentCount: 40
+  },
+  {
+    id: 'cls-f4-phys',
+    schoolId: 'sch-alliance-science',
+    name: 'Form 4 West (KCSE Physics Candidate)',
+    formYear: 4,
+    teacherId: 'usr-teacher-phys',
+    teacherName: 'Mr. Peter Otieno',
+    subject: 'Physics',
+    studentCount: 38
+  },
+  {
+    id: 'cls-f4-bio',
+    schoolId: 'sch-alliance-science',
+    name: 'Form 4 North (KCSE Biology Candidate)',
+    formYear: 4,
+    teacherId: 'usr-teacher-bio',
+    teacherName: 'Mrs. Sarah Ndwiga',
+    subject: 'Biology',
+    studentCount: 42
+  },
+  {
+    id: 'cls-f3-chem',
+    schoolId: 'sch-alliance-science',
+    name: 'Form 3 Central (Practical Chemistry)',
+    formYear: 3,
+    teacherId: 'usr-teacher-chem',
+    teacherName: 'Mdm. Grace Kamau',
+    subject: 'Chemistry',
+    studentCount: 40
+  },
+  {
+    id: 'cls-kh-f4-chem',
+    schoolId: 'sch-kenya-high',
+    name: 'Form 4 Platinum (KCSE Chemistry Candidate)',
+    formYear: 4,
+    teacherId: 'usr-teacher-chem-2',
+    teacherName: 'Mr. Andrew Barasa',
+    subject: 'Chemistry',
+    studentCount: 45
+  }
+];
+
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Initialize state with localStorage fallbacks
+  // Clean live state: experiments remain, all others start clean and populate dynamically or from live DB
   const [schools, setSchools] = useState<School[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.SCHOOLS);
-    return saved ? JSON.parse(saved) : SEED_SCHOOLS;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {}
+    }
+    return DEFAULT_SCHOOLS;
   });
 
   const [users, setUsers] = useState<User[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.USERS);
-    return saved ? JSON.parse(saved) : SEED_USERS;
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [classes, setClasses] = useState<ClassGroup[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.CLASSES);
-    return saved ? JSON.parse(saved) : SEED_CLASSES;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {}
+    }
+    return DEFAULT_CLASSES;
   });
 
   const [experiments, setExperiments] = useState<ExperimentSpec[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.EXPERIMENTS);
-    return saved ? JSON.parse(saved) : [...INITIAL_EXPERIMENTS, SEED_SCHOOL_EXPERIMENT];
+    return saved ? JSON.parse(saved) : [...INITIAL_EXPERIMENTS];
   });
 
   const [assignments, setAssignments] = useState<Assignment[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.ASSIGNMENTS);
-    return saved ? JSON.parse(saved) : SEED_ASSIGNMENTS;
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [attempts, setAttempts] = useState<Attempt[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.ATTEMPTS);
-    return saved ? JSON.parse(saved) : SEED_ATTEMPTS;
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [sentEmails, setSentEmails] = useState<EmailDispatch[]>(() => {
@@ -122,7 +237,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [latestDispatchedEmail, setLatestDispatchedEmail] = useState<EmailDispatch | null>(null);
 
-  // Default to Super Admin (Platform Owner) so user lands straight into the requested top-level view
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
     if (saved) {
@@ -132,7 +246,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         // fallback
       }
     }
-    return SEED_USERS[0]; // Super Admin
+    return null;
   });
 
   // UI Flow State with initial URL detection
@@ -140,15 +254,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (typeof window !== 'undefined') {
       const path = window.location.pathname;
       if (path === '/auth') return 'auth';
-      if (path === '/landing' || path === '/') return 'dashboard'; // or dashboard for quick access
       if (path === '/lab') return 'lab';
       if (path === '/builder') return 'builder';
       if (path === '/review') return 'review_attempt';
+      if (path === '/dashboard') return 'dashboard';
     }
-    return 'dashboard';
+    return 'landing';
   });
 
-  const [authMode, setAuthMode] = useState<'login' | 'register_student' | 'register_school'>('login');
+  const [authMode, setAuthMode] = useState<'login' | 'register_student' | 'register_school' | 'register_admin'>('login');
   const [activeExperiment, setActiveExperiment] = useState<ExperimentSpec | null>(null);
   const [activeAssignment, setActiveAssignment] = useState<Assignment | null>(null);
   const [activeLabMode, setActiveLabMode] = useState<'practice' | 'exam'>('practice');
@@ -166,7 +280,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    localStorage.setItem('stem_spark_theme', theme);
+    try {
+      localStorage.setItem('stem_spark_theme', theme);
+    } catch (e) {
+      // ignore
+    }
     if (theme === 'dark') {
       document.documentElement.classList.add('dark');
     } else {
@@ -185,7 +303,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   ) => {
     if (typeof window === 'undefined') return;
 
-    let targetPath = '/dashboard';
+    let targetPath = '/';
     const params = new URLSearchParams();
 
     if (view === 'landing') {
@@ -239,13 +357,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           api.emails.getAll().catch(() => null),
         ]);
 
-        if (schs && schs.length > 0) setSchools(schs);
-        if (usrs && usrs.length > 0) setUsers(usrs);
-        if (clss && clss.length > 0) setClasses(clss);
-        if (exps && exps.length > 0) setExperiments(exps);
-        if (asgs && asgs.length > 0) setAssignments(asgs);
-        if (atts && atts.length > 0) setAttempts(atts);
-        if (emls && emls.length > 0) setSentEmails(emls);
+        if (Array.isArray(schs)) setSchools(schs);
+        if (Array.isArray(usrs)) {
+          setUsers(prev => {
+            if (!prev || prev.length === 0) return usrs;
+            const mergedMap = new Map<string, User>();
+            usrs.forEach(u => mergedMap.set(u.email.toLowerCase(), u));
+            prev.forEach(localU => {
+              const existing = mergedMap.get(localU.email.toLowerCase());
+              if (existing) {
+                mergedMap.set(localU.email.toLowerCase(), {
+                  ...existing,
+                  ...localU,
+                  mustChangePassword: localU.mustChangePassword === false ? false : existing.mustChangePassword,
+                  tempPassword: localU.mustChangePassword === false ? undefined : (localU.tempPassword || existing.tempPassword)
+                });
+              } else {
+                mergedMap.set(localU.email.toLowerCase(), localU);
+              }
+            });
+            return Array.from(mergedMap.values());
+          });
+        }
+        if (Array.isArray(clss)) setClasses(clss);
+        if (Array.isArray(exps) && exps.length > 0) setExperiments(exps);
+        if (Array.isArray(asgs)) setAssignments(asgs);
+        if (Array.isArray(atts)) setAttempts(atts);
+        if (Array.isArray(emls)) setSentEmails(emls);
       } catch (err) {
         console.warn('Initial backend sync completed or using stored data.');
       }
@@ -331,13 +469,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [currentUser]);
 
   const login = (user: User) => {
-    setCurrentUser(user);
+    const latest = users.find(u => u.id === user.id || u.email.toLowerCase() === user.email.toLowerCase()) || user;
+    setCurrentUser(latest);
     setViewWithUrl('dashboard');
   };
 
   const logout = () => {
     setCurrentUser(null);
-    setViewWithUrl('auth');
+    setViewWithUrl('landing');
     setAuthMode('login');
   };
 
@@ -354,29 +493,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const changePassword = (userId: string, newPassword: string) => {
+    const targetUser = users.find(u => u.id === userId || (currentUser?.id === userId && u.email === currentUser.email));
+    const targetEmail = targetUser?.email || currentUser?.email;
+
     setUsers(prev => prev.map(u => {
-      if (u.id === userId) {
+      const isMatch = u.id === userId || (targetEmail && u.email.toLowerCase() === targetEmail.toLowerCase());
+      if (isMatch) {
         return {
           ...u,
           mustChangePassword: false,
-          tempPassword: undefined
+          tempPassword: undefined,
+          password: newPassword
         };
       }
       return u;
     }));
 
-    if (currentUser?.id === userId) {
+    if (currentUser?.id === userId || (targetEmail && currentUser?.email?.toLowerCase() === targetEmail.toLowerCase())) {
       setCurrentUser(prev => prev ? {
         ...prev,
         mustChangePassword: false,
-        tempPassword: undefined
+        tempPassword: undefined,
+        password: newPassword
       } : null);
     }
 
-    api.users.changePassword(userId, newPassword).catch(err => console.warn('API sync:', err));
+    api.users.changePassword(userId, newPassword, targetEmail).catch(err => console.warn('API sync:', err));
   };
 
-  // 1. Separate School Registration with Registration Number & Temporary Password Email
+  // 1. School Registration with Credentials Dispatch
   const registerSchool = (
     schoolData: Omit<School, 'id' | 'createdAt' | 'status' | 'totalStudents' | 'totalTeachers'>,
     adminPassword?: string
@@ -407,7 +552,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       tempPassword: tempPassword
     };
 
-    // Dispatch official onboarding email with temporary password
     const emailDispatch: EmailDispatch = {
       id: `email-${Date.now()}-${Math.random().toString(36).substring(2, 5)}`,
       recipientEmail: schoolData.adminEmail,
@@ -425,16 +569,46 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setSentEmails(prev => [emailDispatch, ...prev]);
     setLatestDispatchedEmail(emailDispatch);
     
-    // If not super admin, switch to the new admin
-    if (currentUser?.role !== 'super_admin') {
+    // Only automatically log in as the newly created School Admin if NO user is currently logged in!
+    // If a Super Admin created this school, DO NOT hijack their session or prompt them to change password!
+    if (!currentUser) {
       setCurrentUser(newAdminUser);
       setCurrentView('dashboard');
     }
 
+    api.schools.create(
+      { id: schoolId, ...schoolData },
+      tempPassword,
+      { schoolId, adminUserId }
+    ).catch(err => console.warn('API sync:', err));
+
     return newSchool;
   };
 
-  // 2. Separate Student Registration
+  // 1b. Platform Super Administrator Registration
+  const registerSuperAdmin = (adminData: { name: string; email: string; password?: string }): User => {
+    const adminUserId = `usr-super-${Date.now().toString(36)}`;
+    const newAdminUser: User = {
+      id: adminUserId,
+      schoolId: null,
+      name: adminData.name,
+      email: adminData.email.trim().toLowerCase(),
+      role: 'super_admin',
+      avatarColor: 'bg-slate-900',
+      mustChangePassword: false,
+      tempPassword: adminData.password
+    };
+
+    setUsers(prev => [newAdminUser, ...prev]);
+    setCurrentUser(newAdminUser);
+    setCurrentView('dashboard');
+
+    api.users.registerAdmin({ id: adminUserId, ...adminData }).catch(err => console.warn('API sync:', err));
+
+    return newAdminUser;
+  };
+
+  // 2. Student Registration
   const registerStudent = (studentData: {
     name: string;
     email: string;
@@ -453,7 +627,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       role: 'student',
       admissionNumber: studentData.admissionNumber,
       classId: studentData.classId,
-      className: targetClass?.name || 'Form 3 East',
+      className: targetClass?.name || 'Class Stream',
       teacherId: targetClass?.teacherId,
       teacherName: targetClass?.teacherName,
       avatarColor: 'bg-emerald-600'
@@ -469,10 +643,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCurrentUser(newStudentUser);
     setCurrentView('dashboard');
 
+    api.users.registerStudent({ id: studentId, ...studentData }).catch(err => console.warn('API sync:', err));
+
     return newStudentUser;
   };
 
-  // 3. Teacher Appointment with Temporary Password Email
+  // 3. Teacher Appointment with Credentials Email
   const registerTeacher = (teacherData: {
     name: string;
     email: string;
@@ -495,7 +671,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       tempPassword: tempPassword
     };
 
-    // Dispatch appointment notification email
     const emailDispatch: EmailDispatch = {
       id: `email-${Date.now()}-${Math.random().toString(36).substring(2, 5)}`,
       recipientEmail: teacherData.email,
@@ -513,10 +688,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setSentEmails(prev => [emailDispatch, ...prev]);
     setLatestDispatchedEmail(emailDispatch);
 
+    api.users.registerTeacher({ id: teacherId, tempPassword, ...teacherData }).catch(err => console.warn('API sync:', err));
+
     return newTeacher;
   };
 
-  // 4. Add Form Stream with Student Count field
+  // 4. Add Form Stream
   const addClass = (classData: Omit<ClassGroup, 'id'>) => {
     const studentCount = classData.studentCount !== undefined ? Number(classData.studentCount) : 40;
     const newClass: ClassGroup = {
@@ -525,7 +702,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       studentCount: studentCount
     };
     setClasses(prev => [newClass, ...prev]);
-    // Increment school total students
     setSchools(prev => prev.map(s => s.id === classData.schoolId ? { ...s, totalStudents: s.totalStudents + studentCount } : s));
 
     api.classes.create(classData).catch(err => console.warn('API sync:', err));
@@ -535,7 +711,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const exp = experiments.find(e => e.id === experimentId);
     if (!exp) return;
     
-    // Create a school tier copy or update
     const schoolExp: ExperimentSpec = {
       ...exp,
       id: `exp-school-${Date.now().toString(36)}`,
@@ -570,6 +745,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setClasses(prev => prev.map(c => c.teacherId === teacherId ? { ...c, teacherId: '', teacherName: 'Unassigned' } : c));
 
     api.users.deleteTeacher(teacherId).catch(err => console.warn('API sync:', err));
+  };
+
+  const deleteUser = (userId: string) => {
+    const targetUser = users.find(u => u.id === userId);
+    if (targetUser?.role === 'teacher') {
+      deleteTeacher(userId);
+      return;
+    }
+    if (targetUser && targetUser.schoolId && targetUser.role === 'student') {
+      setSchools(prev => prev.map(s => s.id === targetUser.schoolId ? { ...s, totalStudents: Math.max(0, s.totalStudents - 1) } : s));
+    }
+    setUsers(prev => prev.filter(u => u.id !== userId));
+    if (currentUser?.id === userId) {
+      setCurrentUser(null);
+    }
+    api.users.delete(userId).catch(err => console.warn('API sync:', err));
   };
 
   const deleteExperiment = (experimentId: string) => {
@@ -647,20 +838,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return ans;
       });
 
-      // Recalculate total score
-      const proceduralScores = att.stepLogs.reduce((acc, step) => acc + step.marksEarned, 0);
-      const questionScores = updatedAnswers.reduce((acc, ans) => acc + (ans.teacherScore !== undefined ? ans.teacherScore : ans.autoScore), 0);
-      const newTotal = proceduralScores + questionScores;
-      const newPercentage = Math.round((newTotal / att.maxScore) * 100);
+      const questionMarks = updatedAnswers.reduce((acc, a) => acc + (a.teacherScore !== undefined ? a.teacherScore : a.autoScore), 0);
+      const proceduralMarks = att.stepLogs.reduce((acc, l) => acc + l.marksEarned, 0);
+      const totalScore = questionMarks + proceduralMarks;
+      const percentage = Math.round((totalScore / att.maxScore) * 100);
 
       return {
         ...att,
         answers: updatedAnswers,
-        totalScore: newTotal,
-        percentage: newPercentage,
+        totalScore,
+        percentage,
         teacherComments,
-        status: 'graded',
-        teacherFeedbackReleased: true
+        status: 'graded'
       };
     }));
 
@@ -701,7 +890,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setAttempts(prev => [newAttempt, ...prev]);
 
-    // If linked to assignment, increment submitted count
     if (newAttempt.assignmentId) {
       setAssignments(prev => prev.map(asg => {
         if (asg.id === newAttempt.assignmentId) {
@@ -729,16 +917,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.removeItem(STORAGE_KEYS.EXPERIMENTS);
     localStorage.removeItem(STORAGE_KEYS.ASSIGNMENTS);
     localStorage.removeItem(STORAGE_KEYS.ATTEMPTS);
+    localStorage.removeItem(STORAGE_KEYS.EMAILS);
     localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
 
-    setSchools(SEED_SCHOOLS);
-    setUsers(SEED_USERS);
-    setClasses(SEED_CLASSES);
-    setExperiments([...INITIAL_EXPERIMENTS, SEED_SCHOOL_EXPERIMENT]);
-    setAssignments(SEED_ASSIGNMENTS);
-    setAttempts(SEED_ATTEMPTS);
-    setCurrentUser(SEED_USERS[0]);
-    setViewWithUrl('dashboard');
+    setSchools([]);
+    setUsers([]);
+    setClasses([]);
+    setExperiments([...INITIAL_EXPERIMENTS]);
+    setAssignments([]);
+    setAttempts([]);
+    setSentEmails([]);
+    setCurrentUser(null);
+    setViewWithUrl('landing');
 
     api.health.reset().catch(err => console.warn('API reset:', err));
   };
@@ -771,10 +961,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setCurrentView: setViewWithUrl,
         setAuthMode,
         registerSchool,
+        registerSuperAdmin,
         registerStudent,
         registerTeacher,
         deleteSchool,
         deleteTeacher,
+        deleteUser,
         deleteExperiment,
         addClass,
         promoteExperimentToSchool,

@@ -1,6 +1,11 @@
 import { Router, Request, Response } from 'express';
 import { store } from '../db/store.js';
-import { isSupabaseConfigured, getSupabaseClient } from '../db/supabase.js';
+import { 
+  isSupabaseConfigured, 
+  getSupabaseClient, 
+  assignmentFromDb, 
+  assignmentToDb 
+} from '../db/supabase.js';
 import { Assignment } from '../../src/types/index.js';
 
 const router = Router();
@@ -9,25 +14,25 @@ const router = Router();
 router.get('/', async (req: Request, res: Response) => {
   try {
     const { schoolId, teacherId, classId } = req.query;
-    let results = [...store.assignments];
-
-    if (schoolId) results = results.filter(a => a.schoolId === schoolId);
-    if (teacherId) results = results.filter(a => a.teacherId === teacherId);
-    if (classId) results = results.filter(a => a.classId === classId);
 
     if (isSupabaseConfigured()) {
       const supabase = getSupabaseClient();
       if (supabase) {
-        let query = supabase.from('assignments').select('*');
+        let query = supabase.from('assignments').select('*').order('assigned_at', { ascending: false });
         if (schoolId) query = query.eq('school_id', schoolId);
         if (teacherId) query = query.eq('teacher_id', teacherId);
         if (classId) query = query.eq('class_id', classId);
         const { data, error } = await query;
-        if (!error && data && data.length > 0) {
-          return res.json(data);
+        if (!error && data) {
+          return res.json(data.map(assignmentFromDb));
         }
       }
     }
+
+    let results = [...store.assignments];
+    if (schoolId) results = results.filter(a => a.schoolId === schoolId);
+    if (teacherId) results = results.filter(a => a.teacherId === teacherId);
+    if (classId) results = results.filter(a => a.classId === classId);
 
     return res.json(results);
   } catch (err: any) {
@@ -55,23 +60,7 @@ router.post('/', async (req: Request, res: Response) => {
     if (isSupabaseConfigured()) {
       const supabase = getSupabaseClient();
       if (supabase) {
-        await supabase.from('assignments').insert([{
-          id: newAssignment.id,
-          school_id: newAssignment.schoolId,
-          teacher_id: newAssignment.teacherId,
-          teacher_name: newAssignment.teacherName,
-          class_id: newAssignment.classId,
-          class_name: newAssignment.className,
-          experiment_id: newAssignment.experimentId,
-          experiment_title: newAssignment.experimentTitle,
-          subject: newAssignment.subject,
-          kcse_paper: newAssignment.kcsePaper,
-          mode: newAssignment.mode,
-          deadline: newAssignment.deadline,
-          time_limit_minutes: newAssignment.timeLimitMinutes,
-          total_enrolled_students: newAssignment.totalEnrolledStudents,
-          submitted_count: 0
-        }]);
+        await supabase.from('assignments').insert([assignmentToDb(newAssignment)]);
       }
     }
 

@@ -2,6 +2,335 @@ import { ExperimentSpec } from '../types';
 
 export const INITIAL_EXPERIMENTS: ExperimentSpec[] = [
   {
+    id: 'exp-chem-solubility-01',
+    subject: 'chemistry',
+    title: 'Solubility of Solid A & Determination of Relative Molecular Mass (R.M.M.)',
+    kcsePaper: '233/3 (KCSE Chemistry Practical Paper 3 - Q1)',
+    topic: 'Solubility Curves, Thermochemistry & Volumetric Titration',
+    objectives: [
+      'Fill the burette with distilled water and measure accurate volume increments into a boiling tube',
+      'Dissolve 6.0g of Solid A (organic acid) by controlled heating with a Bunsen burner while stirring with a thermometer',
+      'Cool in a cold water bath while stirring and detect the exact temperature at which crystals first appear',
+      'Complete Table I of volume of water, calculated solubility (g/100g water), and crystallization temperature',
+      'Plot a smooth solubility curve on the millimeter examination graph grid provided',
+      'Titrate against Solution B (0.20M NaOH) to calculate the Relative Molecular Mass (R.M.M.) of the acid'
+    ],
+    estimatedDurationMinutes: 60,
+    apparatus: [
+      { id: 'app-burette-water', name: '50cm³ Burette with Teflon Tap (Distilled Water)', subject: 'chemistry', icon: 'Burette' },
+      { id: 'app-boiling-tube', name: 'Pyrex Boiling Tube', subject: 'chemistry', icon: 'TestTube' },
+      { id: 'app-solid-a', name: 'Solid A: 6.0g Organic Acid', subject: 'chemistry', icon: 'Layers' },
+      { id: 'app-thermometer', name: '0 - 100°C Laboratory Thermometer', subject: 'chemistry', icon: 'Activity' },
+      { id: 'app-burner', name: 'Bunsen Burner, Tripod & Wire Gauze', subject: 'chemistry', icon: 'Flame' },
+      { id: 'app-beaker-cold', name: '250cm³ Beaker containing Cold Water Bath', subject: 'chemistry', icon: 'Beaker' },
+      { id: 'app-reagent-naoh', name: 'Solution B: 0.20M Sodium Hydroxide', subject: 'chemistry', icon: 'Beaker' },
+      { id: 'app-conical-flask', name: '250cm³ Conical Flask', subject: 'chemistry', icon: 'FlaskConical' },
+      { id: 'app-pipette-25', name: '25.0cm³ Pipette & Safety Filler', subject: 'chemistry', icon: 'Pipette' },
+      { id: 'app-phenolphthalein', name: 'Phenolphthalein Indicator Bottle', subject: 'chemistry', icon: 'Droplets' }
+    ],
+    simulationType: 'solubility',
+    simulationConfig: {
+      acidConcentrationM: 0.098,
+      baseVolumeCm3: 25.0,
+      equivalencePointCm3: 24.50,
+      indicator: 'Phenolphthalein',
+      colorBefore: 'Colourless',
+      colorAfter: 'Pale Pink'
+    },
+    procedures: [
+      {
+        id: 'proc-1',
+        number: 1,
+        title: 'Procedure I: Solubility of Solid A & Crystallization Curve',
+        description: 'Fill burette with distilled water. Transfer water portions to boiling tube containing Solid A, heat until dissolved, and cool in water bath to record crystallization temperature.',
+        steps: [
+          {
+            id: 1,
+            instruction: 'Fill the burette with distilled water up to the 0.00 cm³ mark, ensuring no air bubbles in the jet.',
+            validationType: 'apparatus_placed',
+            validationDetail: 'Burette filled with distilled water',
+            marks: 1,
+            hint: 'Click "Refill 0.00 cm³" to charge the burette with distilled water.',
+            allowForcePush: true,
+            procedureNumber: 1
+          },
+          {
+            id: 2,
+            instruction: 'Place Solid A (6.0g of organic acid) into the clean boiling tube.',
+            validationType: 'reagent_added',
+            validationDetail: '6.0g Solid A placed in boiling tube',
+            marks: 1,
+            hint: 'Click "Place Solid A (6.0g) in Tube".',
+            allowForcePush: true,
+            procedureNumber: 1
+          },
+          {
+            id: 3,
+            instruction: 'Transfer 4.0 cm³ of distilled water from the burette into the boiling tube containing Solid A. Heat the mixture while stirring carefully with thermometer until all the solid dissolves.',
+            validationType: 'heated',
+            validationDetail: 'Transferred 4.0 cm³ water and heated until all solid dissolves',
+            marks: 2,
+            hint: 'Click "Transfer 4.0 cm³" then click "Heat & Stir until Dissolved".',
+            allowForcePush: true,
+            procedureNumber: 1
+          },
+          {
+            id: 4,
+            instruction: 'Cool the solution by dipping it in the provided beaker containing cold water while stirring with the thermometer. Record the temperature at which crystals start to form in Table I below.',
+            validationType: 'reading_recorded',
+            validationDetail: 'Crystallization temperature recorded (~68.0°C)',
+            marks: 2,
+            hint: 'Click "Cool in Water Bath (Detect Crystals)". Note the temperature when crystals appear.',
+            allowForcePush: true,
+            procedureNumber: 1
+          },
+          {
+            id: 5,
+            instruction: 'Add a further 1.0 cm³ of distilled water from the burette to the mixture (total 5.0 cm³). Repeat heating and cooling, and record the crystallization temperature (~59.0°C).',
+            validationType: 'volume_set',
+            validationDetail: 'Added further 1.0 cm³ water (total 5.0 cm³)',
+            marks: 2,
+            hint: 'Click "+ Add Further 1.0 cm³ Water" then heat and cool again.',
+            allowForcePush: true,
+            procedureNumber: 1
+          },
+          {
+            id: 6,
+            instruction: 'Repeat procedure by adding further 1.0 cm³ portions of water (6.0, 7.0, and 8.0 cm³), heating to dissolve and cooling to record crystallization temperatures to complete Table I.',
+            validationType: 'observation_made',
+            validationDetail: 'Completed trials for 6.0 cm³ (52°C), 7.0 cm³ (45°C), and 8.0 cm³ (39°C)',
+            marks: 2,
+            hint: 'Continue adding water increments and record each crystallization temperature in Table I.',
+            allowForcePush: true,
+            procedureNumber: 1
+          }
+        ]
+      },
+      {
+        id: 'proc-2',
+        number: 2,
+        title: 'Procedure II: Volumetric Titration with Solution B (0.20M NaOH)',
+        description: 'Titrate solution containing dissolved organic acid against 0.20M Sodium Hydroxide using phenolphthalein indicator to determine the Relative Molecular Mass (R.M.M.).',
+        steps: [
+          {
+            id: 7,
+            instruction: 'Mount the burette and fill it with Solution B (0.20M Sodium Hydroxide) to the 0.00 cm³ mark.',
+            validationType: 'apparatus_placed',
+            validationDetail: 'Burette filled with Solution B',
+            marks: 1,
+            hint: 'Switch to Procedure II tab and refill burette with Solution B.',
+            allowForcePush: true,
+            procedureNumber: 2
+          },
+          {
+            id: 8,
+            instruction: 'Pipette exactly 25.0 cm³ of the prepared acid solution into a 250 cm³ conical flask.',
+            validationType: 'volume_set',
+            validationDetail: '25.0 cm³ acid in conical flask',
+            marks: 1,
+            hint: 'Click "Pipette 25.0 cm³ into Flask".',
+            allowForcePush: true,
+            procedureNumber: 2
+          },
+          {
+            id: 9,
+            instruction: 'Add 2 to 3 drops of phenolphthalein indicator to the conical flask.',
+            validationType: 'reagent_added',
+            validationDetail: 'Phenolphthalein indicator added',
+            marks: 1,
+            hint: 'Click "Add Phenolphthalein Drops".',
+            allowForcePush: true,
+            procedureNumber: 2
+          },
+          {
+            id: 10,
+            instruction: 'Titrate the solution using Solution B until a permanent pale pink colour just appears. Record final burette reading.',
+            validationType: 'reading_recorded',
+            validationDetail: 'Titration end-point reached (~24.50 cm³)',
+            marks: 2,
+            hint: 'Click "Titrate Dropwise" until permanent pale pink color persists.',
+            allowForcePush: true,
+            procedureNumber: 2
+          }
+        ]
+      }
+    ],
+    steps: [
+      {
+        id: 1,
+        instruction: 'Fill the burette with distilled water up to the 0.00 cm³ mark, ensuring no air bubbles in the jet.',
+        validationType: 'apparatus_placed',
+        validationDetail: 'Burette filled with distilled water',
+        marks: 1,
+        hint: 'Click "Refill 0.00 cm³" to charge the burette with distilled water.',
+        allowForcePush: true,
+        procedureNumber: 1
+      },
+      {
+        id: 2,
+        instruction: 'Place Solid A (6.0g of organic acid) into the clean boiling tube.',
+        validationType: 'reagent_added',
+        validationDetail: '6.0g Solid A placed in boiling tube',
+        marks: 1,
+        hint: 'Click "Place Solid A (6.0g) in Tube".',
+        allowForcePush: true,
+        procedureNumber: 1
+      },
+      {
+        id: 3,
+        instruction: 'Transfer 4.0 cm³ of distilled water from the burette into the boiling tube containing Solid A. Heat the mixture while stirring carefully with thermometer until all the solid dissolves.',
+        validationType: 'heated',
+        validationDetail: 'Transferred 4.0 cm³ water and heated until all solid dissolves',
+        marks: 2,
+        hint: 'Click "Transfer 4.0 cm³" then click "Heat & Stir until Dissolved".',
+        allowForcePush: true,
+        procedureNumber: 1
+      },
+      {
+        id: 4,
+        instruction: 'Cool the solution by dipping it in the provided beaker containing cold water while stirring with the thermometer. Record the temperature at which crystals start to form in Table I below.',
+        validationType: 'reading_recorded',
+        validationDetail: 'Crystallization temperature recorded (~68.0°C)',
+        marks: 2,
+        hint: 'Click "Cool in Water Bath (Detect Crystals)". Note the temperature when crystals appear.',
+        allowForcePush: true,
+        procedureNumber: 1
+      },
+      {
+        id: 5,
+        instruction: 'Add a further 1.0 cm³ of distilled water from the burette to the mixture (total 5.0 cm³). Repeat heating and cooling, and record the crystallization temperature (~59.0°C).',
+        validationType: 'volume_set',
+        validationDetail: 'Added further 1.0 cm³ water (total 5.0 cm³)',
+        marks: 2,
+        hint: 'Click "+ Add Further 1.0 cm³ Water" then heat and cool again.',
+        allowForcePush: true,
+        procedureNumber: 1
+      },
+      {
+        id: 6,
+        instruction: 'Repeat procedure by adding further 1.0 cm³ portions of water (6.0, 7.0, and 8.0 cm³), heating to dissolve and cooling to record crystallization temperatures to complete Table I.',
+        validationType: 'observation_made',
+        validationDetail: 'Completed trials for 6.0 cm³ (52°C), 7.0 cm³ (45°C), and 8.0 cm³ (39°C)',
+        marks: 2,
+        hint: 'Continue adding water increments and record each crystallization temperature in Table I.',
+        allowForcePush: true,
+        procedureNumber: 1
+      },
+      {
+        id: 7,
+        instruction: 'Mount the burette and fill it with Solution B (0.20M Sodium Hydroxide) to the 0.00 cm³ mark.',
+        validationType: 'apparatus_placed',
+        validationDetail: 'Burette filled with Solution B',
+        marks: 1,
+        hint: 'Switch to Procedure II tab and refill burette with Solution B.',
+        allowForcePush: true,
+        procedureNumber: 2
+      },
+      {
+        id: 8,
+        instruction: 'Pipette exactly 25.0 cm³ of the prepared acid solution into a 250 cm³ conical flask.',
+        validationType: 'volume_set',
+        validationDetail: '25.0 cm³ acid in conical flask',
+        marks: 1,
+        hint: 'Click "Pipette 25.0 cm³ into Flask".',
+        allowForcePush: true,
+        procedureNumber: 2
+      },
+      {
+        id: 9,
+        instruction: 'Add 2 to 3 drops of phenolphthalein indicator to the conical flask.',
+        validationType: 'reagent_added',
+        validationDetail: 'Phenolphthalein indicator added',
+        marks: 1,
+        hint: 'Click "Add Phenolphthalein Drops".',
+        allowForcePush: true,
+        procedureNumber: 2
+      },
+      {
+        id: 10,
+        instruction: 'Titrate the solution using Solution B until a permanent pale pink colour just appears. Record final burette reading.',
+        validationType: 'reading_recorded',
+        validationDetail: 'Titration end-point reached (~24.50 cm³)',
+        marks: 2,
+        hint: 'Click "Titrate Dropwise" until permanent pale pink color persists.',
+        allowForcePush: true,
+        procedureNumber: 2
+      }
+    ],
+    answerSheet: [
+      {
+        id: 'q-table-solubility',
+        type: 'data_table',
+        prompt: 'Complete Table I below by recording the volumes of distilled water added, calculated solubility of solid A, and the crystallization temperatures.',
+        maxMarks: 5,
+        procedureNumber: 1,
+        tableType: 'solubility',
+        tableHeaders: [
+          'Volume of distilled water added (cm³)',
+          'Solubility of solid A (g / 100g water)',
+          'Crystallization temperature (°C)'
+        ],
+        tableRows: [
+          { label: '4.0 cm³ water', simulatedValue: 68.0, tolerance: 2.0 },
+          { label: '5.0 cm³ water', simulatedValue: 59.0, tolerance: 2.0 },
+          { label: '6.0 cm³ water', simulatedValue: 52.0, tolerance: 2.0 },
+          { label: '7.0 cm³ water', simulatedValue: 45.0, tolerance: 2.0 },
+          { label: '8.0 cm³ water', simulatedValue: 39.0, tolerance: 2.0 }
+        ]
+      },
+      {
+        id: 'q-graph-solubility',
+        type: 'graph',
+        prompt: 'a) On the grid provided, plot a graph of solubility of solid A (y-axis) against crystallization temperature (x-axis). (3 marks)',
+        maxMarks: 3,
+        procedureNumber: 1,
+        graphConfig: {
+          xLabel: 'Crystallization temperature (°C)',
+          yLabel: 'Solubility of solid A (g / 100g of water)',
+          xMin: 20,
+          xMax: 80,
+          xStep: 10,
+          yMin: 0,
+          yMax: 160,
+          yStep: 20,
+          curveType: 'smooth_curve',
+          expectedPoints: [
+            { x: 68.0, y: 150.0 },
+            { x: 59.0, y: 120.0 },
+            { x: 52.0, y: 100.0 },
+            { x: 45.0, y: 85.7 },
+            { x: 39.0, y: 75.0 }
+          ]
+        }
+      },
+      {
+        id: 'q-calc-solubility-temp',
+        type: 'calculation',
+        prompt: 'b) From your graph, determine the solubility of solid A at 55.0°C. (1 mark)',
+        maxMarks: 1,
+        procedureNumber: 1,
+        correctNumericValue: 110.0,
+        tolerance: 4.0,
+        unit: 'g / 100g of water',
+        formulaHint: 'Read off the y-axis coordinate corresponding to 55°C on the plotted curve.'
+      },
+      {
+        id: 'q-calc-rmm',
+        type: 'calculation',
+        prompt: 'c) Using the titration results from Procedure II (where 25.0 cm³ of the acid reacted with 24.50 cm³ of 0.20M NaOH in a 1:2 mole ratio), calculate the Relative Molecular Mass (R.M.M.) of organic acid solid A. (2 marks)',
+        maxMarks: 2,
+        procedureNumber: 2,
+        correctNumericValue: 126.0,
+        tolerance: 3.0,
+        unit: 'g/mol',
+        formulaHint: 'Moles NaOH = (0.20 × 24.50) / 1000 = 0.0049 mol; Moles acid in 25cm³ = 0.0049 / 2 = 0.00245 mol; Moles in 250cm³ = 0.0245 mol; RMM = 6.0g / 0.0245 = 126 g/mol (Ethanedioic acid dihydrate H₂C₂O₄·2H₂O)'
+      }
+    ],
+    ownerType: 'global',
+    authorName: 'KNEC Chief Examiner',
+    status: 'published'
+  },
+  {
     id: 'exp-chem-titration-01',
     subject: 'chemistry',
     title: 'Acid-Base Titration: Standardization of Hydrochloric Acid',
@@ -512,6 +841,289 @@ export const INITIAL_EXPERIMENTS: ExperimentSpec[] = [
         tolerance: 1.0,
         unit: 'N/m',
         formulaHint: 'k = ΔF (N) / Δe (m)'
+      }
+    ],
+    ownerType: 'global',
+    schoolId: null,
+    teacherId: null,
+    authorName: 'KCSE National Examinations Board (Curriculum Directorate)',
+    status: 'published'
+  },
+  {
+    id: 'exp-chem-redox-knec-233-3',
+    subject: 'chemistry',
+    title: 'Standardization and Volumetric Analysis Practical (233/3)',
+    kcsePaper: '233/3 (KCSE Chemistry Practical Paper 3 - Q1)',
+    topic: 'Acids, Bases & Redox Volumetric Analysis',
+    objectives: [
+      'Fill the burette with Solution B and zero to the 0.00 cm³ mark',
+      'Accurately pipette 25.0 cm³ of Solution C into a clean conical flask',
+      'Measure 5.0 cm³ of 1M sulphuric(VI) acid using a measuring cylinder into the flask',
+      'Titrate Solution C against Solution B until a permanent pale pink colour just appears',
+      'Determine the reaction stoichiometry, average volume, and write balanced ionic equations'
+    ],
+    estimatedDurationMinutes: 45,
+    apparatus: [
+      { id: 'app-burette', name: '50cm³ Burette with Teflon Tap', subject: 'chemistry', icon: 'Burette' },
+      { id: 'app-flask', name: '250cm³ Conical Flask', subject: 'chemistry', icon: 'FlaskConical' },
+      { id: 'app-pipette', name: '25.0cm³ Pipette & Safety Filler', subject: 'chemistry', icon: 'Pipette' },
+      { id: 'app-stand', name: 'Retort Stand & Burette Clamp', subject: 'chemistry', icon: 'Clamp' },
+      { id: 'app-cylinder', name: '10cm³ Measuring Cylinder', subject: 'chemistry', icon: 'Cylinder' },
+      { id: 'app-white-tile', name: 'White Ceramic Inspection Tile', subject: 'chemistry', icon: 'Square' },
+      { id: 'app-sol-b', name: 'Solution B: Aqueous Potassium Manganate(VII)', subject: 'chemistry', icon: 'Beaker' },
+      { id: 'app-sol-c', name: 'Solution C: 0.1M Ammonium Iron(II) Sulphate', subject: 'chemistry', icon: 'Beaker' },
+      { id: 'app-acid', name: '1.0M Sulphuric(VI) Acid', subject: 'chemistry', icon: 'Beaker' },
+      { id: 'app-burner', name: 'Bunsen Burner & Wire Gauze', subject: 'chemistry', icon: 'Flame' }
+    ],
+    procedures: [
+      {
+        id: 'proc-1',
+        number: 1,
+        title: 'Procedure I: Standardization of Solution B with Solution C',
+        description: 'Volumetric titration using Solution B in burette and acidified Solution C in conical flask.',
+        steps: [
+          {
+            id: 1,
+            instruction: 'Fill the burette with solution B up to the 0.00 cm³ mark.',
+            validationType: 'apparatus_placed',
+            validationDetail: 'Burette filled with Solution B',
+            marks: 1,
+            hint: 'Mount the burette and fill with Solution B using a funnel or tap.',
+            allowForcePush: true,
+            procedureNumber: 1
+          },
+          {
+            id: 2,
+            instruction: 'Pipette 25cm³ of solution C into a conical flask.',
+            validationType: 'volume_set',
+            validationDetail: '25.0 cm³ Solution C in conical flask',
+            marks: 1,
+            hint: 'Use the pipette filler to deliver exactly 25.0 cm³ of Solution C.',
+            allowForcePush: true,
+            procedureNumber: 1
+          },
+          {
+            id: 3,
+            instruction: 'Add 5cm³ of 1M sulphuric (VI) acid using a measuring cylinder into the conical flask.',
+            validationType: 'reagent_added',
+            validationDetail: '5.0 cm³ 1M H₂SO₄ added via measuring cylinder',
+            marks: 1,
+            hint: 'Use the measuring cylinder to measure 5.0 cm³ of 1M H₂SO₄ and pour into the flask.',
+            allowForcePush: true,
+            procedureNumber: 1
+          },
+          {
+            id: 4,
+            instruction: 'Titrate solution C using solution B until a permanent pale pink colour just appears.',
+            validationType: 'run_simulation',
+            validationDetail: 'Titrated to permanent pale pink endpoint',
+            marks: 1,
+            hint: 'Deliver Solution B dropwise until the pale pink colour remains on swirling.',
+            allowForcePush: true,
+            procedureNumber: 1
+          }
+        ]
+      },
+      {
+        id: 'proc-2',
+        number: 2,
+        title: 'Procedure II: Quantitative Determination with Dilution & Heating',
+        description: 'Dilution of Solution A, acidification, heating to 60°C, and titration against Solution B.',
+        steps: [
+          {
+            id: 5,
+            instruction: 'Measure 2.0 cm³ of Solution A and dilute by adding 75 cm³ of distilled water to make Solution D.',
+            validationType: 'diluted',
+            validationDetail: 'Solution D prepared by dilution',
+            marks: 1,
+            hint: 'Use the dilution station to prepare Solution D.',
+            allowForcePush: true,
+            procedureNumber: 2
+          },
+          {
+            id: 6,
+            instruction: 'Pipette 25.0 cm³ of Solution D into a conical flask and add 5.0 cm³ of 1M sulphuric acid.',
+            validationType: 'volume_set',
+            validationDetail: '25.0 cm³ Solution D + 5cm³ H₂SO₄ in flask',
+            marks: 1,
+            hint: 'Transfer Solution D and acidify with 5.0 cm³ 1M sulphuric acid using measuring cylinder.',
+            allowForcePush: true,
+            procedureNumber: 2
+          },
+          {
+            id: 7,
+            instruction: 'Heat the mixture in the conical flask to about 60°C using a Bunsen burner or water bath.',
+            validationType: 'heated',
+            validationDetail: 'Conical flask heated to 60°C',
+            marks: 1,
+            hint: 'Activate heat source and monitor thermometer until 60°C is reached.',
+            allowForcePush: true,
+            procedureNumber: 2
+          },
+          {
+            id: 8,
+            instruction: 'Titrate while hot against Solution B until a permanent pale pink colour appears.',
+            validationType: 'run_simulation',
+            validationDetail: 'Hot mixture titrated to pale pink endpoint',
+            marks: 1,
+            hint: 'Titrate while hot with Solution B until pale pink endpoint.',
+            allowForcePush: true,
+            procedureNumber: 2
+          }
+        ]
+      }
+    ],
+    steps: [
+      {
+        id: 1,
+        instruction: 'Fill the burette with solution B up to the 0.00 cm³ mark.',
+        validationType: 'apparatus_placed',
+        validationDetail: 'Burette filled with Solution B',
+        marks: 1,
+        hint: 'Mount the burette and fill with Solution B using a funnel or tap.',
+        allowForcePush: true,
+        procedureNumber: 1
+      },
+      {
+        id: 2,
+        instruction: 'Pipette 25cm³ of solution C into a conical flask.',
+        validationType: 'volume_set',
+        validationDetail: '25.0 cm³ Solution C in conical flask',
+        marks: 1,
+        hint: 'Use the pipette filler to deliver exactly 25.0 cm³ of Solution C.',
+        allowForcePush: true,
+        procedureNumber: 1
+      },
+      {
+        id: 3,
+        instruction: 'Add 5cm³ of 1M sulphuric (VI) acid using a measuring cylinder into the conical flask.',
+        validationType: 'reagent_added',
+        validationDetail: '5.0 cm³ 1M H₂SO₄ added via measuring cylinder',
+        marks: 1,
+        hint: 'Use the measuring cylinder to measure 5.0 cm³ of 1M H₂SO₄ and pour into the flask.',
+        allowForcePush: true,
+        procedureNumber: 1
+      },
+      {
+        id: 4,
+        instruction: 'Titrate solution C using solution B until a permanent pale pink colour just appears.',
+        validationType: 'run_simulation',
+        validationDetail: 'Titrated to permanent pale pink endpoint',
+        marks: 1,
+        hint: 'Deliver Solution B dropwise until the pale pink colour remains on swirling.',
+        allowForcePush: true,
+        procedureNumber: 1
+      },
+      {
+        id: 5,
+        instruction: 'Measure 2.0 cm³ of Solution A and dilute by adding 75 cm³ of distilled water to make Solution D.',
+        validationType: 'diluted',
+        validationDetail: 'Solution D prepared by dilution',
+        marks: 1,
+        hint: 'Use the dilution station to prepare Solution D.',
+        allowForcePush: true,
+        procedureNumber: 2
+      },
+      {
+        id: 6,
+        instruction: 'Pipette 25.0 cm³ of Solution D into a conical flask and add 5.0 cm³ of 1M sulphuric acid.',
+        validationType: 'volume_set',
+        validationDetail: '25.0 cm³ Solution D + 5cm³ H₂SO₄ in flask',
+        marks: 1,
+        hint: 'Transfer Solution D and acidify with 5.0 cm³ 1M sulphuric acid using measuring cylinder.',
+        allowForcePush: true,
+        procedureNumber: 2
+      },
+      {
+        id: 7,
+        instruction: 'Heat the mixture in the conical flask to about 60°C using a Bunsen burner or water bath.',
+        validationType: 'heated',
+        validationDetail: 'Conical flask heated to 60°C',
+        marks: 1,
+        hint: 'Activate heat source and monitor thermometer until 60°C is reached.',
+        allowForcePush: true,
+        procedureNumber: 2
+      },
+      {
+        id: 8,
+        instruction: 'Titrate while hot against Solution B until a permanent pale pink colour appears.',
+        validationType: 'run_simulation',
+        validationDetail: 'Hot mixture titrated to pale pink endpoint',
+        marks: 1,
+        hint: 'Titrate while hot with Solution B until pale pink endpoint.',
+        allowForcePush: true,
+        procedureNumber: 2
+      }
+    ],
+    simulationType: 'titration',
+    simulationConfig: {
+      acidConcentrationM: 0.02,
+      baseVolumeCm3: 25.0,
+      unknownMolarity: 0.10,
+      indicator: 'Potassium Permanganate (Self-Indicating)',
+      equivalencePointCm3: 24.50,
+      colorBefore: '#f1f5f9',
+      colorAfter: '#fbcfe8'
+    },
+    answerSheet: [
+      {
+        id: 'q-table-a',
+        type: 'data_table',
+        prompt: 'Table A: Titration of 25.0 cm³ Solution C against Solution B',
+        maxMarks: 4,
+        procedureNumber: 1,
+        tableType: 'titration',
+        tableHeaders: ['Titre Number', 'Final burette reading (cm³)', 'Initial burette reading (cm³)', 'Volume of Solution B used (cm³)'],
+        tableRows: [
+          { label: 'Titre I (Trial)', simulatedValue: 24.50, tolerance: 0.20 },
+          { label: 'Titre II (Accurate)', simulatedValue: 24.50, tolerance: 0.10 },
+          { label: 'Titre III (Accurate)', simulatedValue: 24.40, tolerance: 0.10 }
+        ]
+      },
+      {
+        id: 'q-calc-avg-b',
+        type: 'calculation',
+        prompt: '(a) Calculate the average volume of Solution B used.',
+        maxMarks: 1,
+        procedureNumber: 1,
+        correctNumericValue: 24.45,
+        tolerance: 0.10,
+        unit: 'cm³',
+        formulaHint: '(Titre II + Titre III) / 2'
+      },
+      {
+        id: 'q-writing-ionic-eq',
+        type: 'short_answer',
+        prompt: '(b) Write the balanced ionic equation for the reaction between Solution B (MnO₄⁻) and Solution C (Fe²⁺) in acidic medium.',
+        maxMarks: 2,
+        procedureNumber: 1,
+        writingType: 'multi_line',
+        modelAnswer: 'MnO₄⁻(aq) + 5Fe²⁺(aq) + 8H⁺(aq) -> Mn²⁺(aq) + 5Fe³⁺(aq) + 4H₂O(l) (Award 1 mark for correct balancing, 1 mark for state symbols).',
+        acceptedKeywords: ['MnO4-', 'Fe2+', 'H+', 'Mn2+', 'Fe3+', 'H2O', 'balanced']
+      },
+      {
+        id: 'q-table-b',
+        type: 'data_table',
+        prompt: 'Table B: Titration of 25.0 cm³ of diluted Solution D against Solution B (Hot)',
+        maxMarks: 4,
+        procedureNumber: 2,
+        tableType: 'titration',
+        tableHeaders: ['Titre Number', 'Final burette reading (cm³)', 'Initial burette reading (cm³)', 'Volume of Solution B used (cm³)'],
+        tableRows: [
+          { label: 'Titre I (Trial)', simulatedValue: 22.80, tolerance: 0.20 },
+          { label: 'Titre II (Accurate)', simulatedValue: 22.80, tolerance: 0.10 },
+          { label: 'Titre III (Accurate)', simulatedValue: 22.70, tolerance: 0.10 }
+        ]
+      },
+      {
+        id: 'q-writing-acid-role',
+        type: 'short_answer',
+        prompt: '(c) Explain the role of the 5.0 cm³ 1M sulphuric(VI) acid added using the measuring cylinder in Step 3.',
+        maxMarks: 1,
+        procedureNumber: 1,
+        writingType: 'multi_line',
+        modelAnswer: 'Provides hydrogen ions (H⁺) required for the reduction of manganate(VII) ions to manganese(II) ions, and prevents formation of brown manganese(IV) oxide precipitate.',
+        acceptedKeywords: ['acidic medium', 'H+ ions', 'prevent MnO2', 'reduction of MnO4-']
       }
     ],
     ownerType: 'global',

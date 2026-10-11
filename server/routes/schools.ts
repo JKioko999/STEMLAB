@@ -1,6 +1,15 @@
 import { Router, Request, Response } from 'express';
 import { store } from '../db/store.js';
-import { isSupabaseConfigured, getSupabaseClient } from '../db/supabase.js';
+import { 
+  isSupabaseConfigured, 
+  getSupabaseClient, 
+  schoolFromDb, 
+  schoolToDb, 
+  userFromDb, 
+  userToDb, 
+  classFromDb, 
+  emailToDb 
+} from '../db/supabase.js';
 import { School, User, EmailDispatch } from '../../src/types/index.js';
 
 const router = Router();
@@ -12,8 +21,8 @@ router.get('/', async (req: Request, res: Response) => {
       const supabase = getSupabaseClient();
       if (supabase) {
         const { data, error } = await supabase.from('schools').select('*').order('created_at', { ascending: false });
-        if (!error && data && data.length > 0) {
-          return res.json(data);
+        if (!error && data) {
+          return res.json(data.map(schoolFromDb));
         }
       }
     }
@@ -27,6 +36,24 @@ router.get('/', async (req: Request, res: Response) => {
 router.get('/:id', async (req: Request, res: Response) => {
   const { id } = req.params;
   try {
+    if (isSupabaseConfigured()) {
+      const supabase = getSupabaseClient();
+      if (supabase) {
+        const { data: sch, error } = await supabase.from('schools').select('*').eq('id', id).maybeSingle();
+        if (!error && sch) {
+          const { data: teachers } = await supabase.from('users').select('*').eq('school_id', id).eq('role', 'teacher');
+          const { data: classes } = await supabase.from('classes').select('*').eq('school_id', id);
+          const { count: studentCount } = await supabase.from('users').select('*', { count: 'exact', head: true }).eq('school_id', id).eq('role', 'student');
+          return res.json({
+            school: schoolFromDb(sch),
+            teachers: (teachers || []).map(userFromDb),
+            classes: (classes || []).map(classFromDb),
+            studentCount: studentCount || 0
+          });
+        }
+      }
+    }
+
     const school = store.schools.find(s => s.id === id);
     if (!school) {
       return res.status(404).json({ error: 'School not found' });
@@ -50,12 +77,13 @@ router.get('/:id', async (req: Request, res: Response) => {
 // POST /api/schools - Register a new secondary school
 router.post('/', async (req: Request, res: Response) => {
   try {
-    const { schoolData, adminPassword } = req.body;
+    const { schoolData, adminPassword, schoolId: passedSchoolId, adminUserId: passedAdminUserId } = req.body;
     if (!schoolData || !schoolData.name || !schoolData.adminEmail) {
       return res.status(400).json({ error: 'Missing required school name or admin email' });
     }
 
-    const schoolId = `sch-${Date.now().toString(36)}`;
+    const schoolId = schoolData.id || passedSchoolId || `sch-${Date.now().toString(36)}`;
+    const adminUserId = passedAdminUserId || `usr-admin-${Date.now().toString(36)}`;
     const tempPassword = adminPassword || `Kcse${Math.floor(1000 + Math.random() * 9000)}!`;
 
     const newSchool: School = {
@@ -68,7 +96,7 @@ router.post('/', async (req: Request, res: Response) => {
     };
 
     const adminUser: User = {
-      id: `usr-admin-${Date.now().toString(36)}`,
+      id: adminUserId,
       schoolId: schoolId,
       name: schoolData.adminName,
       email: schoolData.adminEmail,
@@ -95,23 +123,13 @@ router.post('/', async (req: Request, res: Response) => {
     store.users.unshift(adminUser);
     store.emails.unshift(emailDispatch);
 
-    // Optional Supabase insertion
+    // Save to live Supabase database if configured
     if (isSupabaseConfigured()) {
       const supabase = getSupabaseClient();
       if (supabase) {
-        await supabase.from('schools').insert([{
-          id: newSchool.id,
-          name: newSchool.name,
-          registration_number: newSchool.registrationNumber,
-          county: newSchool.county,
-          sub_county: newSchool.subCounty,
-          category: newSchool.category,
-          subscription_plan: newSchool.subscriptionPlan,
-          admin_name: newSchool.adminName,
-          admin_email: newSchool.adminEmail,
-          phone: newSchool.phone,
-          status: 'active'
-        }]);
+        await supabase.from('schools').insert([schoolToDb(newSchool)]);
+        await supabase.from('users').insert([userToDb(adminUser)]);
+        await supabase.from('dispatched_emails').insert([emailToDb(emailDispatch)]);
       }
     }
 

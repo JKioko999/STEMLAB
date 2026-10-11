@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { store } from '../db/store.js';
-import { isSupabaseConfigured, getSupabaseClient } from '../db/supabase.js';
+import { isSupabaseConfigured, getSupabaseClient, emailFromDb } from '../db/supabase.js';
 
 const router = Router();
 
@@ -8,20 +8,22 @@ const router = Router();
 router.get('/', async (req: Request, res: Response) => {
   try {
     const { schoolName } = req.query;
-    let results = [...store.emails];
-
-    if (schoolName) {
-      results = results.filter(e => e.schoolName === schoolName);
-    }
 
     if (isSupabaseConfigured()) {
       const supabase = getSupabaseClient();
       if (supabase) {
-        const { data, error } = await supabase.from('dispatched_emails').select('*').order('sent_at', { ascending: false });
-        if (!error && data && data.length > 0) {
-          return res.json(data);
+        let query = supabase.from('dispatched_emails').select('*').order('sent_at', { ascending: false });
+        if (schoolName) query = query.eq('school_name', schoolName);
+        const { data, error } = await query;
+        if (!error && data) {
+          return res.json(data.map(emailFromDb));
         }
       }
+    }
+
+    let results = [...store.emails];
+    if (schoolName) {
+      results = results.filter(e => e.schoolName === schoolName);
     }
 
     return res.json(results);

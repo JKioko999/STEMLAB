@@ -236,6 +236,8 @@ export const InteractiveTitrationWorkbench: React.FC<InteractiveTitrationWorkben
 
   const currentStep = activeExperiment?.steps?.[currentStepIndex] || null;
 
+
+
   // Temperature simulation
   useEffect(() => {
     let interval: any;
@@ -1028,40 +1030,11 @@ export const InteractiveTitrationWorkbench: React.FC<InteractiveTitrationWorkben
               </span>
             ) : (
               <button
-                onClick={() => {
-                  const ins = currentStep.instruction.toLowerCase();
-                  if (ins.includes('burette') || ins.includes('burrete') || ins.includes('fill')) {
-                    handlePlaceStand();
-                    handleMountBurette();
-                    handleFillBuretteWithAcid();
-                  } else if (ins.includes('pipette') || ins.includes('pippete') || ins.includes('25cm') || ins.includes('flask')) {
-                    handlePlaceTileAndFlask();
-                    handleDrawBaseWithPipette();
-                    handleDispensePipetteToFlask();
-                  } else if (ins.includes('indicator') || ins.includes('methyl orange') || ins.includes('phenolphthalein') || ins.includes('drop')) {
-                    handleAddIndicatorDrop();
-                  } else if (solidReagents.length > 0 && (ins.includes('solid') || ins.includes('carbonate') || ins.includes('add'))) {
-                    setAddedSolidName(solidReagents[0].name);
-                    setBenchMessage({ text: `Placed ${solidReagents[0].name} into the reaction container.`, type: 'success' });
-                    if (onStepComplete) onStepComplete(currentStep.id);
-                  } else if (requiresAuxiliaryReagent && (ins.includes('measuring cylinder') || ins.includes('sulphuric'))) {
-                    handlePlaceTileAndFlask();
-                    handlePourMeasuringCylinder();
-                  } else if (requiresHeating && (ins.includes('heat') || ins.includes('60°c'))) {
-                    handleToggleHeating();
-                  } else if (requiresDilution && ins.includes('dilute')) {
-                    handlePerformDilution();
-                  } else if (ins.includes('titrate') || ins.includes('endpoint') || ins.includes('table')) {
-                    handleMoveFlaskUnderBurette();
-                    handleTitrate(24.50);
-                  } else {
-                    if (onStepComplete) onStepComplete(currentStep.id);
-                  }
-                }}
-                className="px-3.5 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-semibold transition flex items-center gap-1.5 shadow-lg"
+                onClick={() => onStepComplete && onStepComplete(currentStep.id)}
+                className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold transition flex items-center gap-1.5 shadow"
               >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Execute Step {currentStep.id} on Bench</span>
+                <Check className="w-3.5 h-3.5" />
+                <span>Mark Step {currentStep.id} Done</span>
               </button>
             )}
           </div>
@@ -1093,6 +1066,83 @@ export const InteractiveTitrationWorkbench: React.FC<InteractiveTitrationWorkben
           </button>
         </div>
       )}
+
+      {/* ================= TOP APPARATUS & REAGENT BOTTLES SHELF (ON TOP OF WORKBENCH) ================= */}
+      <div className="bg-slate-900 border border-slate-800 p-3 rounded-2xl shadow-xl space-y-2">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-1.5">
+          <div className="flex items-center gap-2">
+            <FlaskConical className="w-4 h-4 text-cyan-400" />
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
+              Laboratory Reagents & Apparatus Shelf
+            </span>
+          </div>
+          <span className="text-[10px] font-mono text-slate-400">
+            Click bottles to fill burette, draw pipette, or add indicator drops
+          </span>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {/* 1. Titrant Acid Bottle (Fill Burette) */}
+          <button
+            onClick={handleFillBuretteWithAcid}
+            className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-750 border border-amber-500/40 text-amber-200 text-xs font-semibold transition flex items-center gap-2 shadow-xs cursor-pointer"
+            title="Fill 50.0cm³ burette with titrant solution"
+          >
+            <div className="w-4 h-5 rounded-t bg-amber-700 border border-amber-500 flex items-center justify-center text-[7px] font-bold text-white shrink-0">
+              HCl
+            </div>
+            <span>Fill Burette with {buretteReagentName.split(':')[0]}</span>
+            {isBuretteFilledWithAcid && <span className="text-emerald-400 font-bold text-[10px]">✓ Full</span>}
+          </button>
+
+          {/* 2. Analyte Base Bottle (Draw with Pipette) */}
+          <button
+            onClick={handleDrawBaseWithPipette}
+            className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-750 border border-cyan-500/40 text-cyan-200 text-xs font-semibold transition flex items-center gap-2 shadow-xs cursor-pointer"
+            title="Draw with 25.0cm³ pipette and deliver into conical flask"
+          >
+            <div className="w-4 h-5 rounded-t bg-cyan-700 border border-cyan-400 flex items-center justify-center text-[7px] font-bold text-white shrink-0">
+              NaOH
+            </div>
+            <span>Pipette 25.0 cm³ {pipetteReagentName.split(':')[0]}</span>
+            {flaskBaseVolume > 0 && <span className="text-emerald-400 font-bold text-[10px]">✓ In Flask</span>}
+          </button>
+
+          {/* 3. Indicator Dropper Bottle */}
+          <button
+            onClick={handleAddIndicatorDrop}
+            className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-750 border border-rose-500/40 text-rose-200 text-xs font-semibold transition flex items-center gap-2 shadow-xs cursor-pointer"
+            title="Add indicator drop into conical flask"
+          >
+            <Droplet className="w-3.5 h-3.5 text-rose-400" />
+            <span>Indicator: {indicatorType === 'phenolphthalein' ? 'Phenolphthalein' : 'Methyl Orange'}</span>
+            <span className="text-[10px] font-mono text-rose-300 bg-rose-950/60 px-1.5 py-0.5 rounded">
+              +{indicatorDrops} drop{indicatorDrops !== 1 ? 's' : ''}
+            </span>
+          </button>
+
+          {/* 4. Auxiliary Reagent (if present) */}
+          {requiresAuxiliaryReagent && (
+            <button
+              onClick={handleDispenseAuxiliaryMeasuringCylinder}
+              className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-750 border border-violet-500/40 text-violet-200 text-xs font-semibold transition flex items-center gap-2 shadow-xs cursor-pointer"
+            >
+              <PlusCircle className="w-3.5 h-3.5 text-violet-400" />
+              <span>Add {selectedMeasuringVolume} cm³ {selectedMeasuringReagent.split(':')[0]}</span>
+            </button>
+          )}
+
+          {/* 5. Wash Bottle: Distilled H2O */}
+          <button
+            onClick={handleRinseFlask}
+            className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-750 border border-blue-500/30 text-blue-200 text-xs font-medium transition flex items-center gap-1.5 cursor-pointer ml-auto"
+            title="Rinse conical flask with distilled water"
+          >
+            <Droplet className="w-3.5 h-3.5 text-blue-400" />
+            <span>Rinse Flask (H₂O)</span>
+          </button>
+        </div>
+      </div>
 
       {/* MAIN WORKBENCH STAGE */}
       {viewMode === 'photorealistic' ? (
@@ -1528,83 +1578,6 @@ export const InteractiveTitrationWorkbench: React.FC<InteractiveTitrationWorkben
                 </div>
               </>
             )}
-
-            {/* ================= RIGHT SIDE: LABORATORY REAGENT BOTTLES RACK ================= */}
-            <div className="absolute top-16 right-6 z-25 flex flex-col gap-2.5 max-w-[210px] pointer-events-auto">
-              <div className="bg-slate-950/90 backdrop-blur-md p-3 rounded-2xl border border-slate-800 shadow-xl space-y-2">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block border-b border-slate-800 pb-1">
-                  Workbench Reagent Bottles
-                </span>
-
-                {/* 1. Amber Reagent Bottle: Solution N (Acid) */}
-                <button
-                  onClick={handleFillBuretteWithAcid}
-                  className="w-full p-2 rounded-xl bg-slate-900 hover:bg-slate-850 border border-amber-600/30 text-left transition flex items-center gap-2 group"
-                >
-                  <div className="w-6 h-8 rounded-t bg-amber-700 border border-amber-500 flex flex-col items-center justify-between p-0.5 shadow shrink-0">
-                    <div className="w-3 h-1 bg-slate-800 rounded-xs" />
-                    <span className="text-[6px] font-bold text-white">HCl</span>
-                  </div>
-                  <div className="truncate">
-                    <span className="text-xs font-bold text-amber-300 block truncate group-hover:text-amber-200">
-                      {buretteReagentName.split(':')[0]}
-                    </span>
-                    <span className="text-[9px] text-slate-400">Click to fill burette</span>
-                  </div>
-                </button>
-
-                {/* 2. Clear Reagent Bottle: Solution M (Base) */}
-                <button
-                  onClick={handleDrawBaseWithPipette}
-                  className="w-full p-2 rounded-xl bg-slate-900 hover:bg-slate-850 border border-cyan-600/30 text-left transition flex items-center gap-2 group"
-                >
-                  <div className="w-6 h-8 rounded-t bg-cyan-700/60 border border-cyan-400 flex flex-col items-center justify-between p-0.5 shadow shrink-0">
-                    <div className="w-3 h-1 bg-slate-800 rounded-xs" />
-                    <span className="text-[6px] font-bold text-white">NaOH</span>
-                  </div>
-                  <div className="truncate">
-                    <span className="text-xs font-bold text-cyan-300 block truncate group-hover:text-cyan-200">
-                      {pipetteReagentName.split(':')[0]}
-                    </span>
-                    <span className="text-[9px] text-slate-400">Click to draw with pipette</span>
-                  </div>
-                </button>
-
-                {/* 3. Dropper Bottle: Indicator */}
-                <button
-                  onClick={handleAddIndicatorDrop}
-                  className="w-full p-2 rounded-xl bg-slate-900 hover:bg-slate-850 border border-rose-600/30 text-left transition flex items-center gap-2 group"
-                >
-                  <div className="w-5 h-7 rounded-t bg-rose-700 border border-rose-400 flex flex-col items-center justify-between p-0.5 shadow shrink-0">
-                    <div className="w-2 h-1.5 bg-slate-900 rounded-full" />
-                    <span className="text-[5px] font-bold text-white">IND</span>
-                  </div>
-                  <div className="truncate">
-                    <span className="text-xs font-bold text-rose-300 block truncate group-hover:text-rose-200">
-                      {indicatorType === 'phenolphthalein' ? 'Phenolphthalein' : 'Methyl Orange'}
-                    </span>
-                    <span className="text-[9px] text-slate-400">+1 drop ({indicatorDrops} in flask)</span>
-                  </div>
-                </button>
-
-                {/* 4. Wash Bottle: Distilled Water */}
-                <button
-                  onClick={handleRinseFlask}
-                  className="w-full p-2 rounded-xl bg-slate-900 hover:bg-slate-850 border border-blue-500/30 text-left transition flex items-center gap-2 group"
-                >
-                  <div className="w-5 h-7 rounded bg-blue-500/30 border border-blue-400 flex items-center justify-center shadow shrink-0">
-                    <Droplet className="w-3 h-3 text-blue-300" />
-                  </div>
-                  <div className="truncate">
-                    <span className="text-xs font-bold text-blue-300 block truncate group-hover:text-blue-200">
-                      Distilled Water H₂O
-                    </span>
-                    <span className="text-[9px] text-slate-400">Rinse flask for next trial</span>
-                  </div>
-                </button>
-
-              </div>
-            </div>
 
             {/* ================= BOTTOM FLOATING CONTROL PANEL ================= */}
             <div className="absolute bottom-4 left-6 right-6 z-30 flex flex-wrap items-center justify-between gap-3 bg-slate-950/95 backdrop-blur-md border border-slate-800 p-3.5 rounded-2xl shadow-2xl">

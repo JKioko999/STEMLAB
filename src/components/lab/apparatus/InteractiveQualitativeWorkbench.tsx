@@ -12,7 +12,8 @@ import {
   AlertTriangle,
   Info,
   RefreshCw,
-  Move
+  Move,
+  FlaskConical
 } from 'lucide-react';
 
 export interface QualitativeLiveTelemetry {
@@ -732,175 +733,154 @@ export const InteractiveQualitativeWorkbench: React.FC<InteractiveQualitativeWor
         </div>
       )}
 
-      {/* Main Grid: Reagents & Dosage Tray on Left + Test Tube Rack Canvas on Right */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        
-        {/* REAGENTS & APPARATUS CONTROLS (Col 4) */}
-        <div className="lg:col-span-4 bg-slate-800/90 border border-slate-700/80 p-4 rounded-2xl space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-700 pb-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Chemical Reagents Shelf
+      {/* ================= TOP APPARATUS & CHEMICAL REAGENTS RIBBON (ON TOP OF WORKBENCH) ================= */}
+      <div className="bg-slate-900 border border-slate-800 p-3.5 rounded-2xl space-y-3 shadow-lg">
+        {/* Header: Tube Selection & Location Controls */}
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+              <FlaskConical className="w-4 h-4 text-amber-400" />
+              <span>Active Target Tube:</span>
             </span>
-            <span className="text-[10px] text-amber-400 font-bold">
-              Target: {selectedTube.name}
-            </span>
-          </div>
-
-          {/* Active Target Tube Selector */}
-          <div className="space-y-1">
-            <label className="text-[11px] font-semibold text-slate-300 block">
-              Active Tube to Work On:
-            </label>
-            <div className="grid grid-cols-2 gap-1.5">
+            <div className="flex items-center gap-1.5">
               {tubes.map(t => (
                 <button
                   key={t.id}
                   onClick={() => setSelectedTubeId(t.id)}
-                  className={`p-2 rounded-xl border text-left text-xs transition ${
+                  className={`px-2.5 py-1 rounded-lg border text-xs transition cursor-pointer ${
                     selectedTubeId === t.id
-                      ? 'bg-amber-600 text-white font-bold border-amber-500 shadow'
-                      : 'bg-slate-900 border-slate-750 text-slate-300 hover:text-white'
+                      ? 'bg-amber-600 text-white font-bold border-amber-500 shadow-xs'
+                      : 'bg-slate-800 border-slate-700 text-slate-300 hover:text-white'
                   }`}
                 >
-                  <div className="font-bold truncate">{t.name}</div>
-                  <div className="text-[10px] opacity-80">{t.isOnTile ? 'On Tile ✨' : `${t.liquidVolumeMl.toFixed(1)} cm³`}</div>
+                  <span className="font-semibold">{t.name}</span>
+                  <span className="text-[10px] opacity-75 ml-1">
+                    {t.isOnTile ? '✨ Tile' : `${t.liquidVolumeMl.toFixed(1)} cm³`}
+                  </span>
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Placement Toggle */}
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
             {!selectedTube.isOnTile ? (
               <button
                 onClick={() => handleMoveToTile(selectedTube.id)}
-                className="w-full py-2 px-3 rounded-lg bg-amber-700 hover:bg-amber-650 text-white font-bold text-xs transition flex items-center justify-center space-x-1 shadow"
+                className="px-2.5 py-1 rounded-lg bg-amber-700 hover:bg-amber-650 text-white text-xs font-bold transition flex items-center gap-1 cursor-pointer"
               >
-                <span>Move {selectedTube.name} to Inspection Tile</span>
-                <Move className="w-3.5 h-3.5 ml-1" />
+                <span>Move to Tile</span>
+                <Move className="w-3 h-3" />
               </button>
             ) : (
               <button
                 onClick={() => handleReturnToRack(selectedTube.id)}
-                className="w-full py-2 px-3 rounded-lg bg-slate-750 hover:bg-slate-700 text-white font-bold text-xs transition"
+                className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition cursor-pointer"
               >
-                Return {selectedTube.name} to Rack
+                Return to Rack
               </button>
             )}
+            <button
+              onClick={handleResetWorkbench}
+              className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-750 text-rose-400 text-xs font-medium transition cursor-pointer"
+            >
+              Wash All Tubes
+            </button>
           </div>
+        </div>
 
-          {/* Solid Sample & Dissolution Actions */}
-          <div className="p-3 bg-slate-900/90 rounded-xl border border-slate-750 space-y-2.5">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-amber-400">Solid Q Sample & Distilled Water</span>
-              <span className="text-[10px] font-mono text-slate-400">Sample: FeSO₄·xH₂O</span>
-            </div>
-
+        {/* Row 1: Solid Sample, Dissolution & Portions */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={handleAddSolidQ}
-              className="w-full py-2 px-3 rounded-lg bg-amber-700 hover:bg-amber-600 text-white font-bold text-xs transition flex items-center justify-between"
+              className="px-3 py-1.5 rounded-xl bg-amber-700 hover:bg-amber-600 text-white font-bold text-xs transition flex items-center gap-1.5 shadow-xs cursor-pointer"
             >
-              <span>Add 1 Spatula of Solid Q</span>
-              <PlusCircle className="w-4 h-4" />
+              <PlusCircle className="w-3.5 h-3.5" />
+              <span>+1 Spatula Solid Q</span>
             </button>
 
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={() => handleAddDistilledWater(2.0)}
-                className="py-1.5 px-2 rounded-lg bg-cyan-700 hover:bg-cyan-650 text-white text-[11px] font-bold transition flex items-center justify-center space-x-1"
-              >
-                <Droplet className="w-3 h-3" />
-                <span>+2.0 cm³ Water</span>
-              </button>
-              <button
-                onClick={() => handleAddDistilledWater(5.0)}
-                className="py-1.5 px-2 rounded-lg bg-cyan-800 hover:bg-cyan-750 text-white text-[11px] font-bold transition flex items-center justify-center space-x-1"
-              >
-                <Droplet className="w-3 h-3" />
-                <span>+5.0 cm³ Water</span>
-              </button>
-            </div>
+            <button
+              onClick={() => handleAddDistilledWater(2.0)}
+              className="px-2.5 py-1.5 rounded-xl bg-cyan-700 hover:bg-cyan-650 text-white font-bold text-xs transition flex items-center gap-1 cursor-pointer"
+            >
+              <Droplet className="w-3 h-3" />
+              <span>+2.0 cm³ Water</span>
+            </button>
+
+            <button
+              onClick={() => handleAddDistilledWater(5.0)}
+              className="px-2.5 py-1.5 rounded-xl bg-cyan-800 hover:bg-cyan-750 text-white font-bold text-xs transition flex items-center gap-1 cursor-pointer"
+            >
+              <Droplet className="w-3 h-3" />
+              <span>+5.0 cm³ Water</span>
+            </button>
 
             <button
               onClick={handleTransferToPortions}
-              className="w-full py-2 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition flex items-center justify-between shadow"
+              className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition flex items-center gap-1.5 shadow-xs cursor-pointer"
             >
+              <CheckCircle2 className="w-3.5 h-3.5" />
               <span>Divide Solution Q into 3 Portions</span>
-              <CheckCircle2 className="w-4 h-4" />
             </button>
           </div>
-
-          {/* Specific Chemical Test Reagents */}
-          <div className="p-3 bg-slate-900/90 rounded-xl border border-slate-750 space-y-2.5">
-            <span className="text-xs font-bold text-cyan-400 block">Analytical Test Reagents</span>
-
-            {/* 1. NaOH Dropwise & Excess */}
-            <div className="space-y-1">
-              <span className="text-[11px] text-slate-300 font-semibold block">2.0M Sodium Hydroxide (NaOH):</span>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={() => handleAddNaOH('dropwise')}
-                  className="py-2 px-2 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-[11px] font-bold transition flex items-center justify-center space-x-1 shadow"
-                >
-                  <Droplet className="w-3 h-3" />
-                  <span>Dropwise (3 drops)</span>
-                </button>
-                <button
-                  onClick={() => handleAddNaOH('excess')}
-                  className="py-2 px-2 rounded-lg bg-emerald-800 hover:bg-emerald-750 text-white text-[11px] font-bold transition flex items-center justify-center space-x-1 shadow"
-                >
-                  <Droplet className="w-3 h-3" />
-                  <span>Until in Excess</span>
-                </button>
-              </div>
-            </div>
-
-            {/* 2. Aqueous Ammonia */}
-            <div className="space-y-1 pt-1">
-              <span className="text-[11px] text-slate-300 font-semibold block">Aqueous Ammonia (NH₃):</span>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={() => handleAddAmmonia('dropwise')}
-                  className="py-1.5 px-2 rounded-lg bg-teal-700 hover:bg-teal-650 text-white text-[11px] font-bold transition"
-                >
-                  Dropwise (NH₃)
-                </button>
-                <button
-                  onClick={() => handleAddAmmonia('excess')}
-                  className="py-1.5 px-2 rounded-lg bg-teal-800 hover:bg-teal-750 text-white text-[11px] font-bold transition"
-                >
-                  Excess (NH₃)
-                </button>
-              </div>
-            </div>
-
-            {/* 3. Barium Nitrate */}
-            <div className="pt-1">
-              <button
-                onClick={handleAddBariumNitrate}
-                className="w-full py-2 px-3 rounded-lg bg-indigo-700 hover:bg-indigo-600 text-white text-[11px] font-bold transition flex items-center justify-between shadow"
-              >
-                <span>Add Aqueous Barium Nitrate [Ba(NO₃)₂]</span>
-                <Droplet className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
-            {/* 4. Dilute HCl */}
-            <div className="pt-1">
-              <button
-                onClick={handleAddDiluteHCl}
-                className="w-full py-2 px-3 rounded-lg bg-rose-700 hover:bg-rose-600 text-white text-[11px] font-bold transition flex items-center justify-between shadow"
-              >
-                <span>Add 2.0M Dilute Hydrochloric Acid (HCl)</span>
-                <Droplet className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
-
         </div>
 
-        {/* Right Side: The Physical Test Tube Rack Canvas (Col 8) */}
-        <div className="lg:col-span-8 space-y-4">
+        {/* Row 2: Analytical Dropper Reagents */}
+        <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-800/80">
+          <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Analytical Reagents:</span>
+
+          <button
+            onClick={() => handleAddNaOH('dropwise')}
+            className="px-2.5 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+          >
+            <Droplet className="w-3 h-3" />
+            <span>2.0M NaOH (Dropwise)</span>
+          </button>
+
+          <button
+            onClick={() => handleAddNaOH('excess')}
+            className="px-2.5 py-1.5 rounded-xl bg-emerald-800 hover:bg-emerald-750 text-white text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+          >
+            <Droplet className="w-3 h-3" />
+            <span>NaOH (Excess)</span>
+          </button>
+
+          <button
+            onClick={() => handleAddAmmonia('dropwise')}
+            className="px-2.5 py-1.5 rounded-xl bg-teal-700 hover:bg-teal-650 text-white text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+          >
+            <Droplet className="w-3 h-3" />
+            <span>Aqueous NH₃ (Dropwise)</span>
+          </button>
+
+          <button
+            onClick={() => handleAddAmmonia('excess')}
+            className="px-2.5 py-1.5 rounded-xl bg-teal-800 hover:bg-teal-750 text-white text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+          >
+            <Droplet className="w-3 h-3" />
+            <span>NH₃ (Excess)</span>
+          </button>
+
+          <button
+            onClick={handleAddBariumNitrate}
+            className="px-2.5 py-1.5 rounded-xl bg-indigo-700 hover:bg-indigo-600 text-white text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+          >
+            <Droplet className="w-3 h-3" />
+            <span>Ba(NO₃)₂ Solution</span>
+          </button>
+
+          <button
+            onClick={handleAddDiluteHCl}
+            className="px-2.5 py-1.5 rounded-xl bg-rose-700 hover:bg-rose-600 text-white text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+          >
+            <Droplet className="w-3 h-3" />
+            <span>2.0M Dilute HCl</span>
+          </button>
+        </div>
+      </div>
+
+      {/* ================= FULL-WIDTH EXPANSIVE TEST TUBE RACK CANVAS ================= */}
+      <div className="space-y-4">
           <div 
             ref={benchRef}
             className="relative w-full min-h-[660px] lg:min-h-[720px] rounded-3xl overflow-hidden border-2 border-slate-700/80 shadow-2xl p-6 select-none"
@@ -1136,7 +1116,5 @@ export const InteractiveQualitativeWorkbench: React.FC<InteractiveQualitativeWor
         </div>
 
       </div>
-
-    </div>
-  );
+    );
 };

@@ -168,56 +168,46 @@ export const InteractiveGeneralWorkbench: React.FC<InteractiveGeneralWorkbenchPr
         </div>
       )}
 
-      {/* Main Bench Grid: Left is Locker, Right is Active Mat */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        
-        {/* Left: Apparatus Locker (Teacher's chosen items) */}
-        <div className="lg:col-span-4 bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-              <Layers className="w-3.5 h-3.5 text-amber-400" />
-              <span>Apparatus Locker</span>
-            </span>
-            <span className="text-[10px] text-slate-500 font-mono">
-              {availableApparatus.length} Available
-            </span>
-          </div>
-
-          <p className="text-[11px] text-slate-400">
-            Click any apparatus configured by your teacher to mount it onto the lab workbench:
-          </p>
-
-          <div className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
-            {availableApparatus.map(item => {
-              const isPlaced = placedApparatus.some(p => p.id === item.id);
-              return (
-                <div
-                  key={item.id}
-                  onClick={() => handlePlaceApparatus(item)}
-                  className={`p-2 rounded-xl border text-xs flex items-center justify-between transition cursor-pointer ${
-                    isPlaced
-                      ? 'bg-slate-900/60 border-slate-800 text-slate-500'
-                      : item.isDistractor
-                      ? 'bg-rose-950/20 border-rose-800/40 text-rose-300 hover:border-rose-500'
-                      : 'bg-slate-900 border-slate-750 text-slate-200 hover:border-emerald-500 hover:text-white'
-                  }`}
-                >
-                  <div className="flex items-center gap-2 truncate">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
-                    <span className="truncate">{item.name}</span>
-                  </div>
-
-                  <span className="text-[10px] text-slate-400 shrink-0">
-                    {isPlaced ? 'Placed' : '+ Place'}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
+      {/* ================= TOP APPARATUS LOCKER RIBBON (ON TOP OF WORKBENCH) ================= */}
+      <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 space-y-2.5 shadow-lg">
+        <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+          <span className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+            <Layers className="w-3.5 h-3.5 text-amber-400" />
+            <span>Apparatus Locker (Click to Mount on Bench)</span>
+          </span>
+          <span className="text-[10px] text-slate-500 font-mono">
+            {availableApparatus.length} Available · {placedApparatus.length} Mounted
+          </span>
         </div>
 
-        {/* Right: Active Workbench Mat & Interactive Instruments */}
-        <div className="lg:col-span-8 bg-slate-950 p-5 rounded-2xl border border-slate-800 space-y-5">
+        <div className="flex flex-wrap items-center gap-2">
+          {availableApparatus.map(item => {
+            const isPlaced = placedApparatus.some(p => p.id === item.id);
+            return (
+              <button
+                key={item.id}
+                onClick={() => handlePlaceApparatus(item)}
+                className={`px-3 py-1.5 rounded-xl border text-xs flex items-center gap-2 transition cursor-pointer ${
+                  isPlaced
+                    ? 'bg-slate-900/60 border-slate-800 text-slate-500'
+                    : item.isDistractor
+                    ? 'bg-rose-950/20 border-rose-800/40 text-rose-300 hover:border-rose-500'
+                    : 'bg-slate-900 border-slate-750 text-slate-200 hover:border-emerald-500 hover:text-white'
+                }`}
+              >
+                <span className={`w-2 h-2 rounded-full ${isPlaced ? 'bg-slate-600' : 'bg-emerald-400'}`} />
+                <span className="font-medium">{item.name}</span>
+                <span className="text-[10px] text-slate-400 font-mono">
+                  {isPlaced ? 'Mounted' : '+ Mount'}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ================= FULL-WIDTH EXPANSIVE WORKBENCH SURFACE ================= */}
+      <div className="w-full bg-slate-950 p-5 rounded-2xl border border-slate-800 space-y-5">
           
           <div className="flex items-center justify-between border-b border-slate-800 pb-3">
             <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
@@ -353,7 +343,5 @@ export const InteractiveGeneralWorkbench: React.FC<InteractiveGeneralWorkbenchPr
         </div>
 
       </div>
-
-    </div>
-  );
+    );
 };

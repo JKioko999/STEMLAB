@@ -12,7 +12,8 @@ import {
   AlertTriangle,
   Info,
   RefreshCw,
-  Move
+  Move,
+  FlaskConical
 } from 'lucide-react';
 
 export interface FoodTestLiveTelemetry {
@@ -592,164 +593,131 @@ export const InteractiveFoodTestWorkbench: React.FC<InteractiveFoodTestWorkbench
         </div>
       )}
 
-      {/* Main Grid: Reagents & Controls on Left + Test Tubes & Water Bath Canvas on Right */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        
-        {/* REAGENTS & APPARATUS CONTROLS (Col 4) */}
-        <div className="lg:col-span-4 bg-slate-800/90 border border-slate-700/80 p-4 rounded-2xl space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-700 pb-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Biology Laboratory Reagents
+      {/* ================= TOP APPARATUS & REAGENTS RIBBON (ON TOP OF WORKBENCH) ================= */}
+      <div className="bg-slate-900 border border-slate-800 p-3.5 rounded-2xl space-y-3 shadow-lg">
+        {/* Header: Tube Selection & Quick Info */}
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+              <FlaskConical className="w-4 h-4 text-emerald-400" />
+              <span>Active Target Tube:</span>
             </span>
-            <span className="text-[10px] text-emerald-400 font-bold">
-              Target: {selectedTube.name}
-            </span>
-          </div>
-
-          {/* Active Target Tube Selector */}
-          <div className="space-y-1">
-            <label className="text-[11px] font-semibold text-slate-300 block">
-              Select Tube to Work On:
-            </label>
-            <div className="grid grid-cols-3 gap-1.5">
+            <div className="flex items-center gap-1.5">
               {tubes.map(t => (
                 <button
                   key={t.id}
                   onClick={() => setSelectedTubeId(t.id)}
-                  className={`p-2 rounded-xl border text-center text-xs transition ${
+                  className={`px-2.5 py-1 rounded-lg border text-xs transition cursor-pointer ${
                     selectedTubeId === t.id
-                      ? 'bg-emerald-600 text-white font-bold border-emerald-500 shadow'
-                      : 'bg-slate-900 border-slate-750 text-slate-300 hover:text-white'
+                      ? 'bg-emerald-600 text-white font-bold border-emerald-500 shadow-xs'
+                      : 'bg-slate-800 border-slate-700 text-slate-300 hover:text-white'
                   }`}
                 >
-                  <div className="font-bold truncate">{t.name}</div>
-                  <div className="text-[9px] opacity-80 uppercase truncate">
-                    {t.isInWaterBath ? 'In Bath 🔥' : (t.reagentName || 'In Rack')}
-                  </div>
+                  <span className="font-semibold">{t.name}</span>
+                  <span className="text-[10px] opacity-75 ml-1">
+                    {t.isInWaterBath ? '🔥 Bath' : `(${t.reagentName || 'Empty'})`}
+                  </span>
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Dispenser for Solution X (Food Extract) */}
-          <div className="p-3 bg-slate-900/90 rounded-xl border border-slate-750 space-y-2">
-            <span className="text-xs font-bold text-amber-400 block">
-              1. Dispense Solution X (Food Extract Sample)
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-mono text-slate-400">
+              Heated: <strong className="text-rose-400">{selectedTube.heatedSeconds}s</strong>
             </span>
-            
-            <div className="space-y-1">
-              <div className="flex justify-between text-[11px] text-slate-300">
-                <span>Graduated Syringe Volume:</span>
-                <span className="font-mono font-bold text-emerald-400">{sampleDoseMl.toFixed(1)} cm³</span>
-              </div>
-              <input
-                type="range"
-                min="0.5"
-                max="4.0"
-                step="0.5"
-                value={sampleDoseMl}
-                onChange={e => setSampleDoseMl(Number(e.target.value))}
-                className="w-full accent-emerald-500 cursor-pointer"
-              />
-            </div>
+            <button
+              onClick={handleReset}
+              className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-750 text-rose-400 text-xs font-medium transition cursor-pointer"
+            >
+              Wash All Tubes
+            </button>
+          </div>
+        </div>
 
+        {/* Action Controls & Chemical Reagents Shelf */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          {/* Sample Dispenser */}
+          <div className="flex items-center gap-2 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800">
+            <span className="text-xs font-bold text-amber-400 shrink-0">Sample X:</span>
+            <input
+              type="range"
+              min="0.5"
+              max="4.0"
+              step="0.5"
+              value={sampleDoseMl}
+              onChange={e => setSampleDoseMl(Number(e.target.value))}
+              className="w-24 accent-amber-500 cursor-pointer"
+            />
             <button
               onClick={() => handleAddSampleX(sampleDoseMl)}
-              className="w-full py-2 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition flex items-center justify-between shadow"
+              className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs transition flex items-center gap-1 cursor-pointer shrink-0"
             >
-              <span>Dispense {sampleDoseMl.toFixed(1)} cm³ into {selectedTube.name}</span>
-              <PlusCircle className="w-4 h-4" />
+              <PlusCircle className="w-3.5 h-3.5" />
+              <span>+{sampleDoseMl.toFixed(1)} cm³ Sample</span>
             </button>
           </div>
 
-          {/* Biochemical Reagents Shelf */}
-          <div className="p-3 bg-slate-900/90 rounded-xl border border-slate-750 space-y-2.5">
-            <span className="text-xs font-bold text-cyan-400 block">
-              2. Chemical Food Reagents
-            </span>
-
-            {/* Benedict's Reagent */}
+          {/* Chemical Reagent Dropper Bottles */}
+          <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => handleAddSpecificReagent('benedicts')}
-              className="w-full py-2 px-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs transition flex items-center justify-between shadow"
+              className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs transition flex items-center gap-1.5 shadow-xs cursor-pointer"
             >
-              <span>Add 2.0 cm³ Benedict's Solution</span>
-              <Droplet className="w-4 h-4" />
+              <Droplet className="w-3.5 h-3.5 text-blue-200" />
+              <span>+2.0 cm³ Benedict's</span>
             </button>
 
-            {/* Biuret Reagent */}
             <button
               onClick={() => handleAddSpecificReagent('biuret')}
-              className="w-full py-2 px-3 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs transition flex items-center justify-between shadow"
+              className="px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs transition flex items-center gap-1.5 shadow-xs cursor-pointer"
             >
-              <span>Add 1.0 cm³ Biuret Reagent</span>
-              <Droplet className="w-4 h-4" />
+              <Droplet className="w-3.5 h-3.5 text-purple-200" />
+              <span>+1.0 cm³ Biuret</span>
             </button>
 
-            {/* Iodine Solution */}
             <button
               onClick={() => handleAddSpecificReagent('iodine')}
-              className="w-full py-2 px-3 rounded-lg bg-amber-700 hover:bg-amber-600 text-white font-bold text-xs transition flex items-center justify-between shadow"
+              className="px-3 py-1.5 rounded-xl bg-amber-700 hover:bg-amber-600 text-white font-bold text-xs transition flex items-center gap-1.5 shadow-xs cursor-pointer"
             >
-              <span>Add 3 Drops Iodine Solution</span>
-              <Droplet className="w-4 h-4" />
+              <Droplet className="w-3.5 h-3.5 text-amber-200" />
+              <span>+3 Drops Iodine</span>
             </button>
           </div>
 
-          {/* Boiling Water Bath Movement & Controls */}
-          <div className="p-3 bg-slate-900/90 rounded-xl border border-slate-750 space-y-2.5">
-            <div className="flex items-center justify-between text-xs font-bold">
-              <span className="text-rose-400 flex items-center gap-1">
-                <Flame className="w-3.5 h-3.5" /> 3. Water Bath Controls (95°C)
-              </span>
-              <span className="font-mono text-slate-400">Heated: {selectedTube.heatedSeconds}s</span>
-            </div>
-
-            {/* Move in/out of Water Bath toggle */}
+          {/* Water Bath Quick Heating */}
+          <div className="flex items-center gap-2">
             {!selectedTube.isInWaterBath ? (
               <button
                 onClick={() => handleHeatInWaterBath(60)}
-                className="w-full py-2.5 px-3 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs transition flex items-center justify-between shadow"
+                className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs transition flex items-center gap-1.5 shadow cursor-pointer"
               >
-                <span>Move {selectedTube.name} into Water Bath (+60s Boil)</span>
-                <Flame className="w-4 h-4" />
+                <Flame className="w-3.5 h-3.5" />
+                <span>Move to Water Bath & Boil (60s)</span>
               </button>
             ) : (
-              <div className="space-y-2">
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    onClick={() => handleHeatInWaterBath(20)}
-                    className="py-1.5 px-2 rounded-lg bg-rose-700 hover:bg-rose-650 text-white text-[11px] font-bold transition flex items-center justify-center space-x-1"
-                  >
-                    <Flame className="w-3 h-3" />
-                    <span>Boil +20s</span>
-                  </button>
-                  <button
-                    onClick={() => handleHeatInWaterBath(60)}
-                    className="py-1.5 px-2 rounded-lg bg-rose-700 hover:bg-rose-650 text-white text-[11px] font-bold transition flex items-center justify-center space-x-1"
-                  >
-                    <Flame className="w-3 h-3" />
-                    <span>Boil +60s</span>
-                  </button>
-                </div>
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => handleHeatInWaterBath(20)}
+                  className="px-2.5 py-1.5 rounded-xl bg-rose-700 hover:bg-rose-600 text-white text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                >
+                  <Flame className="w-3.5 h-3.5" />
+                  <span>+20s Boil</span>
+                </button>
                 <button
                   onClick={() => handleReturnToRack(selectedTube.id)}
-                  className="w-full py-2 px-3 rounded-lg bg-slate-750 hover:bg-slate-700 text-white font-bold text-xs transition"
+                  className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs transition cursor-pointer"
                 >
-                  Lift {selectedTube.name} Out of Water Bath
+                  Lift Out of Bath
                 </button>
               </div>
             )}
-
-            <span className="text-[10px] text-slate-400 block italic">
-              Drag tube with mouse/touch into the water bath beaker on the right to boil!
-            </span>
           </div>
-
         </div>
+      </div>
 
-        {/* Right Side: Visual Laboratory Bench (Col 8) */}
-        <div className="lg:col-span-8 space-y-4">
+      {/* ================= FULL-WIDTH EXPANSIVE BIOLOGICAL WORKBENCH CANVAS ================= */}
+      <div className="space-y-4">
           <div 
             ref={benchRef}
             className="relative w-full min-h-[660px] lg:min-h-[720px] rounded-3xl overflow-hidden border-2 border-slate-700/80 shadow-2xl p-6 select-none"
@@ -980,7 +948,5 @@ export const InteractiveFoodTestWorkbench: React.FC<InteractiveFoodTestWorkbench
         </div>
 
       </div>
-
-    </div>
-  );
+    );
 };

@@ -10,7 +10,8 @@ import {
   History,
   AlertTriangle,
   Info,
-  Move
+  Move,
+  Sliders
 } from 'lucide-react';
 
 export interface HookesLawLiveTelemetry {
@@ -291,106 +292,114 @@ export const InteractiveHookesLawWorkbench: React.FC<InteractiveHookesLawWorkben
       )}
 
       {/* Main Grid: Mass Tray Controls + Spring Apparatus Canvas */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        
-        {/* Left Side Controls (Col 4) */}
-        <div className="lg:col-span-4 bg-slate-800/90 border border-slate-700/80 p-4 rounded-2xl space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-700 pb-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Slotted Masses Tray
+      {/* ================= TOP APPARATUS & MASSES TRAY (ON TOP OF WORKBENCH) ================= */}
+      <div className="bg-slate-900 border border-slate-800 p-3.5 rounded-2xl space-y-3 shadow-lg">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+              <Sliders className="w-4 h-4 text-cyan-400" />
+              <span>Slotted Masses & Apparatus Tray (Load / Remove on Carrier)</span>
             </span>
-            <span className="text-[10px] font-mono font-bold text-amber-400">
-              Total: {loadedMassGrams}g ({weightN} N)
-            </span>
+            <span className="text-[10px] text-slate-500 font-mono hidden sm:inline">· Drag stand to position</span>
           </div>
 
-          <p className="text-xs text-slate-300">
-            Click masses to attach or remove from the hanging mass carrier:
-          </p>
+          <div className="flex items-center gap-2">
+            <div className="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-xs font-mono font-bold text-amber-400">
+              Total Load: {loadedMassGrams}g ({weightN} N)
+            </div>
+            {loadedMassGrams > 0 && (
+              <button
+                onClick={() => setLoadedMassGrams(0)}
+                className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-750 text-rose-400 text-xs font-medium transition cursor-pointer"
+              >
+                Reset to 0g
+              </button>
+            )}
+          </div>
+        </div>
 
-          <div className="grid grid-cols-2 gap-2">
+        {/* Horizontal Mass Buttons Ribbon */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2">
             {[50, 100].map(m => (
               <button
                 key={m}
                 onClick={() => handleAddMass(m)}
                 disabled={loadedMassGrams + m > 450}
-                className="p-3 rounded-xl bg-slate-900 hover:bg-slate-750 border border-slate-700 text-white font-bold text-xs transition disabled:opacity-40 flex items-center justify-between shadow"
+                className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-750 border border-slate-700 text-white font-bold text-xs transition disabled:opacity-40 flex items-center gap-1.5 shadow-xs cursor-pointer"
               >
+                <PlusCircle className="w-3.5 h-3.5 text-cyan-400" />
                 <span>+{m}g Mass</span>
-                <span className="text-[10px] font-mono text-cyan-400 font-normal">{(m/100).toFixed(1)} N</span>
+                <span className="text-[10px] font-mono text-cyan-300 font-normal">({(m/100).toFixed(1)} N)</span>
               </button>
             ))}
-          </div>
 
-          <div className="grid grid-cols-2 gap-2">
             {[50, 100].map(m => (
               <button
-                key={m}
+                key={`rem-${m}`}
                 onClick={() => handleRemoveMass(m)}
                 disabled={loadedMassGrams < m}
-                className="p-2 rounded-xl bg-slate-900 hover:bg-slate-750 border border-slate-750 text-slate-300 font-bold text-xs transition disabled:opacity-40 flex items-center justify-between"
+                className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-750 border border-slate-750 text-slate-300 font-semibold text-xs transition disabled:opacity-40 flex items-center gap-1 cursor-pointer"
               >
-                <span>-{m}g Remove</span>
-                <MinusCircle className="w-3.5 h-3.5" />
+                <MinusCircle className="w-3.5 h-3.5 text-rose-400" />
+                <span>-{m}g</span>
               </button>
             ))}
           </div>
 
-          {/* Parallax / Viewing Angle Selector */}
-          <div className="p-3 bg-slate-900 rounded-xl border border-slate-750 space-y-1.5">
-            <span className="text-xs font-bold text-slate-300 block">Observer Viewing Angle (Parallax Check)</span>
-            <div className="grid grid-cols-3 gap-1">
+          {/* Parallax & Record Controls */}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Parallax Mode */}
+            <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
+              <span className="text-[10px] text-slate-400 font-semibold px-1">Viewing:</span>
               <button
                 onClick={() => setParallaxMode('high')}
-                className={`py-1.5 px-2 rounded-lg text-[10px] font-bold transition ${
-                  parallaxMode === 'high' ? 'bg-amber-600 text-white' : 'bg-slate-800 text-slate-400'
+                className={`py-1 px-2 rounded-lg text-[10px] font-bold transition cursor-pointer ${
+                  parallaxMode === 'high' ? 'bg-amber-600 text-white' : 'text-slate-400 hover:text-white'
                 }`}
               >
-                Above (+0.6cm)
+                High (+0.6cm)
               </button>
               <button
                 onClick={() => setParallaxMode('normal')}
-                className={`py-1.5 px-2 rounded-lg text-[10px] font-bold transition ${
-                  parallaxMode === 'normal' ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-slate-400'
+                className={`py-1 px-2 rounded-lg text-[10px] font-bold transition cursor-pointer ${
+                  parallaxMode === 'normal' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white'
                 }`}
               >
                 Eye-Level (Exact)
               </button>
               <button
                 onClick={() => setParallaxMode('low')}
-                className={`py-1.5 px-2 rounded-lg text-[10px] font-bold transition ${
-                  parallaxMode === 'low' ? 'bg-amber-600 text-white' : 'bg-slate-800 text-slate-400'
+                className={`py-1 px-2 rounded-lg text-[10px] font-bold transition cursor-pointer ${
+                  parallaxMode === 'low' ? 'bg-amber-600 text-white' : 'text-slate-400 hover:text-white'
                 }`}
               >
-                Below (-0.6cm)
+                Low (-0.6cm)
               </button>
             </div>
+
+            {/* Record Reading Button */}
+            <button
+              onClick={handleLogReading}
+              className="py-1.5 px-3 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs transition shadow flex items-center space-x-1.5 cursor-pointer shrink-0"
+            >
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              <span>Record to Answer Sheet</span>
+            </button>
           </div>
-
-          {/* Overload Warning */}
-          {isOverloaded && (
-            <div className="p-3 bg-rose-500/15 border border-rose-500/40 rounded-xl text-xs text-rose-300 space-y-1">
-              <span className="font-bold flex items-center gap-1">
-                <AlertTriangle className="w-4 h-4" /> Elastic Limit Exceeded!
-              </span>
-              <p className="text-[11px] leading-relaxed">
-                Loading &gt; 350g breaks Hooke's Law and stretches the spring permanently.
-              </p>
-            </div>
-          )}
-
-          {/* Record button */}
-          <button
-            onClick={handleLogReading}
-            className="w-full py-3 px-4 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs transition shadow-lg shadow-cyan-600/30 flex items-center justify-center space-x-1.5"
-          >
-            <CheckCircle2 className="w-4 h-4" />
-            <span>Record Reading to Practical Answer Sheet</span>
-          </button>
         </div>
 
-        {/* Right Side: Spring Apparatus Graphic Canvas (Col 8) */}
-        <div className="lg:col-span-8 space-y-4">
+        {/* Overload Warning Banner */}
+        {isOverloaded && (
+          <div className="p-2.5 bg-rose-500/15 border border-rose-500/40 rounded-xl text-xs text-rose-300 flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 shrink-0 text-rose-400" />
+            <span className="font-semibold">Elastic Limit Exceeded! Loading &gt; 350g causes plastic deformation.</span>
+          </div>
+        )}
+      </div>
+
+      {/* ================= FULL-WIDTH EXPANSIVE SPRING APPARATUS CANVAS ================= */}
+      <div className="space-y-4">
           <div 
             ref={benchRef}
             className="relative w-full min-h-[660px] lg:min-h-[720px] rounded-3xl overflow-hidden border-2 border-slate-700/80 shadow-2xl p-6 select-none"
@@ -582,7 +591,5 @@ export const InteractiveHookesLawWorkbench: React.FC<InteractiveHookesLawWorkben
         </div>
 
       </div>
-
-    </div>
-  );
+    );
 };

@@ -617,55 +617,77 @@ export const InteractiveOhmsLawWorkbench: React.FC<InteractiveOhmsLawWorkbenchPr
       )}
 
       {/* Main Grid: Apparatus Shelf + Circuit Canvas */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        
-        {/* Left Side: Apparatus Tray + Rheostat Slider + Wires List (Col 4) */}
-        <div className="lg:col-span-4 bg-slate-800/90 border border-slate-700/80 p-4 rounded-2xl space-y-4">
-          
-          {/* Apparatus Shelf */}
-          <div className="space-y-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400 block">
-              1. Apparatus Tray (Click to Add to Bench)
+      {/* ================= TOP APPARATUS & INSTRUMENTS RIBBON (ON TOP OF WORKBENCH) ================= */}
+      <div className="bg-slate-900 border border-slate-800 p-3.5 rounded-2xl space-y-3 shadow-lg">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+              <Zap className="w-4 h-4 text-amber-400" />
+              <span>Apparatus Tray (Click to Add / Remove on Workbench)</span>
             </span>
-            <div className="grid grid-cols-1 gap-1.5">
-              {TRAY_ITEMS.map(item => {
-                const isPlaced = placedComponents.some(c => c.type === item.type);
-                return (
-                  <button
-                    key={item.type}
-                    onClick={() => handlePlaceFromTray(item.type)}
-                    disabled={isPlaced}
-                    className={`p-2.5 rounded-xl border text-xs font-bold transition flex items-center justify-between ${
-                      isPlaced
-                        ? 'bg-slate-900/60 border-slate-750 text-slate-500 opacity-60 cursor-not-allowed'
-                        : 'bg-slate-900 hover:bg-slate-750 border-slate-700 text-white shadow'
-                    }`}
-                  >
-                    <div className="flex items-center space-x-2">
-                      <span className="text-base">{item.icon}</span>
-                      <span>{item.name}</span>
-                    </div>
-                    {isPlaced ? (
-                      <span className="text-[10px] text-emerald-400 flex items-center gap-1 font-semibold">
-                        <CheckCircle2 className="w-3.5 h-3.5" /> Placed
-                      </span>
-                    ) : (
-                      <span className="text-[10px] text-cyan-400 flex items-center gap-1">
-                        <PlusCircle className="w-3.5 h-3.5" /> Place
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
+            <span className="text-[10px] text-slate-500 font-mono hidden sm:inline">· Drag items anywhere on the board</span>
           </div>
 
-          {/* Rheostat Slider Controller */}
-          <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-750 space-y-2">
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-bold text-amber-400">Rheostat Slider (R)</span>
-              <span className="font-mono text-white font-bold">{rheostatResistance.toFixed(1)} Ω</span>
-            </div>
+          {/* Quick Clear / Reset Controls */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                pushSnapshot();
+                setPlacedComponents([]);
+                setWires([]);
+                setIsSwitchClosed(false);
+                setSelectedTerminal(null);
+                setBenchMessage({ text: 'Workbench and wires cleared.', type: 'info' });
+              }}
+              className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-750 text-rose-400 text-xs font-medium transition flex items-center gap-1 cursor-pointer"
+            >
+              <Trash2 className="w-3 h-3" />
+              <span>Clear Wires & Bench</span>
+            </button>
+            {wires.length > 0 && (
+              <span className="text-[10px] font-mono text-cyan-400 bg-cyan-950/40 border border-cyan-800/60 px-2 py-0.5 rounded-md">
+                {wires.length} wire{wires.length > 1 ? 's' : ''} connected
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Horizontal Apparatus Selector Ribbon */}
+        <div className="flex flex-wrap items-center gap-2">
+          {TRAY_ITEMS.map(item => {
+            const isPlaced = placedComponents.some(c => c.type === item.type);
+            return (
+              <button
+                key={item.type}
+                onClick={() => handlePlaceFromTray(item.type)}
+                disabled={isPlaced}
+                className={`px-3 py-2 rounded-xl border text-xs font-semibold transition flex items-center gap-2 shadow-xs cursor-pointer ${
+                  isPlaced
+                    ? 'bg-slate-950/70 border-slate-800 text-slate-500 opacity-60 cursor-not-allowed'
+                    : 'bg-slate-800 hover:bg-slate-750 border-slate-700 text-white hover:border-cyan-500'
+                }`}
+              >
+                <span className="text-sm">{item.icon}</span>
+                <span className="truncate">{item.name}</span>
+                {isPlaced ? (
+                  <span className="text-[10px] text-emerald-400 flex items-center gap-0.5 font-bold">
+                    <CheckCircle2 className="w-3 h-3" /> Placed
+                  </span>
+                ) : (
+                  <span className="text-[10px] text-cyan-400 flex items-center gap-0.5">
+                    <PlusCircle className="w-3 h-3" /> Add
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Compact Quick-Controls Bar (Rheostat + Knife Switch + Wire Color) */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-800/80">
+          {/* Rheostat Inline Slider */}
+          <div className="flex items-center gap-3 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800 flex-1 min-w-[240px] max-w-md">
+            <span className="text-xs font-bold text-amber-400 shrink-0">Rheostat (R):</span>
             <input
               type="range"
               min="0"
@@ -675,20 +697,12 @@ export const InteractiveOhmsLawWorkbench: React.FC<InteractiveOhmsLawWorkbenchPr
               onChange={e => setRheostatResistance(Number(e.target.value))}
               className="w-full accent-amber-500 cursor-pointer"
             />
-            <div className="flex justify-between text-[10px] font-mono text-slate-400">
-              <span>0.0 Ω (Max Current)</span>
-              <span>20.0 Ω (Min Current)</span>
-            </div>
+            <span className="font-mono text-xs text-white font-bold shrink-0">{rheostatResistance.toFixed(1)} Ω</span>
           </div>
 
-          {/* Knife Switch State Toggle */}
-          <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-750 flex items-center justify-between">
-            <div>
-              <span className="text-xs font-bold text-white block">Knife Switch Contact</span>
-              <span className="text-[10px] text-slate-400">
-                {isSwitchClosed ? 'Circuit Closed (Current Active)' : 'Circuit Open (No Current)'}
-              </span>
-            </div>
+          {/* Knife Switch Toggle */}
+          <div className="flex items-center gap-2 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800 shrink-0">
+            <span className="text-xs font-bold text-white">Knife Switch:</span>
             <button
               onClick={() => {
                 pushSnapshot();
@@ -698,58 +712,42 @@ export const InteractiveOhmsLawWorkbench: React.FC<InteractiveOhmsLawWorkbenchPr
                   type: 'info' 
                 });
               }}
-              className={`p-2 rounded-xl transition flex items-center space-x-1.5 text-xs font-bold shadow ${
+              className={`px-2.5 py-1 rounded-lg transition flex items-center space-x-1.5 text-xs font-bold shadow cursor-pointer ${
                 isSwitchClosed 
                   ? 'bg-emerald-600 hover:bg-emerald-500 text-white' 
-                  : 'bg-slate-700 hover:bg-slate-650 text-slate-300'
+                  : 'bg-slate-800 hover:bg-slate-750 text-slate-300'
               }`}
             >
-              {isSwitchClosed ? <ToggleRight className="w-5 h-5 text-emerald-300" /> : <ToggleLeft className="w-5 h-5" />}
-              <span>{isSwitchClosed ? 'CLOSED' : 'OPEN'}</span>
+              {isSwitchClosed ? <ToggleRight className="w-4 h-4 text-emerald-300" /> : <ToggleLeft className="w-4 h-4 text-slate-400" />}
+              <span>{isSwitchClosed ? 'CLOSED (ON)' : 'OPEN (OFF)'}</span>
             </button>
           </div>
 
-          {/* Active Wires List with Delete option */}
-          <div className="space-y-1.5 pt-1">
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-bold text-slate-400 uppercase tracking-wider text-[11px]">
-                Active Circuit Wires ({wires.length})
-              </span>
-              <span className="text-[10px] text-slate-500">Click × to disconnect</span>
-            </div>
-            
-            {wires.length === 0 ? (
-              <p className="text-[11px] text-slate-500 italic p-2 bg-slate-900/50 rounded-lg">
-                No wires connected yet. Click any terminal to begin wiring.
-              </p>
-            ) : (
-              <div className="max-h-32 overflow-y-auto space-y-1 pr-1">
-                {wires.map(w => (
-                  <div 
-                    key={w.id} 
-                    className="p-1.5 rounded-lg bg-slate-900 border border-slate-750 flex items-center justify-between text-[11px]"
-                  >
-                    <div className="flex items-center space-x-1.5 truncate">
-                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: w.color }} />
-                      <span className="text-slate-300 font-mono truncate">{w.fromTerminalId} ↔ {w.toTerminalId}</span>
-                    </div>
-                    <button
-                      onClick={() => handleRemoveWire(w.id)}
-                      className="p-1 text-slate-400 hover:text-rose-400 transition"
-                      title="Disconnect wire"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
+          {/* Wire Color Chooser */}
+          <div className="flex items-center gap-1.5 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800 shrink-0">
+            <span className="text-xs text-slate-400">Wire:</span>
+            {[
+              { color: '#ef4444', label: 'Red (+)' },
+              { color: '#000000', label: 'Black (-)' },
+              { color: '#eab308', label: 'Yellow' },
+              { color: '#06b6d4', label: 'Cyan' }
+            ].map(c => (
+              <button
+                key={c.color}
+                onClick={() => setWireColor(c.color)}
+                className={`w-5 h-5 rounded-full border transition cursor-pointer ${
+                  wireColor === c.color ? 'ring-2 ring-white scale-110' : 'opacity-70 hover:opacity-100'
+                }`}
+                style={{ backgroundColor: c.color, borderColor: '#475569' }}
+                title={c.label}
+              />
+            ))}
           </div>
-
         </div>
+      </div>
 
-        {/* Right Canvas: Interactive Workbench Circuit Board (Col 8) */}
-        <div className="lg:col-span-8 space-y-4">
+      {/* ================= FULL-WIDTH EXPANSIVE CIRCUIT WORKBENCH CANVAS ================= */}
+      <div className="space-y-4">
           <div 
             ref={benchRef}
             className={`relative w-full min-h-[660px] lg:min-h-[720px] rounded-3xl overflow-hidden shadow-2xl border-2 select-none transition-colors ${
@@ -1121,7 +1119,5 @@ export const InteractiveOhmsLawWorkbench: React.FC<InteractiveOhmsLawWorkbenchPr
         </div>
 
       </div>
-
-    </div>
-  );
+    );
 };

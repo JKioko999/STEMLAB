@@ -194,6 +194,9 @@ export const InteractiveUniversalWorkbench: React.FC<InteractiveUniversalWorkben
   const [dragOffset, setDragOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const benchRef = useRef<HTMLDivElement>(null);
 
+  // Current Step
+  const currentStep = activeExperiment?.steps?.[currentStepIndex] || null;
+
   const handleStartDrag = (e: React.MouseEvent | React.TouchEvent, itemKey: string) => {
     if ((e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('input')) return;
     const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
@@ -560,8 +563,6 @@ export const InteractiveUniversalWorkbench: React.FC<InteractiveUniversalWorkben
       onStepComplete?.(currentStep.id, titre);
     }
   };
-
-  const currentStep = activeExperiment.steps[currentStepIndex];
 
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl space-y-0 text-slate-100 text-xs">
@@ -1264,6 +1265,8 @@ export const InteractiveUniversalWorkbench: React.FC<InteractiveUniversalWorkben
           </div>
         )}
 
+
+
       </div>
 
       {/* ========================================================================= */}
@@ -1321,15 +1324,17 @@ export const InteractiveUniversalWorkbench: React.FC<InteractiveUniversalWorkben
               {currentStep.instruction}
             </p>
 
-            <button
-              type="button"
-              onClick={() => onStepComplete?.(currentStep.id, temperature)}
-              disabled={completedSteps.includes(currentStep.id)}
-              className="w-full py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 shadow-md disabled:opacity-50 cursor-pointer"
-            >
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              <span>{completedSteps.includes(currentStep.id) ? 'Step Validated' : 'Validate Step Action'}</span>
-            </button>
+            <div className="pt-1">
+              <button
+                type="button"
+                onClick={() => onStepComplete?.(currentStep.id, temperature)}
+                disabled={completedSteps.includes(currentStep.id)}
+                className="w-full py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 shadow-md disabled:opacity-50 cursor-pointer"
+              >
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>{completedSteps.includes(currentStep.id) ? 'Validated' : 'Validate Step ' + currentStep.id}</span>
+              </button>
+            </div>
           </div>
         )}
 

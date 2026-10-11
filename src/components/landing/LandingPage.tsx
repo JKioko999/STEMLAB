@@ -22,11 +22,27 @@ import {
   Beaker,
   Thermometer,
   Activity,
-  Download,
-  FileText
+  FileText,
+  Home,
+  Building2,
+  Droplets,
+  Microscope,
+  Check,
+  ExternalLink,
+  Info,
+  Scale,
+  Flame,
+  ArrowUp,
+  Mail,
+  Phone,
+  MapPin,
+  Globe,
+  Shield
 } from 'lucide-react';
 import labBannerImg from '../../assets/images/science_lab_banner_1791271184391.jpg';
 import titrationBenchImg from '../../assets/images/titration_bench_1791271199117.jpg';
+import physicsBenchImg from '../../assets/images/physics_circuit_bench_1791705834906.jpg';
+import biologyBenchImg from '../../assets/images/biology_food_testing_1791705847555.jpg';
 import teacherStudioImg from '../../assets/images/workflow_teacher_studio_1791560694991.jpg';
 import pipettingStepImg from '../../assets/images/workflow_pipetting_step_1791560652846.jpg';
 import buretteSetupImg from '../../assets/images/workflow_burette_setup_1791560633247.jpg';
@@ -40,12 +56,53 @@ export const LandingPage: React.FC = () => {
     setCurrentView, 
     setAuthMode, 
     experiments, 
-    startExperiment 
+    startExperiment,
+    landingTab,
+    setLandingTab
   } = useApp();
 
-  const [activeTab, setActiveTab] = useState<'chemistry' | 'physics' | 'biology'>('chemistry');
+  // Internal tab state for subject explorer
+  const [activeSubjectTab, setActiveSubjectTab] = useState<'chemistry' | 'physics' | 'biology'>('chemistry');
   const [selectedWorkflowStep, setSelectedWorkflowStep] = useState(0);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [legalModalContent, setLegalModalContent] = useState<{ title: string; text: string } | null>(null);
+
+  // Interactive Mini-Workbench Sandbox Demo State (allows direct test-drive without logging in)
+  const [sandboxVolume, setSandboxVolume] = useState<number>(0.0);
+  const [sandboxIndicator, setSandboxIndicator] = useState<'none' | 'methyl_orange' | 'phenolphthalein'>('methyl_orange');
+  const [sandboxSwirling, setSandboxSwirling] = useState<boolean>(false);
+  const [sandboxIsPouring, setSandboxIsPouring] = useState<boolean>(false);
+
+  // Derive sandbox color based on volume and indicator
+  const getSandboxFlaskColor = () => {
+    if (sandboxIndicator === 'none') return 'rgba(224, 242, 254, 0.4)';
+    if (sandboxIndicator === 'phenolphthalein') {
+      // Colorless in acid, turns pale pink at endpoint ~24.50 mL
+      if (sandboxVolume >= 24.5) return 'rgba(244, 114, 182, 0.85)';
+      if (sandboxVolume >= 24.0) return 'rgba(251, 207, 232, 0.5)';
+      return 'rgba(241, 245, 249, 0.4)';
+    }
+    // Methyl Orange: Yellow in alkali, transitions to orange/pink at endpoint ~24.50 mL
+    if (sandboxVolume >= 24.5) return 'rgba(244, 63, 94, 0.85)'; // pink/orange endpoint
+    if (sandboxVolume >= 23.5) return 'rgba(251, 146, 60, 0.8)'; // transition orange
+    return 'rgba(250, 204, 21, 0.85)'; // alkaline yellow
+  };
+
+  const handleSandboxPourStep = () => {
+    setSandboxIsPouring(true);
+    setSandboxSwirling(true);
+    setTimeout(() => {
+      setSandboxVolume(prev => Math.min(25.0, +(prev + 5.0).toFixed(2)));
+      setSandboxIsPouring(false);
+      setTimeout(() => setSandboxSwirling(false), 500);
+    }, 400);
+  };
+
+  const handleSandboxReset = () => {
+    setSandboxVolume(0.0);
+    setSandboxIsPouring(false);
+    setSandboxSwirling(false);
+  };
 
   const workflowSteps = [
     {
@@ -54,7 +111,7 @@ export const LandingPage: React.FC = () => {
       title: 'Teacher AI Experiment Creation Studio',
       subtitle: 'Natural language parsing of raw instructions with automated apparatus disambiguation.',
       image: teacherStudioImg,
-      description: 'The teacher inputs raw instructions (e.g. "Fill burrete with Solution N, Pippete 25cm3 of sodium hydrotide M..."). The AI parser cleans typographic errors, isolates glassware (50ml Burette, 25ml Pipette, Conical Flask, Methyl Orange), and synthesizes a live simulation preview with auto-calculated rubric parameters.',
+      description: 'The teacher inputs raw instructions (e.g. "Fill burrete with Solution N, Pippete 25cm3 of sodium hydroxide M..."). The AI parser cleans typographic errors, isolates glassware (50ml Burette, 25ml Pipette, Conical Flask, Methyl Orange), and synthesizes a live simulation preview with auto-calculated rubric parameters.',
       highlights: ['Apparatus Auto-Detection', 'Spelling Disambiguation', 'Simulation Workbench Synthesis', 'Rubric Blueprinting']
     },
     {
@@ -124,831 +181,1622 @@ export const LandingPage: React.FC = () => {
   const faqs = [
     {
       q: "What is STEM Spark Lab all about?",
-      a: "STEM Spark Lab is a virtual science practicals platform purpose-built for secondary school students and teachers. It provides interactive, curriculum-calibrated laboratory simulations for Chemistry (233/3), Physics (232/3), and Biology (231/3) practical examinations. Students can operate apparatus like burettes, pipettes, circuits, and test tubes with zero risk, zero reagent waste, and instant feedback."
+      a: "STEM Spark Lab is a virtual science practicals platform purpose-built for secondary school students and teachers. It provides interactive, curriculum-calibrated laboratory simulations for Chemistry (233/3), Physics (232/3), and Biology (231/3) practical examinations. Students operate apparatus like burettes, pipettes, circuits, and test tubes with zero risk, zero reagent waste, and instant feedback."
     },
     {
-      q: "Can I use STEM Spark Lab on my phone or tablet?",
-      a: "Yes! STEM Spark Lab works on modern smartphones, tablets, Chromebooks, laptops, and computer lab desktops without installing any special software or plugins."
+      q: "Can I use STEM Spark Lab on my smartphone or low-spec computer?",
+      a: "Yes! STEM Spark Lab is engineered as a lightweight web application that runs smoothly on standard smartphones, tablets, Chromebooks, and computer lab desktops without requiring heavy plugins or graphics cards."
     },
     {
       q: "How does the digital answer sheet and grading work?",
-      a: "As you conduct practical experiments, you enter your observations, meniscus readings, titre values, and calculations into a digital exam answer sheet. The system checks your readings with realistic laboratory tolerances (such as ±0.20 cm³ for concordant titration titres) and scores your working according to official marking schemes."
+      a: "As students conduct experiments, they record meniscus readings, titre values, meter currents, and observations into digital exam answer sheets. The system evaluates their readings using realistic laboratory tolerances (such as ±0.20 cm³ for concordant titration titres) and marks their work according to official national examination rubrics."
     },
     {
-      q: "Can I practice as many times as I want?",
-      a: "Absolutely! Unlike physical school laboratories where chemicals are scarce and glassware can break, STEM Spark Lab allows unlimited practice attempts with realistic variables so you can achieve complete mastery before exam day."
+      q: "Can students practice repeatedly without cost or reagent limits?",
+      a: "Yes! Unlike physical school laboratories where expensive chemicals (like potassium permanganate or sodium hydroxide) and fragile glassware are rationed, STEM Spark Lab allows unlimited practice attempts with realistic variables so students master procedures with complete confidence."
     },
     {
-      q: "How do students register and join their school?",
-      a: "Click 'Register student account' at the top of the page. Enter your full name, email address, select your registered secondary school and your class stream, set your password, and you will be immediately enrolled into your science class."
+      q: "How do schools and teachers onboard their science classes?",
+      a: "School administrators register their secondary school, create class streams (e.g., Form 3 East, Form 4 West), and invite teachers. Science teachers can immediately dispatch standard national practicals or use our AI Experiment Studio to convert their own typed instructions into interactive virtual workbenches."
+    },
+    {
+      q: "How are student results protected against exam collusion?",
+      a: "In examination mode, each student receives randomized initial meniscus offsets and slight reagent molarity variations. Submissions are timestamped, validated with telemetry logs, and directly delivered to the teacher's gradebook."
     }
   ];
 
+  const primaryTabs = [
+    { id: 'home', label: 'Home', icon: Home, desc: 'Overview & interactive demo' },
+    { id: 'about', label: 'About', icon: Info, desc: 'Mission, pedagogy & impact' },
+    { id: 'subjects', label: 'Subjects', icon: Layers, desc: 'Chemistry, Physics & Biology' },
+    { id: 'workbenches', label: 'Workbenches', icon: Sparkles, desc: 'Simulated apparatus & physics' },
+    { id: 'curriculum', label: 'KCSE Standards', icon: Award, desc: 'Paper 3 criteria & rubrics' },
+    { id: 'schools', label: 'Institutions', icon: Building2, desc: 'School administration & pricing' },
+    { id: 'faq', label: 'FAQ', icon: HelpCircle, desc: 'Frequently asked questions' }
+  ];
+
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans selection:bg-emerald-500 selection:text-white">
-      
-      {/* Top Banner Notice */}
-      <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-indigo-600 text-white py-2 px-4 text-xs font-medium shadow-xs">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center space-x-2 truncate">
-            <span className="bg-white/20 px-2 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase">National Syllabus</span>
-            <span className="truncate">Calibrated for Paper 3 Practicals: Chemistry (233/3), Physics (232/3), & Biology (231/3)</span>
-          </div>
-          <div className="flex items-center space-x-4 shrink-0">
-            <button
-              onClick={() => handleGoToAuth('login')}
-              className="hover:underline font-semibold text-white hidden sm:inline"
-            >
-              Sign in
-            </button>
-            <button
-              onClick={() => handleGoToAuth('register_student')}
-              className="bg-white text-emerald-700 px-2.5 py-0.5 rounded font-bold hover:bg-emerald-50 transition-colors shadow-2xs text-[11px]"
-            >
-              Register student account
-            </button>
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans selection:bg-emerald-500 selection:text-white">
+
+      {/* ================= PRIMARY NAVIGATION TAB BAR ================= */}
+      <div className="sticky top-14 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 shadow-2xs">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between overflow-x-auto py-2.5 no-scrollbar gap-1 sm:gap-2">
+            <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+              {primaryTabs.map((tab) => {
+                const IconComponent = tab.icon;
+                const isActive = landingTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => {
+                      setLandingTab(tab.id as any);
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer shrink-0 ${
+                      isActive
+                        ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/80'
+                    }`}
+                  >
+                    <IconComponent className={`w-3.5 h-3.5 ${isActive ? 'text-emerald-400 dark:text-emerald-600' : 'text-slate-400 dark:text-slate-500'}`} />
+                    <span>{tab.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="hidden md:flex items-center gap-2 pl-4 border-l border-slate-200 dark:border-slate-800 shrink-0">
+              <button
+                onClick={() => handleLaunchExperimentDirectly('titration')}
+                className="px-3 py-1.5 text-xs font-semibold rounded-md bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800/80 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors flex items-center gap-1.5 cursor-pointer"
+              >
+                <Play className="w-3 h-3 text-emerald-600 dark:text-emerald-400 fill-emerald-600 dark:fill-emerald-400" />
+                <span>Test-Drive Workbench</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Hero Section */}
-      <section className="relative overflow-hidden bg-white border-b border-slate-200 pt-12 pb-16 lg:py-20">
-        <div className="absolute inset-0 bg-radial from-emerald-50/60 via-transparent to-transparent pointer-events-none" />
-        
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+      {/* ================= TAB 1: HOME ================= */}
+      {landingTab === 'home' && (
+        <>
+          {/* Hero Section */}
+          <section className="relative overflow-hidden bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 pt-10 pb-14 lg:py-16">
+            <div className="absolute inset-0 bg-radial from-emerald-50/50 dark:from-emerald-950/20 via-transparent to-transparent pointer-events-none" />
             
-            {/* Left Column: Heading and CTAs */}
-            <div className="lg:col-span-7 space-y-6">
-              
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold">
-                <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-                <span>The Virtual Science Laboratory for Secondary Schools</span>
-              </div>
-
-              <h1 className="text-3xl sm:text-5xl lg:text-5xl font-extrabold tracking-tight text-slate-900 leading-tight">
-                Master Science Practicals with <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-teal-600">Virtual Hands-On Labs</span>
-              </h1>
-
-              <p className="text-base sm:text-lg text-slate-600 leading-relaxed max-w-2xl">
-                Experience real laboratory simulations from your screen. Perform volumetric titrations drop-by-drop, assemble electrical circuits, conduct qualitative salt tests, and fill digital answer sheets graded to official KCSE standards.
-              </p>
-
-              {/* Only Two Actions: Sign in and Register student account */}
-              <div className="pt-2 flex flex-wrap items-center gap-3">
-                <button
-                  onClick={() => handleGoToAuth('register_student')}
-                  className="px-6 py-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm transition-all shadow-md hover:shadow-lg flex items-center gap-2"
-                >
-                  <GraduationCap className="w-4 h-4" />
-                  <span>Register student account</span>
-                </button>
-
-                <button
-                  onClick={() => handleGoToAuth('login')}
-                  className="px-6 py-3 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-medium text-sm transition-all shadow-sm flex items-center gap-2"
-                >
-                  <span>Sign in</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-
-                {currentUser && (
-                  <button
-                    onClick={() => setCurrentView('dashboard')}
-                    className="px-4 py-3 rounded-lg border border-slate-300 hover:bg-slate-50 text-slate-700 text-sm font-medium transition-colors inline-flex items-center gap-1.5"
-                  >
-                    <span>Back to Dashboard</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
-
-              {/* Quick Feature Badges */}
-              <div className="pt-4 grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs text-slate-600 border-t border-slate-100">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Paper 3 (233/3, 232/3, 231/3)</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Digital KCSE Answer Sheets</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Unlimited Repeat Practice</span>
-                </div>
-              </div>
-
-            </div>
-
-            {/* Right Column: Hero Visual Graphic */}
-            <div className="lg:col-span-5 relative">
-              <div className="relative rounded-2xl overflow-hidden shadow-2xl border-4 border-white bg-slate-900 group">
-                <img 
-                  src={labBannerImg} 
-                  alt="STEM Spark Virtual Science Laboratory" 
-                  className="w-full h-[360px] object-cover object-center group-hover:scale-105 transition-transform duration-500"
-                />
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
                 
-                {/* Gradient overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-slate-950/20" />
-
-                {/* Floating Info Badges */}
-                <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-lg shadow-md border border-white/50 flex items-center gap-2">
-                  <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="text-xs font-bold text-slate-900">Virtual Lab Online</span>
-                </div>
-
-                <div className="absolute bottom-4 left-4 right-4 bg-white/95 backdrop-blur-md p-3.5 rounded-xl border border-slate-100 shadow-lg space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                      <FlaskConical className="w-4 h-4 text-indigo-600" />
-                      Active Practical Engine
-                    </span>
-                    <span className="text-[10px] font-semibold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded">
-                      Interactive
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-600 leading-snug">
-                    Burettes, measuring cylinders, circuit components, and observation tables ready for hands-on simulation.
-                  </p>
-                </div>
-              </div>
-
-              {/* Decorative background glow */}
-              <div className="absolute -bottom-6 -right-6 w-56 h-56 bg-emerald-200/50 rounded-full blur-3xl -z-10" />
-              <div className="absolute -top-6 -left-6 w-56 h-56 bg-indigo-200/50 rounded-full blur-3xl -z-10" />
-            </div>
-
-          </div>
-        </div>
-      </section>
-
-      {/* SECTION: What is STEM Spark Lab All About? */}
-      <section className="py-16 bg-slate-50 border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
-          
-          <div className="text-center max-w-3xl mx-auto space-y-3">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-teal-100/80 text-teal-800 text-xs font-semibold">
-              <BookOpen className="w-3.5 h-3.5 text-teal-600" />
-              <span>Everything You Need to Know</span>
-            </div>
-            <h2 className="text-2xl sm:text-4xl font-bold tracking-tight text-slate-900">
-              What is STEM Spark Lab all about?
-            </h2>
-            <p className="text-sm sm:text-base text-slate-600 leading-relaxed">
-              In secondary schools across Kenya, Science Practical examinations (Paper 3) determine up to 40% of the candidate's final science grade. Yet many schools face equipment shortages, broken burettes, or expensive reagents that students only touch once or twice.
-            </p>
-            <p className="text-sm sm:text-base text-slate-700 font-medium leading-relaxed bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
-              <strong>STEM Spark Lab changes this completely:</strong> It brings the full chemistry, physics, and biology laboratory into an interactive virtual simulator accessible on any computer, tablet, or phone. Students gain confidence, master step-by-step procedures, and eliminate exam anxiety.
-            </p>
-          </div>
-
-          {/* 4 Core Pillars Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            
-            {/* Pillar 1 */}
-            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-xs hover:shadow-md transition-all space-y-3">
-              <div className="w-12 h-12 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold">
-                <FlaskConical className="w-6 h-6" />
-              </div>
-              <h3 className="font-bold text-slate-900 text-base">
-                1. Realistic Apparatus
-              </h3>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Operate 50.0 cm³ burettes with stopcock control, 25.0 cm³ pipettes with safety fillers, measuring cylinders, Bunsen burners, and digital multimeters with realistic physics equations.
-              </p>
-            </div>
-
-            {/* Pillar 2 */}
-            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-xs hover:shadow-md transition-all space-y-3">
-              <div className="w-12 h-12 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold">
-                <Activity className="w-6 h-6" />
-              </div>
-              <h3 className="font-bold text-slate-900 text-base">
-                2. Step-by-Step Validation
-              </h3>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Universal engine automatically recognizes your actions: filling solutions, pipetting, adding 5 cm³ sulphuric acid with measuring cylinder, heating to 60°C, and titrating to pale pink.
-              </p>
-            </div>
-
-            {/* Pillar 3 */}
-            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-xs hover:shadow-md transition-all space-y-3">
-              <div className="w-12 h-12 rounded-lg bg-teal-100 text-teal-600 flex items-center justify-center font-bold">
-                <Award className="w-6 h-6" />
-              </div>
-              <h3 className="font-bold text-slate-900 text-base">
-                3. Digital Answer Sheets
-              </h3>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Record consecutive trials in examination data tables, calculate average titre volumes, test concordancy within ±0.20 cm³, and solve molarity equations with instant auto-marking.
-              </p>
-            </div>
-
-            {/* Pillar 4 */}
-            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-xs hover:shadow-md transition-all space-y-3">
-              <div className="w-12 h-12 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center font-bold">
-                <ShieldCheck className="w-6 h-6" />
-              </div>
-              <h3 className="font-bold text-slate-900 text-base">
-                4. Zero Risk & 100% Free Practice
-              </h3>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                No shattered glassware, no toxic chemical exposure, and zero consumable costs. Practice as many times as needed from school, home, or the library until procedures become second nature.
-              </p>
-            </div>
-
-          </div>
-
-        </div>
-      </section>
-
-      {/* SECTION: End-to-End System Workflows & Step Screenshots (BRD / DRD Walkthrough) */}
-      <section className="py-16 bg-slate-900 text-white border-b border-slate-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
-          
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-            <div className="space-y-2 max-w-3xl">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-400/20 text-blue-400 text-xs font-semibold">
-                <FileText className="w-3.5 h-3.5" />
-                <span>Corporate BRD / DRD Workflow Specification</span>
-              </div>
-              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-white">
-                End-to-End Lab Process & Step Demonstrations
-              </h2>
-              <p className="text-sm text-slate-300 leading-relaxed">
-                Visualizing each operational phase of the virtual laboratory platform—from teacher AI experiment parsing and apparatus disambiguation to student volumetric titration, color endpoint transition, and automated grading.
-              </p>
-            </div>
-          </div>
-
-          {/* Workflow Step Selection Pills */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
-            {workflowSteps.map((step, idx) => (
-              <button
-                key={step.id}
-                onClick={() => setSelectedWorkflowStep(idx)}
-                className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
-                  selectedWorkflowStep === idx
-                    ? 'bg-blue-600/20 border-blue-500 text-white shadow-md'
-                    : 'bg-slate-800/60 border-slate-700/80 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
-                }`}
-              >
-                <div className="text-[10px] uppercase font-bold tracking-wider text-blue-400 mb-1">
-                  {step.badge}
-                </div>
-                <div className="text-xs font-semibold line-clamp-2 leading-tight">
-                  {step.title}
-                </div>
-              </button>
-            ))}
-          </div>
-
-          {/* Featured Active Step Showcase */}
-          {(() => {
-            const step = workflowSteps[selectedWorkflowStep];
-            return (
-              <div className="bg-slate-800/90 rounded-2xl border border-slate-700 overflow-hidden shadow-2xl grid grid-cols-1 lg:grid-cols-12 gap-0">
-                {/* Left/Top: Image Display with Realistic Frame */}
-                <div className="lg:col-span-7 bg-slate-950 p-4 sm:p-6 flex flex-col justify-center items-center relative group">
-                  <div className="w-full relative rounded-xl overflow-hidden border border-slate-800 shadow-xl bg-slate-900">
-                    <img
-                      src={step.image}
-                      alt={step.title}
-                      className="w-full h-auto object-cover aspect-video hover:scale-[1.01] transition-transform duration-300"
-                    />
-                    <div className="absolute top-3 left-3 bg-slate-900/85 backdrop-blur-md px-2.5 py-1 rounded text-[11px] font-mono text-blue-300 border border-slate-700">
-                      Step {selectedWorkflowStep + 1} of {workflowSteps.length}
-                    </div>
-                  </div>
-                  <p className="mt-3 text-xs text-slate-400 text-center italic">
-                    {step.subtitle}
-                  </p>
-                </div>
-
-                {/* Right/Bottom: Step Details & Scientific Explanation */}
-                <div className="lg:col-span-5 p-6 sm:p-8 flex flex-col justify-between space-y-6">
-                  <div className="space-y-4">
-                    <div className="inline-block px-2.5 py-1 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 text-[11px] font-semibold">
-                      {step.badge}
-                    </div>
-
-                    <h3 className="text-xl font-bold text-white tracking-tight">
-                      {step.title}
-                    </h3>
-
-                    <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                      {step.description}
-                    </p>
-
-                    {/* Key Technical Highlights */}
-                    <div className="pt-2 space-y-2">
-                      <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                        Apparatus & Technical Capabilities:
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        {step.highlights.map((h, i) => (
-                          <div
-                            key={i}
-                            className="flex items-center gap-2 p-2 rounded-lg bg-slate-900/80 border border-slate-700/60 text-xs text-slate-200"
-                          >
-                            <span className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
-                            <span className="truncate">{h}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Navigation controls */}
-                  <div className="flex items-center justify-between pt-4 border-t border-slate-700/80 text-xs">
-                    <button
-                      onClick={() => setSelectedWorkflowStep(prev => Math.max(0, prev - 1))}
-                      disabled={selectedWorkflowStep === 0}
-                      className="px-3 py-1.5 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium transition cursor-pointer"
-                    >
-                      ← Previous Step
-                    </button>
-
-                    <div className="text-slate-400 font-mono text-[11px]">
-                      {selectedWorkflowStep + 1} / {workflowSteps.length}
-                    </div>
-
-                    <button
-                      onClick={() => setSelectedWorkflowStep(prev => Math.min(workflowSteps.length - 1, prev + 1))}
-                      disabled={selectedWorkflowStep === workflowSteps.length - 1}
-                      className="px-3 py-1.5 rounded bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium transition cursor-pointer"
-                    >
-                      Next Step →
-                    </button>
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
-
-        </div>
-      </section>
-
-      {/* SECTION: Subject Modules (Chemistry, Physics, Biology) */}
-      <section className="py-16 bg-white border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
-          
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-            <div>
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-semibold mb-2">
-                <Layers className="w-3.5 h-3.5 text-indigo-600" />
-                <span>Curriculum Practicals</span>
-              </div>
-              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
-                Explore Subjects Covered
-              </h2>
-              <p className="text-sm text-slate-600 mt-1">
-                Calibrated to the secondary national examination syllabus for Form 3 & Form 4 candidates.
-              </p>
-            </div>
-
-            {/* Subject Tabs */}
-            <div className="flex items-center p-1 bg-slate-100 rounded-lg border border-slate-200">
-              <button
-                onClick={() => setActiveTab('chemistry')}
-                className={`px-4 py-2 rounded-md text-xs font-bold transition-all flex items-center gap-2 ${
-                  activeTab === 'chemistry'
-                    ? 'bg-indigo-600 text-white shadow-xs'
-                    : 'text-slate-700 hover:text-slate-900'
-                }`}
-              >
-                <FlaskConical className="w-3.5 h-3.5" />
-                <span>Chemistry (233/3)</span>
-              </button>
-
-              <button
-                onClick={() => setActiveTab('physics')}
-                className={`px-4 py-2 rounded-md text-xs font-bold transition-all flex items-center gap-2 ${
-                  activeTab === 'physics'
-                    ? 'bg-sky-600 text-white shadow-xs'
-                    : 'text-slate-700 hover:text-slate-900'
-                }`}
-              >
-                <Zap className="w-3.5 h-3.5" />
-                <span>Physics (232/3)</span>
-              </button>
-
-              <button
-                onClick={() => setActiveTab('biology')}
-                className={`px-4 py-2 rounded-md text-xs font-bold transition-all flex items-center gap-2 ${
-                  activeTab === 'biology'
-                    ? 'bg-emerald-600 text-white shadow-xs'
-                    : 'text-slate-700 hover:text-slate-900'
-                }`}
-              >
-                <Dna className="w-3.5 h-3.5" />
-                <span>Biology (231/3)</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Tab Content Display */}
-          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 sm:p-8">
-            
-            {/* CHEMISTRY */}
-            {activeTab === 'chemistry' && (
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-                <div className="lg:col-span-7 space-y-4">
-                  <div className="inline-block px-2.5 py-1 rounded bg-indigo-100 text-indigo-800 text-xs font-bold">
-                    Chemistry Practical · Paper 233/3 Question 1 & 2
-                  </div>
-                  <h3 className="text-xl sm:text-2xl font-bold text-slate-900">
-                    Volumetric Titration & Qualitative Inorganic Analysis
-                  </h3>
-                  <p className="text-sm text-slate-600 leading-relaxed">
-                    Operate the 50.0 cm³ burette to titrate standard acid against alkali or redox oxidants like potassium manganate (VII). Use pipettes, measuring cylinders for adding auxiliary reagents, and observe precise color changes from pale pink to colorless.
-                  </p>
+                {/* Left Column: Heading and CTAs */}
+                <div className="lg:col-span-7 space-y-6">
                   
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 text-xs">
-                    <div className="p-3 bg-white rounded-lg border border-slate-200">
-                      <span className="font-semibold text-slate-900 block">Procedure I & II Support:</span>
-                      <span className="text-slate-600">Standard titration followed by dilution, heating, and secondary titration.</span>
-                    </div>
-                    <div className="p-3 bg-white rounded-lg border border-slate-200">
-                      <span className="font-semibold text-slate-900 block">Concordancy Scoring:</span>
-                      <span className="text-slate-600">Auto-evaluates titre values within ±0.20 cm³ with decimal reading consistency.</span>
-                    </div>
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-semibold">
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                    <span>Kenya & East Africa Secondary Virtual Science Laboratory</span>
                   </div>
 
+                  <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-[1.12]">
+                    Master Science Practicals with <span className="text-emerald-600 dark:text-emerald-400">Virtual Hands-On Labs</span>
+                  </h1>
+
+                  <p className="text-base sm:text-lg text-slate-600 dark:text-slate-300 leading-relaxed max-w-2xl">
+                    Experience real laboratory simulations from any phone, tablet, or desktop. Perform volumetric titrations with calibrated burettes and pipettes, wire electrical circuits, conduct salt tests, and fill digital answer sheets calibrated to national Paper 3 standards.
+                  </p>
+
+                  {/* Actions */}
                   <div className="pt-2 flex flex-wrap items-center gap-3">
                     <button
+                      onClick={() => handleGoToAuth('register_student')}
+                      className="px-5 py-2.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm transition-all shadow-sm hover:shadow flex items-center gap-2 cursor-pointer"
+                    >
+                      <GraduationCap className="w-4 h-4" />
+                      <span>Register student account</span>
+                    </button>
+
+                    <button
+                      onClick={() => handleGoToAuth('login')}
+                      className="px-5 py-2.5 rounded-md bg-slate-900 dark:bg-slate-100 hover:bg-slate-800 dark:hover:bg-white text-white dark:text-slate-900 font-semibold text-sm transition-all shadow-sm flex items-center gap-2 cursor-pointer"
+                    >
+                      <span>Sign in</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+
+                    <button
                       onClick={() => handleLaunchExperimentDirectly('titration')}
-                      className="px-5 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-colors shadow-xs flex items-center gap-2"
+                      className="px-4 py-2.5 rounded-md border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 text-sm font-semibold transition-colors inline-flex items-center gap-2 cursor-pointer"
                     >
-                      <Play className="w-3.5 h-3.5" />
-                      <span>Launch Titration Practical</span>
+                      <Play className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 fill-emerald-600 dark:fill-emerald-400" />
+                      <span>Launch Live Demo</span>
                     </button>
-                    <button
-                      onClick={() => handleLaunchExperimentDirectly('qualitative_analysis')}
-                      className="px-5 py-2.5 rounded-lg border border-slate-300 hover:bg-white text-slate-700 text-xs font-bold transition-colors shadow-2xs flex items-center gap-2"
-                    >
-                      <Beaker className="w-3.5 h-3.5 text-indigo-600" />
-                      <span>Launch Qualitative Analysis</span>
-                    </button>
+                  </div>
+
+                  {/* Metrics Row (Anti-pill: Clean unboxed metadata) */}
+                  <div className="pt-4 grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs border-t border-slate-200 dark:border-slate-800">
+                    <div>
+                      <div className="text-2xl font-extrabold text-slate-900 dark:text-white font-mono tracking-tight">100%</div>
+                      <div className="text-slate-500 dark:text-slate-400 mt-0.5 text-xs">Syllabus Calibrated</div>
+                    </div>
+                    <div>
+                      <div className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 font-mono tracking-tight">0 KES</div>
+                      <div className="text-slate-500 dark:text-slate-400 mt-0.5 text-xs">Glassware Breakage</div>
+                    </div>
+                    <div>
+                      <div className="text-2xl font-extrabold text-slate-900 dark:text-white font-mono tracking-tight">±0.20 cm³</div>
+                      <div className="text-slate-500 dark:text-slate-400 mt-0.5 text-xs">Concordancy Check</div>
+                    </div>
+                    <div>
+                      <div className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 font-mono tracking-tight">Unlimited</div>
+                      <div className="text-slate-500 dark:text-slate-400 mt-0.5 text-xs">Repeat Practice</div>
+                    </div>
+                  </div>
+
+                </div>
+
+                {/* Right Column: Hero Visual Stage with Mini Interactive Sandbox */}
+                <div className="lg:col-span-5 relative">
+                  <div className="bg-slate-900 rounded-xl border border-slate-800 p-5 shadow-xl text-white space-y-4">
+                    <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                        <span className="text-xs font-semibold text-slate-200">Interactive Burette Sandbox</span>
+                      </div>
+                      <span className="text-[11px] font-mono text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800/80">
+                        {sandboxVolume.toFixed(2)} cm³ Titrant
+                      </span>
+                    </div>
+
+                    {/* Interactive mini canvas */}
+                    <div className="relative h-56 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-center overflow-hidden">
+                      {/* Stand and burette diagram */}
+                      <div className="absolute left-12 top-4 bottom-4 w-1 bg-slate-700 rounded-full" />
+                      <div className="absolute left-8 bottom-4 w-16 h-2 bg-slate-600 rounded" />
+                      
+                      {/* Burette Tube */}
+                      <div className="absolute left-20 top-6 w-5 h-36 border border-slate-600 bg-slate-900/60 rounded-xs flex flex-col justify-end overflow-hidden">
+                        <div 
+                          className="w-full bg-emerald-500/70 transition-all duration-300"
+                          style={{ height: `${Math.max(10, 100 - (sandboxVolume / 25) * 80)}%` }}
+                        />
+                      </div>
+
+                      {/* Liquid Stream during pouring */}
+                      {sandboxIsPouring && (
+                        <div className="absolute left-[88px] top-42 w-0.5 h-12 bg-emerald-400 animate-pulse shadow-xs shadow-emerald-400" />
+                      )}
+
+                      {/* Conical Flask */}
+                      <div className={`relative flex flex-col items-center transition-transform ${sandboxSwirling ? 'animate-bounce' : ''}`}>
+                        <div className="w-4 h-6 border-x border-slate-500 bg-transparent" />
+                        <div className="relative w-24 h-20 border border-slate-400 rounded-b-2xl overflow-hidden flex items-end justify-center bg-slate-800/30">
+                          {/* Flask liquid with reactive color */}
+                          <div 
+                            className="w-full transition-all duration-500 rounded-b-xl"
+                            style={{ 
+                              height: `${25 + (sandboxVolume / 25) * 45}%`,
+                              backgroundColor: getSandboxFlaskColor()
+                            }}
+                          />
+                        </div>
+                        <div className="text-[10px] text-slate-400 mt-2 font-mono">
+                          {sandboxVolume >= 24.5 ? 'Endpoint Reached (Pink)' : 'Conical Flask (Alkaline)'}
+                        </div>
+                      </div>
+
+                      {/* Calibrated Telemetry Badge */}
+                      <div className="absolute top-3 right-3 text-right">
+                        <span className="text-[10px] text-emerald-300 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-800/80 inline-flex items-center gap-1 font-mono">
+                          <Droplets className="w-3 h-3" /> Calibrated Volumetric Simulation
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Quick Sandbox Controls */}
+                    <div className="space-y-2 pt-1">
+                      <div className="flex items-center justify-between text-xs text-slate-400">
+                        <span>Direct apparatus interaction:</span>
+                        <button 
+                          onClick={handleSandboxReset}
+                          className="text-[11px] text-slate-400 hover:text-white flex items-center gap-1 cursor-pointer transition-colors"
+                        >
+                          <RotateCcw className="w-3 h-3" /> Reset
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          onClick={handleSandboxPourStep}
+                          disabled={sandboxVolume >= 25}
+                          className="px-3 py-2 rounded-md bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-semibold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+                        >
+                          <Droplets className="w-3.5 h-3.5" />
+                          <span>Dispense +5.0 cm³ Titrant</span>
+                        </button>
+
+                        <button
+                          onClick={() => setSandboxSwirling(true)}
+                          className="px-3 py-2 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition flex items-center justify-center gap-1.5 cursor-pointer border border-slate-700"
+                        >
+                          <Activity className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>Swirl Flask</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-800 text-[11px] text-slate-400 flex items-center justify-between">
+                      <span>Authentic calibrated apparatus & official KNEC tables</span>
+                      <button
+                        onClick={() => handleLaunchExperimentDirectly('titration')}
+                        className="text-emerald-400 hover:underline font-bold flex items-center gap-1 cursor-pointer"
+                      >
+                        Launch Full Lab <ArrowRight className="w-3 h-3" />
+                      </button>
+                    </div>
+
                   </div>
                 </div>
 
-                <div className="lg:col-span-5">
-                  <div className="rounded-xl overflow-hidden border-2 border-slate-200 shadow-md">
-                    <img 
-                      src={titrationBenchImg} 
-                      alt="Chemistry Titration Apparatus Bench"
-                      className="w-full h-64 object-cover object-center" 
-                    />
-                  </div>
-                </div>
               </div>
-            )}
+            </div>
+          </section>
 
-            {/* PHYSICS */}
-            {activeTab === 'physics' && (
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-                <div className="lg:col-span-7 space-y-4">
-                  <div className="inline-block px-2.5 py-1 rounded bg-sky-100 text-sky-800 text-xs font-bold">
-                    Physics Practical · Paper 232/3 Question 1
+          {/* Core Pillars Grid */}
+          <section className="py-14 bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
+              <div className="text-center max-w-3xl mx-auto space-y-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 font-mono">
+                  Built for Secondary Science
+                </span>
+                <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+                  Why Secondary Schools Choose STEM Spark Lab
+                </h2>
+                <p className="text-sm text-slate-600 dark:text-slate-400">
+                  Paper 3 practicals carry up to 40% of the candidate's final science grade in KCSE examinations. We remove the barriers of broken glassware and expensive chemicals.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+                <div className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs space-y-3">
+                  <div className="w-10 h-10 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
+                    <FlaskConical className="w-5 h-5" />
                   </div>
-                  <h3 className="text-xl sm:text-2xl font-bold text-slate-900">
-                    Current Electricity, Ohm&apos;s Law & Circuit Analysis
-                  </h3>
-                  <p className="text-sm text-slate-600 leading-relaxed">
-                    Wire dry cells in series with an ammeter, voltmeter, switch, and variable rheostat. Drag the rheostat slider to alter circuit resistance across 5 increments, read analog and digital meters, and plot voltage-current graphs to deduce internal resistance and electromotive force.
+                  <h3 className="font-bold text-slate-900 dark:text-white text-sm">1. Realistic Physical Apparatus</h3>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                    Operate 50.0 cm³ burettes, 25.0 cm³ bulb pipettes with safety fillers, iron retort stands, multimeters, and test-tubes with real fluid equations.
                   </p>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 text-xs">
-                    <div className="p-3 bg-white rounded-lg border border-slate-200">
-                      <span className="font-semibold text-slate-900 block">Interactive Wiring:</span>
-                      <span className="text-slate-600">Connect lead clips between voltmeter, ammeter, and resistance wires without short circuits.</span>
-                    </div>
-                    <div className="p-3 bg-white rounded-lg border border-slate-200">
-                      <span className="font-semibold text-slate-900 block">V-I Curve Plotting:</span>
-                      <span className="text-slate-600">Calculate gradient slope (V/I = R) with real-time mathematical validation.</span>
-                    </div>
-                  </div>
-
-                  <div className="pt-2">
-                    <button
-                      onClick={() => handleLaunchExperimentDirectly('ohms_law')}
-                      className="px-5 py-2.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold transition-colors shadow-xs flex items-center gap-2"
-                    >
-                      <Play className="w-3.5 h-3.5" />
-                      <span>Launch Ohm&apos;s Law Practical</span>
-                    </button>
-                  </div>
                 </div>
 
-                <div className="lg:col-span-5 bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-3">
-                  <div className="flex items-center justify-between text-xs font-bold text-slate-700 pb-2 border-b border-slate-100">
-                    <span>Circuit Specifications</span>
-                    <span className="text-sky-600">DC Voltage Mode</span>
+                <div className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs space-y-3">
+                  <div className="w-10 h-10 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
+                    <Sparkles className="w-5 h-5" />
                   </div>
-                  <div className="space-y-2 text-xs text-slate-600">
-                    <div className="flex justify-between">
-                      <span>Power Source:</span>
-                      <span className="font-mono font-bold text-slate-800">2 × 1.5V Dry Cells (3.0V total)</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Voltmeter Range:</span>
-                      <span className="font-mono font-bold text-slate-800">0.0 – 5.0 V (±0.05V accuracy)</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Ammeter Range:</span>
-                      <span className="font-mono font-bold text-slate-800">0.0 – 2.5 A (±0.02A accuracy)</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Rheostat:</span>
-                      <span className="font-mono font-bold text-slate-800">0 – 50 Ω continuous slider</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* BIOLOGY */}
-            {activeTab === 'biology' && (
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-                <div className="lg:col-span-7 space-y-4">
-                  <div className="inline-block px-2.5 py-1 rounded bg-emerald-100 text-emerald-800 text-xs font-bold">
-                    Biology Practical · Paper 231/3 Question 1
-                  </div>
-                  <h3 className="text-xl sm:text-2xl font-bold text-slate-900">
-                    Qualitative Biochemical Food Nutrient Testing
-                  </h3>
-                  <p className="text-sm text-slate-600 leading-relaxed">
-                    Identify unknown nutrients in food substance solution. Carry out Benedict&apos;s test for reducing sugars in a boiling water bath, Biuret test (10% NaOH + 1% CuSO₄) for proteins, Iodine test for starch, and DCPIP test for vitamin C with observation and inference tables.
+                  <h3 className="font-bold text-slate-900 dark:text-white text-sm">2. Guided Procedure Sequences</h3>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                    Interactive procedure checklists guide students through accurate reagent measurement, meniscus leveling, indicator drops, and reaction observation.
                   </p>
+                </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 text-xs">
-                    <div className="p-3 bg-white rounded-lg border border-slate-200">
-                      <span className="font-semibold text-slate-900 block">Color Transition Engine:</span>
-                      <span className="text-slate-600">Observes green → yellow → orange → brick-red precipitate dynamically.</span>
+                <div className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs space-y-3">
+                  <div className="w-10 h-10 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
+                    <Award className="w-5 h-5" />
+                  </div>
+                  <h3 className="font-bold text-slate-900 dark:text-white text-sm">3. Digital Exam Answer Sheets</h3>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                    Complete multi-trial titration tables, compute average titres, test concordancy within ±0.20 cm³, and solve chemical arithmetic with instant auto-grading.
+                  </p>
+                </div>
+
+                <div className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs space-y-3">
+                  <div className="w-10 h-10 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
+                    <ShieldCheck className="w-5 h-5" />
+                  </div>
+                  <h3 className="font-bold text-slate-900 dark:text-white text-sm">4. Zero Chemical Danger</h3>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                    Zero acid splashes, zero toxic gas inhalation, and zero glassware replacement costs. Students can repeat experiments 50 times until full mastery.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Workflow Step Showcase */}
+          <section className="py-14 bg-slate-900 text-white border-b border-slate-800">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+              <div className="space-y-1">
+                <div className="text-xs font-mono text-emerald-400 uppercase tracking-wider">
+                  Full Practical Architecture
+                </div>
+                <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
+                  Step-by-Step Practical Procedure & Assessment
+                </h2>
+                <p className="text-xs sm:text-sm text-slate-400">
+                  Follow the exact operational pipeline from teacher instruction parsing to volumetric endpoint detection.
+                </p>
+              </div>
+
+              {/* Step Selector Buttons */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+                {workflowSteps.map((step, idx) => (
+                  <button
+                    key={step.id}
+                    onClick={() => setSelectedWorkflowStep(idx)}
+                    className={`p-3 rounded-lg border text-left transition-all cursor-pointer ${
+                      selectedWorkflowStep === idx
+                        ? 'bg-emerald-950/60 border-emerald-500 text-white shadow-xs'
+                        : 'bg-slate-800/60 border-slate-700/80 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                    }`}
+                  >
+                    <div className="text-[10px] uppercase font-bold tracking-wider text-emerald-400 mb-0.5 font-mono">
+                      {step.badge}
                     </div>
-                    <div className="p-3 bg-white rounded-lg border border-slate-200">
-                      <span className="font-semibold text-slate-900 block">Observation & Inference Table:</span>
-                      <span className="text-slate-600">Matches student scientific deductions with KNEC biology marking schemes.</span>
+                    <div className="text-xs font-semibold line-clamp-2 leading-tight">
+                      {step.title}
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              {/* Active Step Showcase */}
+              {(() => {
+                const step = workflowSteps[selectedWorkflowStep];
+                return (
+                  <div className="bg-slate-800/90 rounded-xl border border-slate-700 overflow-hidden shadow-2xl grid grid-cols-1 lg:grid-cols-12">
+                    <div className="lg:col-span-7 bg-slate-950 p-4 sm:p-6 flex flex-col justify-center items-center relative">
+                      <div className="w-full relative rounded-lg overflow-hidden border border-slate-800 shadow-xl bg-slate-900">
+                        <img
+                          src={step.image}
+                          alt={step.title}
+                          className="w-full h-auto object-cover aspect-video"
+                        />
+                        <div className="absolute top-3 left-3 bg-slate-900/90 px-2.5 py-1 rounded text-[11px] font-mono text-emerald-300 border border-slate-700">
+                          Step {selectedWorkflowStep + 1} of {workflowSteps.length}
+                        </div>
+                      </div>
+                      <p className="mt-2 text-xs text-slate-400 text-center italic">
+                        {step.subtitle}
+                      </p>
+                    </div>
+
+                    <div className="lg:col-span-5 p-6 sm:p-7 flex flex-col justify-between space-y-4">
+                      <div className="space-y-3">
+                        <div className="text-xs font-mono text-emerald-400 uppercase font-semibold">
+                          {step.badge}
+                        </div>
+                        <h3 className="text-lg sm:text-xl font-bold text-white tracking-tight">
+                          {step.title}
+                        </h3>
+                        <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                          {step.description}
+                        </p>
+                        <div className="pt-2 grid grid-cols-2 gap-1.5 text-xs">
+                          {step.highlights.map((h, i) => (
+                            <div key={i} className="flex items-center gap-1.5 p-1.5 rounded bg-slate-900/80 border border-slate-700/60 text-slate-300 text-[11px]">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                              <span className="truncate">{h}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-4 border-t border-slate-700/80 text-xs">
+                        <button
+                          onClick={() => setSelectedWorkflowStep(prev => Math.max(0, prev - 1))}
+                          disabled={selectedWorkflowStep === 0}
+                          className="px-3 py-1.5 rounded-md bg-slate-700 hover:bg-slate-600 disabled:opacity-40 text-white font-medium transition cursor-pointer"
+                        >
+                          ← Previous
+                        </button>
+                        <span className="text-slate-400 font-mono text-[11px]">
+                          {selectedWorkflowStep + 1} / {workflowSteps.length}
+                        </span>
+                        <button
+                          onClick={() => setSelectedWorkflowStep(prev => Math.min(workflowSteps.length - 1, prev + 1))}
+                          disabled={selectedWorkflowStep === workflowSteps.length - 1}
+                          className="px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white font-medium transition cursor-pointer shadow-xs"
+                        >
+                          Next →
+                        </button>
+                      </div>
                     </div>
                   </div>
+                );
+              })()}
+            </div>
+          </section>
 
-                  <div className="pt-2">
-                    <button
-                      onClick={() => handleLaunchExperimentDirectly('food_test')}
-                      className="px-5 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-colors shadow-xs flex items-center gap-2"
-                    >
-                      <Play className="w-3.5 h-3.5" />
-                      <span>Launch Food Nutrient Practical</span>
-                    </button>
+          {/* Quick Subject Teaser Card */}
+          <section className="py-14 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+                    Explore Laboratory Subjects
+                  </h2>
+                  <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                    Select a subject to view full syllabus practicals and interactive modules.
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setLandingTab('subjects');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  <span>View all subjects</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                <div 
+                  onClick={() => {
+                    setActiveSubjectTab('chemistry');
+                    setLandingTab('subjects');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-emerald-300 dark:hover:border-emerald-800 transition cursor-pointer overflow-hidden group shadow-2xs hover:shadow-xs flex flex-col"
+                >
+                  <div className="h-36 w-full overflow-hidden relative">
+                    <img src={titrationBenchImg} alt="Chemistry Titration Workbench" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" referrerPolicy="no-referrer" />
+                    <span className="absolute top-2.5 right-2.5 px-2 py-0.5 bg-slate-900/80 backdrop-blur-xs text-white text-[10px] font-mono rounded font-semibold">Paper 233/3</span>
+                  </div>
+                  <div className="p-5 space-y-3 flex-1 flex flex-col justify-between">
+                    <div>
+                      <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold mb-2">
+                        <FlaskConical className="w-4 h-4" />
+                      </div>
+                      <h3 className="font-bold text-slate-900 dark:text-white text-base group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">Chemistry Practicals</h3>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed mt-1">
+                        Volumetric titrations, qualitative inorganic salt analysis, thermochemistry, and reaction rates.
+                      </p>
+                    </div>
+                    <div className="pt-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
+                      <span>Explore Chemistry</span> <ArrowRight className="w-3 h-3" />
+                    </div>
                   </div>
                 </div>
 
-                <div className="lg:col-span-5 bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-3">
-                  <div className="flex items-center justify-between text-xs font-bold text-slate-700 pb-2 border-b border-slate-100">
-                    <span>Reagents & Positive Indicators</span>
-                    <span className="text-emerald-600">Biochemical Suite</span>
+                <div 
+                  onClick={() => {
+                    setActiveSubjectTab('physics');
+                    setLandingTab('subjects');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-emerald-300 dark:hover:border-emerald-800 transition cursor-pointer overflow-hidden group shadow-2xs hover:shadow-xs flex flex-col"
+                >
+                  <div className="h-36 w-full overflow-hidden relative">
+                    <img src={physicsBenchImg} alt="Physics Circuit Workbench" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" referrerPolicy="no-referrer" />
+                    <span className="absolute top-2.5 right-2.5 px-2 py-0.5 bg-slate-900/80 backdrop-blur-xs text-white text-[10px] font-mono rounded font-semibold">Paper 232/3</span>
                   </div>
-                  <div className="space-y-2 text-xs text-slate-600">
-                    <div className="flex justify-between items-center">
-                      <span>Reducing Sugar:</span>
-                      <span className="px-2 py-0.5 rounded bg-rose-100 text-rose-800 font-semibold text-[11px]">Brick-red ppt</span>
+                  <div className="p-5 space-y-3 flex-1 flex flex-col justify-between">
+                    <div>
+                      <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold mb-2">
+                        <Zap className="w-4 h-4" />
+                      </div>
+                      <h3 className="font-bold text-slate-900 dark:text-white text-base group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">Physics Practicals</h3>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed mt-1">
+                        Current electricity, Ohm&apos;s Law, Hooke&apos;s Law spring constant, optics, and simple pendulums.
+                      </p>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span>Protein (Biuret):</span>
-                      <span className="px-2 py-0.5 rounded bg-purple-100 text-purple-800 font-semibold text-[11px]">Purple / Violet</span>
+                    <div className="pt-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
+                      <span>Explore Physics</span> <ArrowRight className="w-3 h-3" />
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span>Starch (Iodine):</span>
-                      <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 font-semibold text-[11px]">Blue-black</span>
+                  </div>
+                </div>
+
+                <div 
+                  onClick={() => {
+                    setActiveSubjectTab('biology');
+                    setLandingTab('subjects');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-emerald-300 dark:hover:border-emerald-800 transition cursor-pointer overflow-hidden group shadow-2xs hover:shadow-xs flex flex-col"
+                >
+                  <div className="h-36 w-full overflow-hidden relative">
+                    <img src={biologyBenchImg} alt="Biology Food Testing Workbench" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" referrerPolicy="no-referrer" />
+                    <span className="absolute top-2.5 right-2.5 px-2 py-0.5 bg-slate-900/80 backdrop-blur-xs text-white text-[10px] font-mono rounded font-semibold">Paper 231/3</span>
+                  </div>
+                  <div className="p-5 space-y-3 flex-1 flex flex-col justify-between">
+                    <div>
+                      <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold mb-2">
+                        <Dna className="w-4 h-4" />
+                      </div>
+                      <h3 className="font-bold text-slate-900 dark:text-white text-base group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">Biology Practicals</h3>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed mt-1">
+                        Biochemical food tests, enzyme kinetics, plant transpiration, and microscopic specimen drawings.
+                      </p>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span>Vitamin C (DCPIP):</span>
-                      <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-800 font-semibold text-[11px]">Decolorization</span>
+                    <div className="pt-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
+                      <span>Explore Biology</span> <ArrowRight className="w-3 h-3" />
                     </div>
                   </div>
                 </div>
               </div>
-            )}
+            </div>
+          </section>
+        </>
+      )}
 
-          </div>
-
-        </div>
-      </section>
-
-      {/* SECTION: 3 Steps for Students */}
-      <section className="py-16 bg-slate-50 border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
-          
-          <div className="text-center max-w-2xl mx-auto space-y-2">
-            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
-              How It Works for Students
-            </h2>
-            <p className="text-sm text-slate-600">
-              Getting started takes less than one minute. Follow these three simple steps:
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {/* ================= TAB 2: ABOUT ================= */}
+      {landingTab === 'about' && (
+        <section className="py-12 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
             
-            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-xs space-y-3 relative">
-              <div className="w-10 h-10 rounded-full bg-emerald-600 text-white font-bold flex items-center justify-center text-sm">
-                1
-              </div>
-              <h3 className="font-bold text-slate-900 text-base">Register Student Account</h3>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Click register, select your secondary school and your class stream, and create your student account.
+            <div className="space-y-3">
+              <span className="text-xs font-mono font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                Institutional Mission & Vision
+              </span>
+              <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+                Democratizing Science Practicals Across Secondary Schools
+              </h1>
+              <p className="text-base text-slate-600 dark:text-slate-300 leading-relaxed">
+                STEM Spark Lab was founded to bridge the acute practical science gap in secondary education. Every student, regardless of their school&apos;s laboratory budget, deserves access to world-class scientific inquiry.
               </p>
+            </div>
+
+            {/* Institutional Laboratory Hero Image */}
+            <div className="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-sm">
+              <img 
+                src={labBannerImg} 
+                alt="Kenyan Secondary School Science Laboratory" 
+                className="w-full h-64 sm:h-80 object-cover"
+              />
+              <div className="p-3 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+                <span>Standard secondary school science laboratory preparation space</span>
+                <span className="font-mono text-emerald-600 dark:text-emerald-400 font-semibold">Calibrated to KNEC Paper 3</span>
+              </div>
+            </div>
+
+            {/* The Practical Crisis vs Virtual Solution */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="p-6 rounded-xl border border-rose-200 dark:border-rose-900/60 bg-rose-50/40 dark:bg-rose-950/20 space-y-3">
+                <div className="flex items-center gap-2 text-rose-700 dark:text-rose-400 font-bold text-sm">
+                  <span className="w-2.5 h-2.5 rounded-full bg-rose-600" />
+                  <span>The Secondary School Challenge</span>
+                </div>
+                <ul className="space-y-2 text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
+                  <li className="flex items-start gap-2">
+                    <span className="text-rose-600 font-bold">•</span>
+                    <span><strong>Glassware & Reagent Rationing:</strong> In over 65% of secondary schools, students only touch a burette or pipette once or twice due to fear of breakages.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-rose-600 font-bold">•</span>
+                    <span><strong>40% of National Marks:</strong> Paper 3 examinations constitute 40% of the final KCSE science grade. Practice deficiency directly causes low national grades.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-rose-600 font-bold">•</span>
+                    <span><strong>High Chemical Costs:</strong> Reagents like Silver Nitrate, Potassium Permanganate, and pure acids cost thousands of shillings every term.</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="p-6 rounded-xl border border-emerald-200 dark:border-emerald-900/60 bg-emerald-50/40 dark:bg-emerald-950/20 space-y-3">
+                <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-bold text-sm">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-600" />
+                  <span>The STEM Spark Lab Solution</span>
+                </div>
+                <ul className="space-y-2 text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
+                  <li className="flex items-start gap-2">
+                    <span className="text-emerald-600 font-bold">•</span>
+                    <span><strong>Zero-Risk Unlimited Trials:</strong> Students can repeat volumetric titrations 50 times until meniscus reading and concordancy become muscle memory.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-emerald-600 font-bold">•</span>
+                    <span><strong>Instant KNEC Marking Schemes:</strong> Automated rubric engines verify concordancy within ±0.20 cm³ and mark working steps instantaneously.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-emerald-600 font-bold">•</span>
+                    <span><strong>Teacher Empowerment Studio:</strong> Science teachers can type instructions in natural English and generate live interactive workbenches in seconds.</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            {/* CBC & National Syllabus Alignment */}
+            <div className="p-6 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 space-y-4">
+              <h3 className="font-bold text-slate-900 dark:text-white text-base">
+                Curriculum Integration: CBC & 8-4-4 Alignment
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                STEM Spark Lab is built to meet both the Competency-Based Curriculum (CBC) senior school pathways and the traditional KCSE 8-4-4 Paper 3 examination guidelines. Students develop core competencies in scientific investigation, data handling, digital literacy, and critical problem solving.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs pt-1">
+                <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
+                  <span className="font-bold text-slate-900 dark:text-white block">Form 1 & 2 Foundations</span>
+                  <span className="text-slate-500 dark:text-slate-400 mt-1 block">Apparatus identification, measuring cylinder meniscus, safety rules, Bunsen burner flame adjustment.</span>
+                </div>
+                <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
+                  <span className="font-bold text-slate-900 dark:text-white block">Form 3 Skill Building</span>
+                  <span className="text-slate-500 dark:text-slate-400 mt-1 block">Acid-base volumetric titration, indicator color shifts, Ohm&apos;s Law V-I curves, biochemical food testing.</span>
+                </div>
+                <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
+                  <span className="font-bold text-slate-900 dark:text-white block">Form 4 Exam Mastery</span>
+                  <span className="text-slate-500 dark:text-slate-400 mt-1 block">Redox titrations, concordancy verification, qualitative salt inferences, timed CAT practical exams.</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-center pt-2">
               <button
                 onClick={() => handleGoToAuth('register_student')}
-                className="text-xs text-emerald-600 font-bold hover:underline inline-flex items-center gap-1 pt-1"
+                className="px-6 py-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm transition shadow-md flex items-center gap-2 cursor-pointer"
               >
-                <span>Register now</span>
-                <ChevronRight className="w-3.5 h-3.5" />
+                <GraduationCap className="w-4 h-4" />
+                <span>Join STEM Spark Lab Today</span>
               </button>
             </div>
 
-            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-xs space-y-3 relative">
-              <div className="w-10 h-10 rounded-full bg-indigo-600 text-white font-bold flex items-center justify-center text-sm">
-                2
+          </div>
+        </section>
+      )}
+
+      {/* ================= TAB 3: SUBJECTS ================= */}
+      {landingTab === 'subjects' && (
+        <section className="py-12 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+            
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <span className="text-xs font-mono font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                  Secondary Practical Syllabus
+                </span>
+                <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white mt-1">
+                  Subjects & Practical Examination Modules
+                </h1>
+                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-0.5">
+                  Calibrated to the secondary national syllabus for Form 3 & Form 4 candidates.
+                </p>
               </div>
-              <h3 className="font-bold text-slate-900 text-base">Perform Practical Steps</h3>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Open your assigned experiment or practice module. Follow guided steps, pour reagents, control stopcocks, and wire circuits.
-              </p>
-              <span className="text-xs text-indigo-600 font-bold inline-flex items-center gap-1 pt-1">
-                <span>Guided interactive apparatus</span>
-              </span>
-            </div>
 
-            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-xs space-y-3 relative">
-              <div className="w-10 h-10 rounded-full bg-teal-600 text-white font-bold flex items-center justify-center text-sm">
-                3
-              </div>
-              <h3 className="font-bold text-slate-900 text-base">Fill & Submit Answers</h3>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Enter your trial readings into the digital answer sheet. Submit to receive instant scoring, concordancy checks, and teacher feedback.
-              </p>
-              <span className="text-xs text-teal-600 font-bold inline-flex items-center gap-1 pt-1">
-                <span>Instant KCSE mark breakdown</span>
-              </span>
-            </div>
-
-          </div>
-
-        </div>
-      </section>
-
-      {/* SECTION: Standard Practicals Available */}
-      <section className="py-16 bg-white border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
-          
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <h2 className="text-2xl font-bold tracking-tight text-slate-900">
-                Featured Practicals in the Repository
-              </h2>
-              <p className="text-xs sm:text-sm text-slate-500 mt-1">
-                Standardized practical papers available for immediate practice right now.
-              </p>
-            </div>
-
-            <button
-              onClick={() => handleGoToAuth('login')}
-              className="text-xs font-bold text-slate-900 hover:text-emerald-700 flex items-center gap-1"
-            >
-              <span>Sign in to access all</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {experiments.slice(0, 6).map(exp => (
-              <div 
-                key={exp.id} 
-                className="bg-slate-50 hover:bg-white rounded-xl border border-slate-200 p-5 flex flex-col justify-between shadow-2xs hover:shadow-md transition-all group"
-              >
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-white border border-slate-200 text-slate-700">
-                      {exp.subject}
-                    </span>
-                    <span className="text-[11px] font-semibold text-slate-500">
-                      {exp.kcsePaper}
-                    </span>
-                  </div>
-
-                  <h3 className="font-bold text-slate-900 text-sm group-hover:text-emerald-700 transition-colors">
-                    {exp.title}
-                  </h3>
-
-                  <p className="text-xs text-slate-600 line-clamp-2">
-                    {exp.topic}
-                  </p>
-                </div>
-
-                <div className="mt-4 pt-3 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
-                  <span>{exp.steps?.length || 4} Guided Steps</span>
-                  <button
-                    onClick={() => startExperiment(exp, null, 'practice')}
-                    className="font-bold text-emerald-700 hover:text-emerald-800 inline-flex items-center gap-1"
-                  >
-                    <span>Try practical</span>
-                    <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-
-        </div>
-      </section>
-
-      {/* SECTION: Frequently Asked Questions */}
-      <section className="py-16 bg-slate-50 border-b border-slate-200">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
-          
-          <div className="text-center space-y-2">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-200/80 text-slate-700 text-xs font-semibold">
-              <HelpCircle className="w-3.5 h-3.5 text-slate-600" />
-              <span>Questions & Answers</span>
-            </div>
-            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
-              Frequently Asked Questions
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-600">
-              Have a question about using STEM Spark Lab? Here are the most common answers.
-            </p>
-          </div>
-
-          <div className="space-y-3">
-            {faqs.map((faq, idx) => (
-              <div 
-                key={idx}
-                className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-2xs"
-              >
+              {/* Sub-tab switcher */}
+              <div className="flex items-center p-1 bg-slate-100 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
                 <button
-                  onClick={() => toggleFaq(idx)}
-                  className="w-full p-4 sm:p-5 text-left flex items-center justify-between gap-4 font-semibold text-slate-900 text-sm hover:bg-slate-50/50 transition-colors"
+                  onClick={() => setActiveSubjectTab('chemistry')}
+                  className={`px-3 py-1.5 rounded-md text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                    activeSubjectTab === 'chemistry'
+                      ? 'bg-indigo-600 text-white shadow-xs'
+                      : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+                  }`}
                 >
-                  <span>{faq.q}</span>
-                  <ChevronDown className={`w-4 h-4 text-slate-500 shrink-0 transition-transform ${openFaq === idx ? 'rotate-180' : ''}`} />
+                  <FlaskConical className="w-3.5 h-3.5" />
+                  <span>Chemistry</span>
                 </button>
-                {openFaq === idx && (
-                  <div className="px-5 pb-5 text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-slate-100 pt-3">
-                    {faq.a}
-                  </div>
-                )}
+                <button
+                  onClick={() => setActiveSubjectTab('physics')}
+                  className={`px-3 py-1.5 rounded-md text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                    activeSubjectTab === 'physics'
+                      ? 'bg-sky-600 text-white shadow-xs'
+                      : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  <Zap className="w-3.5 h-3.5" />
+                  <span>Physics</span>
+                </button>
+                <button
+                  onClick={() => setActiveSubjectTab('biology')}
+                  className={`px-3 py-1.5 rounded-md text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                    activeSubjectTab === 'biology'
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  <Dna className="w-3.5 h-3.5" />
+                  <span>Biology</span>
+                </button>
               </div>
-            ))}
+            </div>
+
+            {/* CHEMISTRY SUBJECT VIEW */}
+            {activeSubjectTab === 'chemistry' && (
+              <div className="space-y-6">
+                <div className="p-6 rounded-2xl bg-indigo-50/40 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-900/60 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+                  <div className="lg:col-span-7 space-y-4">
+                    <span className="text-xs font-mono font-bold text-indigo-700 dark:text-indigo-300 uppercase">
+                      KCSE Paper 233/3 · Questions 1 & 2
+                    </span>
+                    <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
+                      Volumetric Titration & Qualitative Inorganic Analysis
+                    </h2>
+                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                      Manipulate 50.0 cm³ burettes, 25.0 cm³ pipettes, conical flasks, white ceramic tiles, and indicators. Observe instantaneous color transitions from alkaline yellow to endpoint orange/pink with Methyl Orange, or colorless to pale pink with Phenolphthalein.
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs pt-1">
+                      <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
+                        <span className="font-bold text-slate-900 dark:text-white block">Table I Titre Concordancy</span>
+                        <span className="text-slate-500 dark:text-slate-400">Verifies that at least two trials agree within ±0.20 cm³ for full examination credit.</span>
+                      </div>
+                      <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
+                        <span className="font-bold text-slate-900 dark:text-white block">Stoichiometric Arithmetic</span>
+                        <span className="text-slate-500 dark:text-slate-400">Moles of base, molarity of acid, Relative Atomic Mass (RAM), and water of crystallization.</span>
+                      </div>
+                    </div>
+                    <div className="pt-2 flex items-center gap-3">
+                      <button
+                        onClick={() => handleLaunchExperimentDirectly('titration')}
+                        className="px-5 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition flex items-center gap-2 cursor-pointer shadow-xs"
+                      >
+                        <Play className="w-3.5 h-3.5" /> Launch Volumetric Titration
+                      </button>
+                      <button
+                        onClick={() => handleLaunchExperimentDirectly('qualitative_analysis')}
+                        className="px-5 py-2.5 rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold transition flex items-center gap-2 cursor-pointer"
+                      >
+                        <Beaker className="w-3.5 h-3.5 text-indigo-500" /> Launch Qualitative Salt Analysis
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="lg:col-span-5">
+                    <div className="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-md">
+                      <img src={titrationBenchImg} alt="Titration Workbench" className="w-full h-60 object-cover" referrerPolicy="no-referrer" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Chemistry Catalog List */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+                  <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2">
+                    <div className="text-xs font-mono text-slate-500">Exp 233/3.1</div>
+                    <h3 className="font-bold text-slate-900 dark:text-white text-sm">Standard Acid-Base Titration</h3>
+                    <p className="text-xs text-slate-600 dark:text-slate-400">Titrating 0.1M HCl (Solution N) against 0.2M NaOH (Solution M) using Methyl Orange indicator.</p>
+                  </div>
+                  <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2">
+                    <div className="text-xs font-mono text-slate-500">Exp 233/3.2</div>
+                    <h3 className="font-bold text-slate-900 dark:text-white text-sm">Redox Titration with KMnO₄</h3>
+                    <p className="text-xs text-slate-600 dark:text-slate-400">Standardizing acidified Potassium Manganate (VII) against Hydrated Ammonium Iron(II) Sulphate.</p>
+                  </div>
+                  <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2">
+                    <div className="text-xs font-mono text-slate-500">Exp 233/3.3</div>
+                    <h3 className="font-bold text-slate-900 dark:text-white text-sm">Inorganic Qualitative Analysis</h3>
+                    <p className="text-xs text-slate-600 dark:text-slate-400">Testing unknown Solid P for cations (Zn²⁺, Al³⁺, Pb²⁺) and anions (SO₄²⁻, CO₃²⁻, Cl⁻) with aqueous reagents.</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* PHYSICS SUBJECT VIEW */}
+            {activeSubjectTab === 'physics' && (
+              <div className="space-y-6">
+                <div className="p-6 rounded-2xl bg-sky-50/40 dark:bg-sky-950/20 border border-sky-200 dark:border-sky-900/60 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+                  <div className="lg:col-span-7 space-y-4">
+                    <span className="text-xs font-mono font-bold text-sky-700 dark:text-sky-300 uppercase">
+                      KCSE Paper 232/3 · Questions 1 & 2
+                    </span>
+                    <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
+                      Current Electricity, Ohm&apos;s Law & Circuit Analysis
+                    </h2>
+                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                      Wire series and parallel circuits with dry cells, rheostat sliders, switches, analog/digital voltmeters, and ammeters. Drag the rheostat slider to alter resistance across 5 increments, plot voltage vs current, and deduce internal resistance (r) and EMF (E).
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs pt-1">
+                      <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
+                        <span className="font-bold text-slate-900 dark:text-white block">V-I Slope Gradient</span>
+                        <span className="text-slate-500 dark:text-slate-400">Mathematical linear regression calculating slope gradient with correct dimensional units.</span>
+                      </div>
+                      <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
+                        <span className="font-bold text-slate-900 dark:text-white block">Interactive Breadboard</span>
+                        <span className="text-slate-500 dark:text-slate-400">Interactive lead clip connectors preventing accidental short circuits.</span>
+                      </div>
+                    </div>
+                    <div className="pt-2 flex items-center gap-3">
+                      <button
+                        onClick={() => handleLaunchExperimentDirectly('ohms_law')}
+                        className="px-5 py-2.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold transition flex items-center gap-2 cursor-pointer shadow-xs"
+                      >
+                        <Play className="w-3.5 h-3.5" /> Launch Ohm&apos;s Law Practical
+                      </button>
+                      <button
+                        onClick={() => handleLaunchExperimentDirectly('hookes_law')}
+                        className="px-5 py-2.5 rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold transition flex items-center gap-2 cursor-pointer"
+                      >
+                        <Scale className="w-3.5 h-3.5 text-sky-500" /> Launch Hooke&apos;s Law
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="lg:col-span-5">
+                    <div className="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-md">
+                      <img 
+                        src={physicsBenchImg} 
+                        alt="Physics Circuit Workbench" 
+                        className="w-full h-60 object-cover" 
+                        referrerPolicy="no-referrer"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Physics Catalog List */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+                  <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2">
+                    <div className="text-xs font-mono text-slate-500">Exp 232/3.1</div>
+                    <h3 className="font-bold text-slate-900 dark:text-white text-sm">Ohm&apos;s Law & Internal Resistance</h3>
+                    <p className="text-xs text-slate-600 dark:text-slate-400">Determining internal resistance and electromotive force using variable resistance and ammeter.</p>
+                  </div>
+                  <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2">
+                    <div className="text-xs font-mono text-slate-500">Exp 232/3.2</div>
+                    <h3 className="font-bold text-slate-900 dark:text-white text-sm">Hooke&apos;s Law Spring Constant</h3>
+                    <p className="text-xs text-slate-600 dark:text-slate-400">Loading slotted masses (20g to 100g) on a spiral spring, measuring pointer extension.</p>
+                  </div>
+                  <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2">
+                    <div className="text-xs font-mono text-slate-500">Exp 232/3.3</div>
+                    <h3 className="font-bold text-slate-900 dark:text-white text-sm">Focal Length of Convex Lens</h3>
+                    <p className="text-xs text-slate-600 dark:text-slate-400">Object-image distances on optical bench, plotting 1/u vs 1/v to determine lens focal length.</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* BIOLOGY SUBJECT VIEW */}
+            {activeSubjectTab === 'biology' && (
+              <div className="space-y-6">
+                <div className="p-6 rounded-2xl bg-emerald-50/40 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/60 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+                  <div className="lg:col-span-7 space-y-4">
+                    <span className="text-xs font-mono font-bold text-emerald-700 dark:text-emerald-300 uppercase">
+                      KCSE Paper 231/3 · Questions 1 & 2
+                    </span>
+                    <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
+                      Biochemical Food Nutrient Testing & Specimen Analysis
+                    </h2>
+                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                      Identify unknown food solutions using chemical reagents. Perform Benedict&apos;s test for reducing sugars in a boiling water bath, Iodine test for starch, Biuret test for proteins, and DCPIP test for vitamin C. Record observations and deductions into standard KNEC observation tables.
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs pt-1">
+                      <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
+                        <span className="font-bold text-slate-900 dark:text-white block">Precipitate Color Shifts</span>
+                        <span className="text-slate-500 dark:text-slate-400">Simulates green → yellow → orange → brick-red precipitate transitions with temperature.</span>
+                      </div>
+                      <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
+                        <span className="font-bold text-slate-900 dark:text-white block">Observation & Deduction Rubric</span>
+                        <span className="text-slate-500 dark:text-slate-400">Penalizes vague descriptions (e.g. &quot;Red color&quot; vs &quot;Brick-red precipitate&quot;) to match KNEC criteria.</span>
+                      </div>
+                    </div>
+                    <div className="pt-2 flex items-center gap-3">
+                      <button
+                        onClick={() => handleLaunchExperimentDirectly('food_test')}
+                        className="px-5 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition flex items-center gap-2 cursor-pointer shadow-xs"
+                      >
+                        <Play className="w-3.5 h-3.5" /> Launch Biochemical Food Test
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="lg:col-span-5">
+                    <div className="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-md">
+                      <img 
+                        src={biologyBenchImg} 
+                        alt="Biology Food Testing Workbench" 
+                        className="w-full h-60 object-cover" 
+                        referrerPolicy="no-referrer"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Biology Catalog List */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+                  <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2">
+                    <div className="text-xs font-mono text-slate-500">Exp 231/3.1</div>
+                    <h3 className="font-bold text-slate-900 dark:text-white text-sm">Qualitative Food Nutrient Tests</h3>
+                    <p className="text-xs text-slate-600 dark:text-slate-400">Testing food extract X for reducing sugars, non-reducing sugars, starch, and proteins.</p>
+                  </div>
+                  <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2">
+                    <div className="text-xs font-mono text-slate-500">Exp 231/3.2</div>
+                    <h3 className="font-bold text-slate-900 dark:text-white text-sm">Enzyme Amylase Temperature Kinetics</h3>
+                    <p className="text-xs text-slate-600 dark:text-slate-400">Rate of starch breakdown by salivary amylase at 10°C, 37°C, and 80°C in water baths.</p>
+                  </div>
+                  <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2">
+                    <div className="text-xs font-mono text-slate-500">Exp 231/3.3</div>
+                    <h3 className="font-bold text-slate-900 dark:text-white text-sm">Plant Transpiration with Potometer</h3>
+                    <p className="text-xs text-slate-600 dark:text-slate-400">Measuring air bubble displacement across capillary tube under windy, sunny, and humid conditions.</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+          </div>
+        </section>
+      )}
+
+      {/* ================= TAB 4: WORKBENCHES ================= */}
+      {landingTab === 'workbenches' && (
+        <section className="py-12 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
+            
+            <div className="space-y-2">
+              <span className="text-xs font-mono font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                Interactive Lab Engines
+              </span>
+              <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+                Specialized Science Workbenches & Simulators
+              </h1>
+              <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                Clean, distraction-free laboratory simulators engineered for national secondary school practical examinations. Students directly manipulate apparatus, collect concordant measurements, and complete KNEC-style structured tables.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              
+              <div className="p-6 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 space-y-3">
+                <div className="w-10 h-10 rounded-lg bg-cyan-100 dark:bg-cyan-950/60 text-cyan-600 dark:text-cyan-400 flex items-center justify-center font-bold">
+                  <FlaskConical className="w-5 h-5" />
+                </div>
+                <h3 className="font-bold text-slate-900 dark:text-white text-base">
+                  1. Volumetric Titration Workbench (233/3)
+                </h3>
+                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                  50 cm³ precision glass burette with zero-meniscus leveling, 25.0 cm³ volumetric pipettes, conical flasks with magnetic swirling, and calibrated dropwise titration stopcock controls for concordant titres.
+                </p>
+              </div>
+
+              <div className="p-6 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 space-y-3">
+                <div className="w-10 h-10 rounded-lg bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold">
+                  <Flame className="w-5 h-5" />
+                </div>
+                <h3 className="font-bold text-slate-900 dark:text-white text-base">
+                  2. Qualitative Analysis & Flame Tests
+                </h3>
+                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Full systematic flowcharts for cation (Pb²⁺, Al³⁺, Zn²⁺, Fe²⁺, Fe³⁺, Cu²⁺) and anion detection with NaOH, aqueous NH₃, Ba(NO₃)₂, and HNO₃, including gas evolution tests with limewater and litmus.
+                </p>
+              </div>
+
+              <div className="p-6 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 space-y-3">
+                <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold">
+                  <Zap className="w-5 h-5" />
+                </div>
+                <h3 className="font-bold text-slate-900 dark:text-white text-base">
+                  3. Electricity & Circuit Mechanics (232/3)
+                </h3>
+                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Interactive Ohm&apos;s Law breadboard with dry cells, rheostat sliders, keys, high-accuracy analogue ammeters (0–1.0A), and voltmeters (0–3.0V) for recording I vs V curves and internal resistance determination.
+                </p>
+              </div>
+
+              <div className="p-6 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 space-y-3">
+                <div className="w-10 h-10 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
+                  <Scale className="w-5 h-5" />
+                </div>
+                <h3 className="font-bold text-slate-900 dark:text-white text-base">
+                  4. Mechanics, Hooke&apos;s Law & Optics
+                </h3>
+                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Helical springs with pointer scales, slotted masses (20g–200g), metre rules with knife edges for principle of moments, and triangular glass prisms with optical pins for angle of deviation.
+                </p>
+              </div>
+
+            </div>
+
+            <div className="p-6 rounded-xl bg-slate-900 text-white flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="space-y-1">
+                <h4 className="font-bold text-base">Launch Interactive Workbench</h4>
+                <p className="text-xs text-slate-400">Open the volumetric titration simulator or qualitative analysis bench to carry out practicals.</p>
+              </div>
+              <button
+                onClick={() => handleLaunchExperimentDirectly('titration')}
+                className="px-5 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs transition flex items-center gap-2 cursor-pointer shrink-0"
+              >
+                <Play className="w-3.5 h-3.5" />
+                <span>Launch Practical Lab</span>
+              </button>
+            </div>
+
+          </div>
+        </section>
+      )}
+
+      {/* ================= TAB 5: KCSE STANDARDS ================= */}
+      {landingTab === 'curriculum' && (
+        <section className="py-12 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
+            
+            <div className="space-y-2">
+              <span className="text-xs font-mono font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                Examination Architecture & Rubrics
+              </span>
+              <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+                KCSE Paper 3 Practical Examination Standards
+              </h1>
+              <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                National examination candidates must follow strict laboratory protocols and answer recording rules. STEM Spark Lab is calibrated to official KNEC scoring rubrics.
+              </p>
+            </div>
+
+            <div className="space-y-6">
+              
+              <div className="p-6 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-bold text-slate-900 dark:text-white text-base">
+                    1. The Concordancy Criteria (±0.20 cm³)
+                  </h3>
+                  <span className="text-xs font-mono text-emerald-600 dark:text-emerald-400 font-bold">Table I Rubric</span>
+                </div>
+                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                  In Chemistry Paper 3 (233/3), students record Initial and Final Burette readings across three trials. For marks to be awarded:
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                  <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
+                    <span className="font-bold text-slate-900 dark:text-white block">Complete Table (1 Mark)</span>
+                    <span className="text-slate-500 dark:text-slate-400">All 3 trials must have initial and final values recorded to 1 or 2 decimal places consistently.</span>
+                  </div>
+                  <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
+                    <span className="font-bold text-slate-900 dark:text-white block">Decimal Accuracy (1 Mark)</span>
+                    <span className="text-slate-500 dark:text-slate-400">Readings must end in .0 or .5 (or .00) with zero arithmetic calculation discrepancies.</span>
+                  </div>
+                  <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
+                    <span className="font-bold text-slate-900 dark:text-white block">Concordancy (1 Mark)</span>
+                    <span className="text-slate-500 dark:text-slate-400">Two selected titres must differ by no more than ±0.20 cm³ to calculate the average titre volume.</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-6 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-bold text-slate-900 dark:text-white text-base">
+                    2. Qualitative Observations vs Deductions
+                  </h3>
+                  <span className="text-xs font-mono text-indigo-600 dark:text-indigo-400 font-bold">Paper 233/3 & 231/3</span>
+                </div>
+                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Examiners strictly differentiate between physical observations and chemical inferences:
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
+                    <span className="font-bold text-rose-600 dark:text-rose-400 block">Penalized Common Mistakes</span>
+                    <span className="text-slate-500 dark:text-slate-400 block mt-1">Writing &quot;Lead is present&quot; under observation, or writing &quot;Forms white solution&quot; instead of &quot;White precipitate soluble in excess&quot;.</span>
+                  </div>
+                  <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
+                    <span className="font-bold text-emerald-600 dark:text-emerald-400 block">Correct KNEC Formula</span>
+                    <span className="text-slate-500 dark:text-slate-400 block mt-1">Observations: &quot;White precipitate soluble in excess NaOH to form a colorless solution.&quot; Inferences: &quot;Pb²⁺, Zn²⁺, or Al³⁺ present.&quot;</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-6 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-bold text-slate-900 dark:text-white text-base">
+                    3. Physics Graph Plotting & Dimensional Units
+                  </h3>
+                  <span className="text-xs font-mono text-sky-600 dark:text-sky-400 font-bold">Paper 232/3</span>
+                </div>
+                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                  In Physics Paper 3, candidates plot graph curves (e.g. Voltage vs Current or Extension vs Load). Marks are allocated across Scale (at least ½ page), Axes Labeling with units (V in Volts, I in Amperes), Plotting Points within ½ square, and Line of Best Fit.
+                </p>
+              </div>
+
+            </div>
+
+          </div>
+        </section>
+      )}
+
+      {/* ================= TAB 6: SCHOOLS & INSTITUTIONS ================= */}
+      {landingTab === 'schools' && (
+        <section className="py-12 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
+            
+            <div className="space-y-2">
+              <span className="text-xs font-mono font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                School Leadership & Administration
+              </span>
+              <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+                Empowering Secondary Schools with Zero Consumable Waste
+              </h1>
+              <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                STEM Spark Lab allows school principals, heads of science, and teachers to deploy an unlimited science laboratory for every stream with zero recurring chemical purchases.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="p-5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-3">
+                <div className="w-10 h-10 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
+                  <Building2 className="w-5 h-5" />
+                </div>
+                <h3 className="font-bold text-slate-900 dark:text-white text-base">1. Multi-Tenant School Code</h3>
+                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Each school receives an isolated institutional tenant. Students register directly under their school and stream (e.g. Form 3 Red, Form 4 Blue).
+                </p>
+              </div>
+
+              <div className="p-5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-3">
+                <div className="w-10 h-10 rounded-lg bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <h3 className="font-bold text-slate-900 dark:text-white text-base">2. AI Experiment Builder</h3>
+                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Science teachers can convert custom mock practicals or typed examination questions into functional simulations in under two minutes.
+                </p>
+              </div>
+
+              <div className="p-5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-3">
+                <div className="w-10 h-10 rounded-lg bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold">
+                  <Award className="w-5 h-5" />
+                </div>
+                <h3 className="font-bold text-slate-900 dark:text-white text-base">3. Centralized Gradebook</h3>
+                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Review student submissions, concordancy accuracy, calculation steps, and class performance distribution in a real-time teacher analytics dashboard.
+                </p>
+              </div>
+            </div>
+
+            {/* Savings Calculator Card */}
+            <div className="p-6 rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50/40 dark:bg-emerald-950/20 space-y-3">
+              <h3 className="font-bold text-slate-900 dark:text-white text-base">
+                Estimated School Laboratory Cost Reduction
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+                A typical Kenyan secondary school with 200 Form 3 & Form 4 candidates spends between <strong>KES 150,000 and KES 350,000 annually</strong> on consumable chemicals, acids, indicators, and replacement glassware. STEM Spark Lab allows unlimited preparatory trials before exam day, reducing chemical expenditure by over 75%.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+              <button
+                onClick={() => handleGoToAuth('register_student')}
+                className="px-6 py-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm transition shadow-md flex items-center gap-2 cursor-pointer"
+              >
+                <GraduationCap className="w-4 h-4" />
+                <span>Register Student Account</span>
+              </button>
+              <button
+                onClick={() => handleGoToAuth('login')}
+                className="px-6 py-3 rounded-lg bg-slate-900 dark:bg-slate-100 hover:bg-slate-800 dark:hover:bg-white text-white dark:text-slate-900 font-semibold text-sm transition flex items-center gap-2 cursor-pointer"
+              >
+                <span>Teacher & School Sign In</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+
+          </div>
+        </section>
+      )}
+
+      {/* ================= TAB 7: FAQ ================= */}
+      {landingTab === 'faq' && (
+        <section className="py-12 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+            
+            <div className="space-y-2">
+              <span className="text-xs font-mono font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                Help & Answers
+              </span>
+              <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+                Frequently Asked Questions
+              </h1>
+              <p className="text-sm text-slate-600 dark:text-slate-300">
+                Everything you need to know about using STEM Spark Virtual Science Lab.
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              {faqs.map((faq, idx) => (
+                <div 
+                  key={idx}
+                  className="bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-2xs"
+                >
+                  <button
+                    onClick={() => toggleFaq(idx)}
+                    className="w-full p-4 sm:p-5 text-left flex items-center justify-between gap-4 font-semibold text-slate-900 dark:text-white text-sm hover:bg-slate-100/50 dark:hover:bg-slate-900/50 transition-colors cursor-pointer"
+                  >
+                    <span>{faq.q}</span>
+                    <ChevronDown className={`w-4 h-4 text-slate-500 shrink-0 transition-transform ${openFaq === idx ? 'rotate-180' : ''}`} />
+                  </button>
+                  {openFaq === idx && (
+                    <div className="px-5 pb-5 text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed border-t border-slate-200 dark:border-slate-800 pt-3">
+                      {faq.a}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+          </div>
+        </section>
+      )}
+
+      {/* ================= COMPREHENSIVE PLATFORM FOOTER ================= */}
+      <footer className="bg-slate-950 text-slate-400 border-t border-slate-800 font-sans">
+        {/* Main Footer Grid */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-12">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10">
+            {/* Col 1: Brand & Curriculum Badge */}
+            <div className="lg:col-span-2 space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-emerald-600 flex items-center justify-center text-white font-black shadow-sm">
+                  <FlaskConical className="w-5 h-5" />
+                </div>
+                <div>
+                  <span className="font-extrabold text-white text-lg tracking-tight block">
+                    STEM Spark Lab
+                  </span>
+                  <span className="text-[11px] font-mono text-emerald-400 block -mt-0.5">
+                    Secondary Science Practical Simulator
+                  </span>
+                </div>
+              </div>
+
+              <p className="text-xs sm:text-sm text-slate-400 leading-relaxed max-w-sm">
+                Empowering secondary school students and teachers with syllabus-aligned, interactive virtual science practicals. Master calibrated equipment handling, empirical data logging, and rigorous KNEC examinations.
+              </p>
+
+              <div className="pt-1 flex flex-wrap gap-2 text-[11px] font-mono">
+                <span className="px-2.5 py-1 rounded-md bg-slate-900 border border-slate-800 text-slate-300 flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                  KCSE 233/3 Chemistry
+                </span>
+                <span className="px-2.5 py-1 rounded-md bg-slate-900 border border-slate-800 text-slate-300 flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-sky-400" />
+                  KCSE 232/3 Physics
+                </span>
+                <span className="px-2.5 py-1 rounded-md bg-slate-900 border border-slate-800 text-slate-300 flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                  KCSE 231/3 Biology
+                </span>
+              </div>
+
+              <div className="pt-2 text-xs text-slate-400 space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  <span>Science & Technology Park, Nairobi, Kenya</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Mail className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  <a href="mailto:support@stemsparklab.edu" className="hover:text-emerald-400 transition-colors">support@stemsparklab.edu</a>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Phone className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  <span>+254 (0) 700 890 120 / +254 (0) 20 523 440</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Col 2: Practicals & Subjects */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-white font-mono">
+                Curriculum Subjects
+              </h4>
+              <ul className="space-y-2 text-xs">
+                <li>
+                  <button 
+                    onClick={() => {
+                      setActiveSubjectTab('chemistry');
+                      setLandingTab('subjects');
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="hover:text-white transition-colors flex items-center gap-1.5 cursor-pointer text-left"
+                  >
+                    <FlaskConical className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Volumetric Titration</span>
+                  </button>
+                </li>
+                <li>
+                  <button 
+                    onClick={() => {
+                      setActiveSubjectTab('chemistry');
+                      setLandingTab('subjects');
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="hover:text-white transition-colors flex items-center gap-1.5 cursor-pointer text-left"
+                  >
+                    <Beaker className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Qualitative Salt Analysis</span>
+                  </button>
+                </li>
+                <li>
+                  <button 
+                    onClick={() => {
+                      setActiveSubjectTab('physics');
+                      setLandingTab('subjects');
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="hover:text-white transition-colors flex items-center gap-1.5 cursor-pointer text-left"
+                  >
+                    <Zap className="w-3.5 h-3.5 text-sky-400" />
+                    <span>Ohm&apos;s Law & Circuits</span>
+                  </button>
+                </li>
+                <li>
+                  <button 
+                    onClick={() => {
+                      setActiveSubjectTab('physics');
+                      setLandingTab('subjects');
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="hover:text-white transition-colors flex items-center gap-1.5 cursor-pointer text-left"
+                  >
+                    <Scale className="w-3.5 h-3.5 text-sky-400" />
+                    <span>Hooke&apos;s Law Elasticity</span>
+                  </button>
+                </li>
+                <li>
+                  <button 
+                    onClick={() => {
+                      setActiveSubjectTab('biology');
+                      setLandingTab('subjects');
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="hover:text-white transition-colors flex items-center gap-1.5 cursor-pointer text-left"
+                  >
+                    <Dna className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Biochemical Food Testing</span>
+                  </button>
+                </li>
+                <li>
+                  <button 
+                    onClick={() => {
+                      setActiveSubjectTab('biology');
+                      setLandingTab('subjects');
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="hover:text-white transition-colors flex items-center gap-1.5 cursor-pointer text-left"
+                  >
+                    <Activity className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Enzyme Kinetics</span>
+                  </button>
+                </li>
+              </ul>
+            </div>
+
+            {/* Col 3: Platform Navigation */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-white font-mono">
+                Platform Navigation
+              </h4>
+              <ul className="space-y-2 text-xs">
+                <li>
+                  <button 
+                    onClick={() => {
+                      setLandingTab('home');
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="hover:text-white transition-colors flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Home className="w-3.5 h-3.5 text-slate-500" />
+                    <span>Home & Overview</span>
+                  </button>
+                </li>
+                <li>
+                  <button 
+                    onClick={() => {
+                      setLandingTab('about');
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="hover:text-white transition-colors flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Info className="w-3.5 h-3.5 text-slate-500" />
+                    <span>About the Mission</span>
+                  </button>
+                </li>
+                <li>
+                  <button 
+                    onClick={() => {
+                      setLandingTab('workbenches');
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="hover:text-white transition-colors flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-slate-500" />
+                    <span>Virtual Workbenches & Simulators</span>
+                  </button>
+                </li>
+                <li>
+                  <button 
+                    onClick={() => {
+                      setLandingTab('schools');
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="hover:text-white transition-colors flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Building2 className="w-3.5 h-3.5 text-slate-500" />
+                    <span>School Administration & Access</span>
+                  </button>
+                </li>
+                <li>
+                  <button 
+                    onClick={() => {
+                      setLandingTab('curriculum');
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="hover:text-white transition-colors flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <BookOpen className="w-3.5 h-3.5 text-slate-500" />
+                    <span>Apparatus & Reagent Catalog</span>
+                  </button>
+                </li>
+                <li>
+                  <button 
+                    onClick={() => {
+                      setLandingTab('faq');
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="hover:text-white transition-colors flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <HelpCircle className="w-3.5 h-3.5 text-slate-500" />
+                    <span>Frequently Asked Questions</span>
+                  </button>
+                </li>
+                <li>
+                  <button 
+                    onClick={() => handleGoToAuth('login')}
+                    className="hover:text-white transition-colors flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <GraduationCap className="w-3.5 h-3.5 text-slate-500" />
+                    <span>Sign In Portal</span>
+                  </button>
+                </li>
+              </ul>
+            </div>
+
+            {/* Col 4: Resources & Guides */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-white font-mono">
+                Resources & Syllabi
+              </h4>
+              <ul className="space-y-2 text-xs">
+                <li>
+                  <button 
+                    onClick={() => {
+                      setLandingTab('curriculum');
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="hover:text-white transition-colors flex items-center gap-1.5 cursor-pointer text-left"
+                  >
+                    <BookOpen className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>KCSE Examination Syllabi</span>
+                  </button>
+                </li>
+                <li>
+                  <button 
+                    onClick={() => {
+                      setLandingTab('workbenches');
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="hover:text-white transition-colors flex items-center gap-1.5 cursor-pointer text-left"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Virtual Lab Workbenches</span>
+                  </button>
+                </li>
+                <li>
+                  <button 
+                    onClick={() => {
+                      setLandingTab('schools');
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="hover:text-white transition-colors flex items-center gap-1.5 cursor-pointer text-left"
+                  >
+                    <Building2 className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>School Institutional Portal</span>
+                  </button>
+                </li>
+                <li>
+                  <button 
+                    onClick={() => {
+                      setLandingTab('faq');
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="hover:text-white transition-colors flex items-center gap-1.5 cursor-pointer text-left"
+                  >
+                    <HelpCircle className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Safety Guidelines & FAQs</span>
+                  </button>
+                </li>
+              </ul>
+            </div>
           </div>
 
-        </div>
-      </section>
+          {/* Secondary Divider & Trust Badges */}
+          <div className="mt-12 pt-8 border-t border-slate-800/80 flex flex-col md:flex-row items-center justify-between gap-4 text-xs">
+            <div className="flex flex-wrap items-center gap-4 text-slate-400">
+              <span className="flex items-center gap-1.5">
+                <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                KNEC Observation Rubrics
+              </span>
+              <span className="text-slate-700 hidden sm:inline">•</span>
+              <span className="flex items-center gap-1.5">
+                <Award className="w-4 h-4 text-emerald-400" />
+                Instant Concordance Checking
+              </span>
+              <span className="text-slate-700 hidden sm:inline">•</span>
+              <span className="flex items-center gap-1.5">
+                <GraduationCap className="w-4 h-4 text-emerald-400" />
+                Secondary Science Verified
+              </span>
+            </div>
 
-      {/* SECTION: Call To Action Footer Banner */}
-      <section className="py-16 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white relative overflow-hidden">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-6 relative z-10">
-          
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-xs font-semibold">
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Start Your Science Lab Journey Today</span>
-          </div>
-
-          <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
-            Ready to Excel in Secondary Science Practicals?
-          </h2>
-
-          <p className="text-slate-300 text-sm sm:text-base max-w-2xl mx-auto leading-relaxed">
-            Join secondary school students and teachers already using STEM Spark Lab to build practical laboratory mastery.
-          </p>
-
-          <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
             <button
-              onClick={() => handleGoToAuth('register_student')}
-              className="px-6 py-3 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-sm transition-all shadow-lg hover:shadow-xl flex items-center gap-2"
+              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+              className="px-3 py-1.5 rounded-md bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs font-medium transition flex items-center gap-1.5 cursor-pointer"
             >
-              <GraduationCap className="w-4 h-4" />
-              <span>Register student account</span>
-            </button>
-
-            <button
-              onClick={() => handleGoToAuth('login')}
-              className="px-6 py-3 rounded-lg bg-white/10 hover:bg-white/20 text-white font-semibold text-sm transition-all border border-white/20 flex items-center gap-2"
-            >
-              <span>Sign in</span>
-              <ArrowRight className="w-4 h-4" />
+              <span>Back to top</span>
+              <ArrowUp className="w-3.5 h-3.5" />
             </button>
           </div>
-
         </div>
 
-        {/* Decorative backdrop elements */}
-        <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
-      </section>
+        {/* Bottom Copyright & Legal Strip */}
+        <div className="bg-black/60 border-t border-slate-900 py-5 text-xs text-slate-400">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <p className="text-center sm:text-left text-slate-400">
+              © {new Date().getFullYear()} STEM Spark Lab. All rights reserved. Built for Kenyan Secondary School Science Education.
+            </p>
+
+            <div className="flex flex-wrap items-center justify-center gap-4 text-[11px] text-slate-400">
+              <button 
+                onClick={() => setLegalModalContent({
+                  title: 'Privacy Policy',
+                  text: 'STEM Spark Lab protects student laboratory logs, assessment scores, and teacher records in strict compliance with education data privacy standards. No student personal information is sold or shared with external third parties.'
+                })} 
+                className="hover:text-slate-300 transition cursor-pointer"
+              >
+                Privacy Policy
+              </button>
+              <span>•</span>
+              <button 
+                onClick={() => setLegalModalContent({
+                  title: 'Terms of Service',
+                  text: 'STEM Spark Lab is licensed for academic instruction, laboratory skill training, and preparation for secondary national examinations. All simulated materials and interactive mark schemes are aligned to national syllabus standards.'
+                })} 
+                className="hover:text-slate-300 transition cursor-pointer"
+              >
+                Terms of Service
+              </button>
+              <span>•</span>
+              <button 
+                onClick={() => setLegalModalContent({
+                  title: 'Laboratory Safety Compliance',
+                  text: 'Our virtual simulator reinforces genuine laboratory safety disciplines, including personal protective equipment (goggles, lab coats), chemical hazard symbols, proper fume handling, and safe reagent disposal procedures.'
+                })} 
+                className="hover:text-slate-300 transition cursor-pointer"
+              >
+                Lab Safety Compliance
+              </button>
+              <span>•</span>
+              <button 
+                onClick={() => setLegalModalContent({
+                  title: 'Academic Integrity & Rigor',
+                  text: 'All simulated volumetric titrations, electrical circuit measurements, and biochemical reactions incorporate authentic physics and stoichiometric mathematics with realistic experimental uncertainties (±0.05 cm³ burette reading, analog scale parallax).'
+                })} 
+                className="hover:text-slate-300 transition cursor-pointer"
+              >
+                Academic Integrity
+              </button>
+            </div>
+          </div>
+        </div>
+      </footer>
+
+      {/* Accessible Policy & Legal Info Modal */}
+      {legalModalContent && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 max-w-md w-full shadow-2xl text-white space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="font-bold text-base text-white flex items-center gap-2">
+                <ShieldCheck className="w-5 h-5 text-emerald-400" />
+                <span>{legalModalContent.title}</span>
+              </h3>
+              <button 
+                onClick={() => setLegalModalContent(null)}
+                className="text-slate-400 hover:text-white p-1 rounded-md text-sm cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+              {legalModalContent.text}
+            </p>
+            <div className="pt-2 flex justify-end">
+              <button
+                onClick={() => setLegalModalContent(null)}
+                className="px-4 py-2 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold cursor-pointer transition shadow-xs"
+              >
+                Understood & Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

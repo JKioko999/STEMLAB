@@ -18,6 +18,8 @@ interface AppContextType {
   
   // Navigation & Lab state
   currentView: 'dashboard' | 'lab' | 'builder' | 'review_attempt' | 'auth' | 'landing';
+  landingTab: 'home' | 'about' | 'subjects' | 'workbenches' | 'curriculum' | 'schools' | 'faq';
+  setLandingTab: (tab: 'home' | 'about' | 'subjects' | 'workbenches' | 'curriculum' | 'schools' | 'faq') => void;
   authMode: 'login' | 'register_student' | 'register_school' | 'register_admin';
   activeExperiment: ExperimentSpec | null;
   activeAssignment: Assignment | null;
@@ -178,6 +180,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     return 'landing';
   });
+
+  const [landingTab, setLandingTab] = useState<'home' | 'about' | 'subjects' | 'workbenches' | 'curriculum' | 'schools' | 'faq'>('home');
 
   const [authMode, setAuthMode] = useState<'login' | 'register_student' | 'register_school' | 'register_admin'>('login');
   const [activeExperiment, setActiveExperiment] = useState<ExperimentSpec | null>(null);
@@ -865,6 +869,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         clearDispatchedEmail,
         changePassword,
         currentView,
+        landingTab,
+        setLandingTab,
         authMode,
         activeExperiment,
         activeAssignment,

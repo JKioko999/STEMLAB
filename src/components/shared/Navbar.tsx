@@ -16,7 +16,10 @@ export const Navbar: React.FC = () => {
     currentUser, 
     schools, 
     logout, 
-    setCurrentView, 
+    setCurrentView,
+    currentView,
+    landingTab,
+    setLandingTab,
     setAuthMode,
     theme,
     toggleTheme 
@@ -74,6 +77,39 @@ export const Navbar: React.FC = () => {
             )}
           </div>
         </div>
+
+        {/* Center Nav Tabs (Visible for guests or landing view) */}
+        {(!currentUser || currentView === 'landing') && (
+          <nav className="hidden lg:flex items-center space-x-1" aria-label="Main Navigation">
+            {[
+              { id: 'home', label: 'Home' },
+              { id: 'about', label: 'About' },
+              { id: 'subjects', label: 'Subjects' },
+              { id: 'workbenches', label: 'Workbenches' },
+              { id: 'curriculum', label: 'KCSE Standards' },
+              { id: 'schools', label: 'Institutions' },
+              { id: 'faq', label: 'FAQ' },
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => {
+                  setLandingTab(tab.id as any);
+                  if (currentView !== 'landing') {
+                    setCurrentView('landing');
+                  }
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
+                  currentView === 'landing' && landingTab === tab.id
+                    ? 'text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/60 dark:border-emerald-800/60'
+                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </nav>
+        )}
 
         {/* Right Nav Actions */}
         <div className="flex items-center space-x-2">

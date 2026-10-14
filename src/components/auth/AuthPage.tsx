@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { api } from '../../services/api';
+import { ForgotPasswordPage } from './ForgotPasswordPage';
 import { 
   ArrowLeft,
   Filter,
@@ -23,6 +24,10 @@ export const AuthPage: React.FC = () => {
     setAuthMode,
     setCurrentView
   } = useApp();
+
+  if (authMode === 'forgot_password') {
+    return <ForgotPasswordPage />;
+  }
 
   // School registration form state
   const [schoolForm, setSchoolForm] = useState({
@@ -613,9 +618,21 @@ export const AuthPage: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
-                    Password
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
+                      Password
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAuthMode('forgot_password');
+                        setLoginError('');
+                      }}
+                      className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline font-medium cursor-pointer"
+                    >
+                      Forgot password?
+                    </button>
+                  </div>
                   <input
                     type="password"
                     value={loginForm.password}

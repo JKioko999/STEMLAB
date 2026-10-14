@@ -98,9 +98,19 @@ export const api = {
         method: 'DELETE',
       }),
     changePassword: (userId: string, newPassword: string, email?: string) =>
-      fetchJSON<{ success: boolean }>(`${BASE_URL}/users/change-password`, {
+      fetchJSON<{ success: boolean; message?: string }>(`${BASE_URL}/users/change-password`, {
         method: 'POST',
         body: JSON.stringify({ userId, newPassword, email }),
+      }),
+    requestResetOtp: (email: string, userData?: Partial<User>) =>
+      fetchJSON<{ success: boolean; message: string; simulated?: boolean; targetUser?: User }>(`${BASE_URL}/users/request-reset-otp`, {
+        method: 'POST',
+        body: JSON.stringify({ email, ...userData }),
+      }),
+    verifyResetOtp: (email: string, otp: string) =>
+      fetchJSON<{ success: boolean; message: string }>(`${BASE_URL}/users/verify-reset-otp`, {
+        method: 'POST',
+        body: JSON.stringify({ email, otp }),
       }),
   },
 
@@ -197,5 +207,39 @@ export const api = {
       const query = schoolName ? `?schoolName=${encodeURIComponent(schoolName)}` : '';
       return fetchJSON<EmailDispatch[]>(`${BASE_URL}/emails${query}`);
     },
+    send: (data: {
+      to: string;
+      toName?: string;
+      subject: string;
+      message: string;
+      recipientRole?: string;
+      tempPassword?: string;
+      schoolName?: string;
+    }) =>
+      fetchJSON<{ success: boolean; message: string; emailDispatch: EmailDispatch; mailResult: any }>(`${BASE_URL}/emails/send`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    getStatus: () =>
+      fetchJSON<{
+        success: boolean;
+        senderEmail: string;
+        senderName: string;
+        configured: boolean;
+        authAccount: string;
+        deliveryMode: string;
+        instructions: string;
+      }>(`${BASE_URL}/emails/status`),
+    test: (to: string) =>
+      fetchJSON<{
+        success: boolean;
+        simulated: boolean;
+        senderEmail: string;
+        message: string;
+        mailResult: any;
+      }>(`${BASE_URL}/emails/test`, {
+        method: 'POST',
+        body: JSON.stringify({ to }),
+      }),
   },
 };

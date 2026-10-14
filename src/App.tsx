@@ -12,6 +12,7 @@ import { AttemptReviewView } from './components/teacher/AttemptReviewView';
 import { ExperimentBuilder } from './components/teacher/ExperimentBuilder';
 import { EmailDispatchModal } from './components/shared/EmailDispatchModal';
 import { PasswordChangeModal } from './components/shared/PasswordChangeModal';
+import { SettingsModal } from './components/shared/SettingsModal';
 
 const AppContent: React.FC = () => {
   const { currentUser, currentView } = useApp();
@@ -24,9 +25,10 @@ const AppContent: React.FC = () => {
     }`}>
       <Navbar />
 
-      {/* Global Modals for Email Dispatch & Password Reset */}
+      {/* Global Modals for Email Dispatch, Password Reset & Account Settings */}
       <EmailDispatchModal />
       <PasswordChangeModal />
+      <SettingsModal />
 
       <main className="flex-1">
         {currentView === 'landing' && <LandingPage />}

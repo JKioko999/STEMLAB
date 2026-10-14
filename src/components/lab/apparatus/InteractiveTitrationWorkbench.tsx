@@ -1124,7 +1124,7 @@ export const InteractiveTitrationWorkbench: React.FC<InteractiveTitrationWorkben
           {/* 4. Auxiliary Reagent (if present) */}
           {requiresAuxiliaryReagent && (
             <button
-              onClick={handleDispenseAuxiliaryMeasuringCylinder}
+              onClick={handlePourMeasuringCylinder}
               className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-750 border border-violet-500/40 text-violet-200 text-xs font-semibold transition flex items-center gap-2 shadow-xs cursor-pointer"
             >
               <PlusCircle className="w-3.5 h-3.5 text-violet-400" />

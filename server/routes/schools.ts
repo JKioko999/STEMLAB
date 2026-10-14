@@ -11,6 +11,7 @@ import {
   emailToDb 
 } from '../db/supabase.js';
 import { School, User, EmailDispatch } from '../../src/types/index.js';
+import { sendEmail } from '../services/mailer.js';
 
 const router = Router();
 
@@ -108,6 +109,7 @@ router.post('/', async (req: Request, res: Response) => {
 
     const emailDispatch: EmailDispatch = {
       id: `email-${Date.now().toString(36)}`,
+      senderEmail: 'intellicaautomationgroup@gmail.com',
       recipientEmail: schoolData.adminEmail,
       recipientName: schoolData.adminName,
       recipientRole: 'school_admin',
@@ -115,7 +117,7 @@ router.post('/', async (req: Request, res: Response) => {
       tempPassword: tempPassword,
       sentAt: new Date().toISOString(),
       schoolName: schoolData.name,
-      messageBody: `Dear Principal ${schoolData.adminName},\n\nYour school ${schoolData.name} has been enrolled into the STEM-SPARK-LAB KCSE Virtual Science Laboratory platform.`
+      messageBody: `Dear Principal ${schoolData.adminName},\n\nYour school ${schoolData.name} has been enrolled into the STEM-SPARK-LAB KCSE Virtual Science Laboratory platform by Intellica Automation Group.\n\nFrom: Intellica Automation Group <intellicaautomationgroup@gmail.com>\nSupport: intellicaautomationgroup@gmail.com`
     };
 
     // Save to local store
@@ -133,7 +135,17 @@ router.post('/', async (req: Request, res: Response) => {
       }
     }
 
-    return res.status(201).json({ school: newSchool, adminUser, emailDispatch });
+    // Transmit email directly from intellicaautomationgroup@gmail.com
+    const mailResult = await sendEmail({
+      to: schoolData.adminEmail,
+      toName: schoolData.adminName,
+      subject: emailDispatch.subject,
+      text: emailDispatch.messageBody,
+      tempPassword: tempPassword
+    });
+    console.info(`[MAILER] School registration email dispatched to ${schoolData.adminEmail}:`, mailResult);
+
+    return res.status(201).json({ school: newSchool, adminUser, emailDispatch, mailResult });
   } catch (err: any) {
     return res.status(500).json({ error: err.message || 'Failed to create school' });
   }

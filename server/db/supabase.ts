@@ -300,6 +300,7 @@ export const attemptToDb = (att: Partial<Attempt>): any => ({
 
 export const emailFromDb = (row: any): EmailDispatch => ({
   id: row.id,
+  senderEmail: row.sender_email || 'intellicaautomationgroup@gmail.com',
   recipientEmail: row.recipient_email,
   recipientName: row.recipient_name,
   recipientRole: row.recipient_role,
@@ -312,6 +313,7 @@ export const emailFromDb = (row: any): EmailDispatch => ({
 
 export const emailToDb = (e: Partial<EmailDispatch>): any => ({
   id: e.id,
+  sender_email: e.senderEmail || 'intellicaautomationgroup@gmail.com',
   recipient_email: e.recipientEmail,
   recipient_name: e.recipientName,
   recipient_role: e.recipientRole,

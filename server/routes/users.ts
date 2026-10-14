@@ -10,6 +10,7 @@ import {
   emailToDb 
 } from '../db/supabase.js';
 import { User, EmailDispatch, ClassGroup, School } from '../../src/types/index.js';
+import { sendEmail } from '../services/mailer.js';
 
 const router = Router();
 
@@ -194,6 +195,7 @@ router.post('/teacher', async (req: Request, res: Response) => {
 
     const emailDispatch: EmailDispatch = {
       id: `email-${Date.now().toString(36)}`,
+      senderEmail: 'intellicaautomationgroup@gmail.com',
       recipientEmail: email,
       recipientName: name,
       recipientRole: 'teacher',
@@ -201,7 +203,7 @@ router.post('/teacher', async (req: Request, res: Response) => {
       tempPassword: tempPassword,
       sentAt: new Date().toISOString(),
       schoolName: targetSchool?.name,
-      messageBody: `Dear Teacher ${name},\n\nYou have been registered as a Science Teacher (${newTeacher.subjectSpecialization}) at ${targetSchool?.name || 'your institution'} on STEM-SPARK-LAB.\n\nYour temporary password: ${tempPassword}\nPlease update your password on initial sign in.`
+      messageBody: `Dear Teacher ${name},\n\nYou have been registered as a Science Teacher (${newTeacher.subjectSpecialization}) at ${targetSchool?.name || 'your institution'} on STEM-SPARK-LAB by Intellica Automation Group.\n\nYour temporary password: ${tempPassword}\nPlease update your password on initial sign in.\n\nFrom: Intellica Automation Group <intellicaautomationgroup@gmail.com>\nSupport: intellicaautomationgroup@gmail.com`
     };
 
     store.users = store.users.filter(u => u.email.toLowerCase() !== newTeacher.email);
@@ -227,7 +229,17 @@ router.post('/teacher', async (req: Request, res: Response) => {
       }
     }
 
-    return res.status(201).json({ teacher: newTeacher, emailDispatch });
+    // Transmit email directly from intellicaautomationgroup@gmail.com
+    const mailResult = await sendEmail({
+      to: email,
+      toName: name,
+      subject: emailDispatch.subject,
+      text: emailDispatch.messageBody,
+      tempPassword: tempPassword
+    });
+    console.info(`[MAILER] Teacher registration email dispatched to ${email}:`, mailResult);
+
+    return res.status(201).json({ teacher: newTeacher, emailDispatch, mailResult });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }
@@ -347,7 +359,177 @@ router.post('/change-password', async (req: Request, res: Response) => {
       }
     }
 
+    // Notify user of password change via email from intellicaautomationgroup@gmail.com
+    const changedUser = store.users.find(u => (userId && u.id === userId) || (normalizedEmail && u.email.toLowerCase() === normalizedEmail));
+    if (changedUser) {
+      const securityDispatch: EmailDispatch = {
+        id: `email-pwd-${Date.now().toString(36)}`,
+        senderEmail: 'intellicaautomationgroup@gmail.com',
+        recipientEmail: changedUser.email,
+        recipientName: changedUser.name,
+        recipientRole: changedUser.role,
+        subject: 'Security Alert: Password Updated - STEM-SPARK-LAB',
+        messageBody: `Dear ${changedUser.name},\n\nYour password for STEM-SPARK-LAB Kenya was successfully updated.\n\nIf you made this change, no further action is required.\nIf you did not authorize this change, please contact Intellica Automation Group immediately at intellicaautomationgroup@gmail.com.\n\nFrom: Intellica Automation Group <intellicaautomationgroup@gmail.com>\nRegards,\nIntellica Automation Group Security Directorate`,
+        sentAt: new Date().toISOString()
+      };
+      store.emails.unshift(securityDispatch);
+      if (isSupabaseConfigured()) {
+        const supabase = getSupabaseClient();
+        if (supabase) {
+          try {
+            await supabase.from('dispatched_emails').insert([emailToDb(securityDispatch)]);
+          } catch (e) {}
+        }
+      }
+
+      sendEmail({
+        to: changedUser.email,
+        toName: changedUser.name,
+        subject: securityDispatch.subject,
+        text: securityDispatch.messageBody
+      }).catch(err => console.warn('[MAILER] Password change notice error:', err));
+    }
+
     return res.json({ success: true, message: 'Password updated successfully' });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/users/request-reset-otp - Send OTP from intellicaautomationgroup@gmail.com
+router.post('/request-reset-otp', async (req: Request, res: Response) => {
+  try {
+    const { email, name, role, schoolId, user } = req.body;
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    const normalizedEmail = String(email).trim().toLowerCase();
+    let targetUser: User | undefined = store.users.find(u => u.email.toLowerCase() === normalizedEmail);
+
+    if (!targetUser && isSupabaseConfigured()) {
+      const supabase = getSupabaseClient();
+      if (supabase) {
+        const { data } = await supabase.from('users').select('*').eq('email', normalizedEmail).maybeSingle();
+        if (data) {
+          targetUser = userFromDb(data);
+          store.users.unshift(targetUser);
+        }
+      }
+    }
+
+    // If target user exists on the client (e.g. registered in local session) but server restarted, restore into store
+    if (!targetUser && (name || user)) {
+      const restoredUser: User = {
+        id: (user && user.id) || `usr-${Date.now().toString(36)}`,
+        name: name || (user && user.name) || normalizedEmail.split('@')[0],
+        email: normalizedEmail,
+        role: (role || (user && user.role) || 'student') as any,
+        schoolId: schoolId || (user && user.schoolId) || null
+      };
+      targetUser = restoredUser;
+      store.users.unshift(restoredUser);
+      if (isSupabaseConfigured()) {
+        const supabase = getSupabaseClient();
+        if (supabase) {
+          try {
+            await supabase.from('users').upsert(userToDb(restoredUser), { onConflict: 'email' });
+          } catch (e) {}
+        }
+      }
+    }
+
+    if (!targetUser) {
+      return res.status(404).json({
+        error: `No registered account found with email "${email}". Password reset is only available for registered school administrators, teachers, and students.`
+      });
+    }
+
+    // Generate 6-digit OTP code
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+    store.resetOtpSessions.set(normalizedEmail, { otp, expiresAt, user: targetUser });
+
+    const subject = `Password Reset Verification Code: ${otp} - Intellica Automation Group`;
+    const messageBody = `Dear ${targetUser.name},\n\nYou requested a password reset for your STEM-SPARK-LAB Kenya registered account (${targetUser.email}).\n\nYour One-Time Password (OTP) verification code is:\n\n${otp}\n\n• Validity: 10 minutes\n• Enter this 6-digit OTP code on the verification screen to verify your identity and set a new password.\n• If you did not request this verification code, please ignore this email or contact support at intellicaautomationgroup@gmail.com.\n\nFrom: Intellica Automation Group <intellicaautomationgroup@gmail.com>\nRegards,\nIntellica Automation Group Security Team\nSTEM-SPARK-LAB Kenya Directorate`;
+
+    const emailDispatch: EmailDispatch = {
+      id: `email-otp-${Date.now().toString(36)}`,
+      senderEmail: 'intellicaautomationgroup@gmail.com',
+      recipientEmail: targetUser.email,
+      recipientName: targetUser.name,
+      recipientRole: targetUser.role,
+      subject,
+      tempPassword: otp,
+      messageBody,
+      sentAt: new Date().toISOString()
+    };
+
+    store.emails.unshift(emailDispatch);
+    if (isSupabaseConfigured()) {
+      const supabase = getSupabaseClient();
+      if (supabase) {
+        await supabase.from('dispatched_emails').insert([emailToDb(emailDispatch)]);
+      }
+    }
+
+    // Deliver via real Gmail SMTP / mailer from intellicaautomationgroup@gmail.com
+    const mailResult = await sendEmail({
+      to: targetUser.email,
+      toName: targetUser.name,
+      subject,
+      text: messageBody,
+      tempPassword: otp
+    });
+
+    if (!mailResult.success) {
+      return res.status(400).json({
+        error: mailResult.error || 'Failed to dispatch email via Gmail SMTP.',
+        targetUser: { id: targetUser.id, name: targetUser.name, email: targetUser.email, role: targetUser.role }
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: mailResult.simulated
+        ? `Verification code dispatched from intellicaautomationgroup@gmail.com.`
+        : `Verification code sent to ${targetUser.email} from intellicaautomationgroup@gmail.com.`,
+      simulated: mailResult.simulated,
+      targetUser: { id: targetUser.id, name: targetUser.name, email: targetUser.email, role: targetUser.role }
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/users/verify-reset-otp - Verify OTP code
+router.post('/verify-reset-otp', (req: Request, res: Response) => {
+  try {
+    const { email, otp } = req.body;
+    if (!email || !otp) {
+      return res.status(400).json({ error: 'Email and OTP code are required' });
+    }
+
+    const normalizedEmail = String(email).trim().toLowerCase();
+    const cleanOtp = String(otp).trim();
+
+    const session = store.resetOtpSessions.get(normalizedEmail);
+    if (!session) {
+      return res.status(400).json({ error: 'No active OTP verification session found for this email. Please request a new code.' });
+    }
+
+    if (Date.now() > session.expiresAt) {
+      store.resetOtpSessions.delete(normalizedEmail);
+      return res.status(400).json({ error: 'The verification code has expired (10-minute limit). Please request a new code.' });
+    }
+
+    const isValid = session.otp === cleanOtp;
+    if (!isValid) {
+      return res.status(400).json({ error: 'Invalid verification code. Please check the 6-digit OTP code sent to your email.' });
+    }
+
+    return res.json({ success: true, message: 'Identity verified successfully' });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }

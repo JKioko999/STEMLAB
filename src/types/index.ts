@@ -32,10 +32,23 @@ export interface User {
   avatarColor?: string;
   mustChangePassword?: boolean; // Flag to force password update on first login
   tempPassword?: string; // Generated temporary password sent via email
+  phone?: string;
 }
+
+export interface UserPreferences {
+  soundEffects: boolean;
+  reducedMotion: boolean;
+  autoSaveDrafts: boolean;
+  emailNotifications: boolean;
+  meniscusLoupeMagnification: '2x' | '3x' | '4x';
+}
+
+export const COMPANY_SENDER_EMAIL = 'intellicaautomationgroup@gmail.com';
+export const COMPANY_SENDER_NAME = 'Intellica Automation Group';
 
 export interface EmailDispatch {
   id: string;
+  senderEmail?: string; // Always intellicaautomationgroup@gmail.com
   recipientEmail: string;
   recipientName: string;
   recipientRole: UserRole;

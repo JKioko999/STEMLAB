@@ -20,6 +20,7 @@ export class BackendDataStore {
   public assignments: Assignment[] = [];
   public attempts: Attempt[] = [];
   public emails: EmailDispatch[] = [];
+  public resetOtpSessions: Map<string, { otp: string; expiresAt: number; user: User }> = new Map();
 
   // Reset helper
   public resetToDefaults() {
@@ -30,6 +31,7 @@ export class BackendDataStore {
     this.assignments = [];
     this.attempts = [];
     this.emails = [];
+    this.resetOtpSessions.clear();
   }
 }
 

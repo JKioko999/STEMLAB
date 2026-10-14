@@ -5,7 +5,9 @@ import {
   Clock, 
   Play, 
   RotateCcw,
-  Eye
+  Eye,
+  Settings,
+  KeyRound
 } from 'lucide-react';
 import { Assignment } from '../../types';
 
@@ -17,7 +19,8 @@ export const StudentDashboard: React.FC = () => {
     assignments, 
     attempts, 
     startExperiment, 
-    openAttemptReview 
+    openAttemptReview,
+    openSettings
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<'assigned' | 'practice_lab' | 'results'>('assigned');
@@ -88,9 +91,18 @@ export const StudentDashboard: React.FC = () => {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setActiveTab('practice_lab')}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium transition-colors shadow-sm"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium transition-colors shadow-sm cursor-pointer"
           >
             <span>Practice lab</span>
+          </button>
+
+          <button
+            onClick={() => openSettings('password')}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium transition-colors shadow-sm cursor-pointer"
+            title="Settings & Change Password"
+          >
+            <Settings className="w-3.5 h-3.5 text-slate-500" />
+            <span>Settings</span>
           </button>
         </div>
       </div>

@@ -16,7 +16,9 @@ import {
   Users as UsersIcon,
   ShieldCheck,
   GraduationCap,
-  BookOpen
+  BookOpen,
+  CheckCircle2,
+  Settings
 } from 'lucide-react';
 import { ExperimentSpec, School, User } from '../../types';
 
@@ -31,7 +33,8 @@ export const SuperAdminDashboard: React.FC = () => {
     deleteSchool,
     deleteUser,
     startExperiment, 
-    switchUser 
+    switchUser,
+    openSettings
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<'schools' | 'users' | 'experiments' | 'analytics' | 'outbox'>('schools');
@@ -72,6 +75,7 @@ export const SuperAdminDashboard: React.FC = () => {
   });
 
   const [formError, setFormError] = useState('');
+  const [successNotification, setSuccessNotification] = useState<string | null>(null);
   const uniqueCounties = Array.from(new Set(schools.map(s => s.county)));
 
   const handleCreateSchool = (e: React.FormEvent) => {
@@ -81,8 +85,14 @@ export const SuperAdminDashboard: React.FC = () => {
       setFormError('Fill in all required fields (school name, registration number, admin name, admin email).');
       return;
     }
+    const targetSchoolName = newSchoolForm.name.trim();
+    const targetAdminEmail = newSchoolForm.adminEmail.trim();
+
     registerSchool(newSchoolForm);
     setIsAddSchoolModalOpen(false);
+    setSuccessNotification(`"${targetSchoolName}" registered successfully! Welcome credentials and temporary password sent directly to ${targetAdminEmail} from intellicaautomationgroup@gmail.com.`);
+    setTimeout(() => setSuccessNotification(null), 6000);
+
     setNewSchoolForm({
       name: '',
       registrationNumber: '',
@@ -99,6 +109,23 @@ export const SuperAdminDashboard: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       
+      {/* Direct Success Notification Toast */}
+      {successNotification && (
+        <div className="p-3.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-xs flex items-center justify-between gap-3 shadow-sm animate-in fade-in duration-200">
+          <div className="flex items-center gap-2.5">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+            <span className="font-medium">{successNotification}</span>
+          </div>
+          <button 
+            type="button" 
+            onClick={() => setSuccessNotification(null)}
+            className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-100 p-1 cursor-pointer"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+      
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-slate-200 dark:border-slate-800">
         <div>
@@ -112,8 +139,17 @@ export const SuperAdminDashboard: React.FC = () => {
 
         <div className="flex items-center gap-2">
           <button
+            onClick={() => openSettings('password')}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium transition-colors shadow-sm cursor-pointer"
+            title="Settings & Change Password"
+          >
+            <Settings className="w-3.5 h-3.5 text-slate-500" />
+            <span>Settings</span>
+          </button>
+
+          <button
             onClick={() => setIsAddSchoolModalOpen(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 text-white dark:text-slate-900 text-xs font-medium transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-slate-400"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 text-white dark:text-slate-900 text-xs font-medium transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-slate-400 cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Add school</span>
@@ -555,7 +591,11 @@ export const SuperAdminDashboard: React.FC = () => {
                           {mail.recipientRole === 'school_admin' ? 'Principal' : 'Teacher'}
                         </span>
                       </div>
-                      <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">{mail.recipientEmail}</span>
+                      <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5">
+                        <span>To: {mail.recipientEmail}</span>
+                        <span>•</span>
+                        <span className="text-emerald-600 dark:text-emerald-400 font-medium">From: {mail.senderEmail || 'intellicaautomationgroup@gmail.com'}</span>
+                      </div>
                     </div>
 
                     <div className="text-left sm:text-right text-xs text-slate-400 font-mono">

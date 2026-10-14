@@ -8,7 +8,8 @@ import {
   Download,
   Edit3,
   Play,
-  X
+  X,
+  Settings
 } from 'lucide-react';
 import { ExperimentSpec } from '../../types';
 
@@ -25,7 +26,8 @@ export const TeacherDashboard: React.FC = () => {
     openExperimentEditor,
     setCurrentView, 
     startExperiment, 
-    openAttemptReview 
+    openAttemptReview,
+    openSettings
   } = useApp();
 
   const currentSchool = schools.find(s => s.id === currentUser?.schoolId);
@@ -158,8 +160,17 @@ export const TeacherDashboard: React.FC = () => {
 
         <div className="flex items-center gap-2">
           <button
+            onClick={() => openSettings('password')}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium transition-colors shadow-sm cursor-pointer"
+            title="Settings & Change Password"
+          >
+            <Settings className="w-3.5 h-3.5 text-slate-500" />
+            <span>Settings</span>
+          </button>
+
+          <button
             onClick={() => setCurrentView('builder')}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 text-white dark:text-slate-900 text-xs font-medium transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-slate-400"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 text-white dark:text-slate-900 text-xs font-medium transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-slate-400 cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Create practical</span>

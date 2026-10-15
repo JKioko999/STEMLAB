@@ -9,7 +9,9 @@ import {
   AlertCircle,
   Shield,
   Building,
-  GraduationCap
+  GraduationCap,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 
 export const AuthPage: React.FC = () => {
@@ -20,6 +22,7 @@ export const AuthPage: React.FC = () => {
     login, 
     registerSchool,
     registerStudent, 
+    registerSuperAdmin,
     authMode, 
     setAuthMode,
     setCurrentView
@@ -62,6 +65,12 @@ export const AuthPage: React.FC = () => {
     email: '',
     password: ''
   });
+  const [adminForm, setAdminForm] = useState({
+    name: 'Joseph Kioko',
+    email: 'jkioko999@gmail.com',
+    password: ''
+  });
+  const [showAdminPassword, setShowAdminPassword] = useState(false);
   const [loginError, setLoginError] = useState('');
   const [registrationError, setRegistrationError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
@@ -152,6 +161,25 @@ export const AuthPage: React.FC = () => {
     }
   };
 
+  const handleAdminSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setRegistrationError('');
+    if (!adminForm.name.trim() || !adminForm.email.trim() || !adminForm.password.trim()) {
+      setRegistrationError('Please fill in all fields (name, email, and password).');
+      return;
+    }
+    try {
+      const newAdmin = registerSuperAdmin({
+        name: adminForm.name.trim(),
+        email: adminForm.email.trim().toLowerCase(),
+        password: adminForm.password.trim()
+      });
+      setSuccessMessage(`Platform Super Administrator account initialized for ${newAdmin.name}. Redirecting to dashboard...`);
+    } catch (err: any) {
+      setRegistrationError(err.message || 'Failed to initialize Platform Super Administrator');
+    }
+  };
+
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
@@ -239,6 +267,30 @@ export const AuthPage: React.FC = () => {
               }`}
             >
               Register student
+            </button>
+
+            <button
+              type="button"
+              onClick={() => { setAuthMode('register_school'); setLoginError(''); setRegistrationError(''); }}
+              className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
+                authMode === 'register_school'
+                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
+              }`}
+            >
+              Enroll school
+            </button>
+
+            <button
+              type="button"
+              onClick={() => { setAuthMode('register_admin'); setLoginError(''); setRegistrationError(''); }}
+              className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
+                authMode === 'register_admin'
+                  ? 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
+              }`}
+            >
+              Platform admin
             </button>
           </div>
         </div>
@@ -619,9 +671,27 @@ export const AuthPage: React.FC = () => {
               </div>
 
               {loginError && (
-                <div className="p-3 rounded-md bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900 text-rose-800 dark:text-rose-300 text-xs flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
-                  <span>{loginError}</span>
+                <div className="p-3 rounded-md bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900 text-rose-800 dark:text-rose-300 text-xs flex flex-col gap-2">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+                    <span>{loginError}</span>
+                  </div>
+                  {loginError.includes('No registered account') && (
+                    <div className="pt-2 border-t border-rose-200/60 dark:border-rose-900/60 flex items-center justify-between gap-2">
+                      <span className="text-[11px] text-rose-700 dark:text-rose-400">First time setting up this server?</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAdminForm(prev => ({ ...prev, email: loginForm.email || prev.email }));
+                          setAuthMode('register_admin');
+                          setLoginError('');
+                        }}
+                        className="text-[11px] font-semibold text-rose-900 dark:text-rose-200 underline hover:no-underline cursor-pointer"
+                      >
+                        Setup Platform Super Admin →
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -669,6 +739,80 @@ export const AuthPage: React.FC = () => {
                   className="w-full py-2 px-4 rounded-md bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 text-white dark:text-slate-900 font-medium text-xs transition-colors shadow-sm disabled:opacity-50"
                 >
                   {isSubmitting ? 'Authenticating...' : 'Sign in'}
+                </button>
+              </form>
+            </div>
+          )}
+
+          {/* 4. PLATFORM SUPER ADMIN SETUP */}
+          {authMode === 'register_admin' && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+                  Platform Super Administrator Setup
+                </h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  Set up or activate your Master Platform Administrator account to manage institutional deployments, curriculum, and global telemetry.
+                </p>
+              </div>
+
+              <form onSubmit={handleAdminSubmit} className="space-y-3.5 max-w-md">
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    Full name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Joseph Kioko"
+                    value={adminForm.name}
+                    onChange={e => setAdminForm({ ...adminForm, name: e.target.value })}
+                    className="w-full px-3 py-1.5 rounded-md bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-xs focus:outline-none focus:ring-1 focus:ring-slate-900"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    Official administrator email *
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="e.g. jkioko999@gmail.com"
+                    value={adminForm.email}
+                    onChange={e => setAdminForm({ ...adminForm, email: e.target.value })}
+                    className="w-full px-3 py-1.5 rounded-md bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-xs focus:outline-none focus:ring-1 focus:ring-slate-900"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    Permanent password *
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showAdminPassword ? 'text' : 'password'}
+                      required
+                      placeholder="Choose your secure password"
+                      value={adminForm.password}
+                      onChange={e => setAdminForm({ ...adminForm, password: e.target.value })}
+                      className="w-full px-3 py-1.5 rounded-md bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-xs focus:outline-none focus:ring-1 focus:ring-slate-900 pr-9"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowAdminPassword(!showAdminPassword)}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    >
+                      {showAdminPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full py-2 px-4 rounded-md bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 text-white dark:text-slate-900 font-medium text-xs transition-colors shadow-sm cursor-pointer"
+                >
+                  Activate Platform Super Administrator
                 </button>
               </form>
             </div>

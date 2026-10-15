@@ -142,7 +142,8 @@ export const AuthPage: React.FC = () => {
         email: studentForm.email.trim(),
         schoolId: studentForm.schoolId,
         classId: studentForm.classId,
-        admissionNumber: studentForm.admissionNumber.trim()
+        admissionNumber: studentForm.admissionNumber.trim(),
+        password: studentForm.password.trim() || undefined
       });
 
       setSuccessMessage(`Account created for ${newStudent.name}. Redirecting to dashboard...`);
@@ -157,26 +158,47 @@ export const AuthPage: React.FC = () => {
     setIsSubmitting(true);
 
     const trimmedEmail = loginForm.email.toLowerCase().trim();
-    let targetUser = users.find(u => u.email.toLowerCase() === trimmedEmail);
+    const cleanPassword = loginForm.password.trim();
 
-    if (!targetUser) {
-      try {
-        const remoteUsers = await api.users.getAll({ email: trimmedEmail });
-        if (Array.isArray(remoteUsers) && remoteUsers.length > 0) {
-          targetUser = remoteUsers[0];
-        }
-      } catch (err) {
-        // continue
+    if (!trimmedEmail || !cleanPassword) {
+      setLoginError('Please enter both your email address and password.');
+      setIsSubmitting(false);
+      return;
+    }
+
+    try {
+      // 1. Authenticate with backend server API (which checks database and strictly validates password)
+      const res = await api.users.login(trimmedEmail, cleanPassword);
+      if (res.success && res.user) {
+        login(res.user);
+        setIsSubmitting(false);
+        return;
       }
+    } catch (apiErr: any) {
+      const errMsg = apiErr.message || '';
+
+      // Fallback check against local users state if server is unreachable
+      const localUser = users.find(u => u.email.toLowerCase() === trimmedEmail);
+      if (localUser) {
+        const hasPermanentPassword = Boolean(localUser.password && localUser.password.trim().length > 0);
+        const expected = hasPermanentPassword ? localUser.password : localUser.tempPassword;
+        if (expected && expected.trim() === cleanPassword) {
+          login(localUser);
+          setIsSubmitting(false);
+          return;
+        } else {
+          setLoginError('Incorrect password. Please verify your credentials or use "Forgot password" to reset.');
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
+      setLoginError(errMsg || 'Invalid credentials. No registered account found with that email address.');
+      setIsSubmitting(false);
+      return;
     }
 
     setIsSubmitting(false);
-
-    if (targetUser) {
-      login(targetUser);
-    } else {
-      setLoginError('No registered user found with that email address. Please register your school, student, or platform administrator account first.');
-    }
   };
 
   return (

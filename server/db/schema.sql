@@ -42,8 +42,12 @@ CREATE TABLE IF NOT EXISTS public.users (
   avatar_color TEXT,
   must_change_password BOOLEAN DEFAULT FALSE,
   temp_password TEXT,
+  password TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Ensure password column exists if upgrading existing table
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS password TEXT;
 
 -- 4. Classes / Form Streams Table
 CREATE TABLE IF NOT EXISTS public.classes (

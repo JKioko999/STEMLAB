@@ -65,7 +65,7 @@ interface AppContextType {
   // Registration
   registerSchool: (schoolData: Omit<School, 'id' | 'createdAt' | 'status' | 'totalStudents' | 'totalTeachers'>, adminPassword?: string) => School;
   registerSuperAdmin: (adminData: { name: string; email: string; password?: string }) => User;
-  registerStudent: (studentData: { name: string; email: string; schoolId: string; classId: string; admissionNumber: string }) => User;
+  registerStudent: (studentData: { name: string; email: string; schoolId: string; classId: string; admissionNumber: string; password?: string }) => User;
   registerTeacher: (teacherData: { name: string; email: string; schoolId: string; subjectSpecialization: string }) => User;
   
   // Deletion Actions
@@ -495,8 +495,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [currentUser]);
 
   const login = (user: User) => {
-    const latest = users.find(u => u.id === user.id || u.email.toLowerCase() === user.email.toLowerCase()) || user;
-    setCurrentUser(latest);
+    setUsers(prev => {
+      const exists = prev.some(u => u.id === user.id || u.email.toLowerCase() === user.email.toLowerCase());
+      if (exists) {
+        return prev.map(u => (u.id === user.id || u.email.toLowerCase() === user.email.toLowerCase()) ? { ...u, ...user } : u);
+      }
+      return [user, ...prev];
+    });
+    setCurrentUser(user);
     setViewWithUrl('dashboard');
   };
 
@@ -807,7 +813,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       role: 'super_admin',
       avatarColor: 'bg-slate-900',
       mustChangePassword: false,
-      tempPassword: adminData.password
+      password: adminData.password ? adminData.password.trim() : undefined,
+      tempPassword: adminData.password ? adminData.password.trim() : undefined
     };
 
     setUsers(prev => [newAdminUser, ...prev]);
@@ -826,6 +833,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     schoolId: string;
     classId: string;
     admissionNumber: string;
+    password?: string;
   }): User => {
     const studentId = `usr-student-${Date.now().toString(36)}`;
     const targetClass = classes.find(c => c.id === studentData.classId);
@@ -841,7 +849,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       className: targetClass?.name || 'Class Stream',
       teacherId: targetClass?.teacherId,
       teacherName: targetClass?.teacherName,
-      avatarColor: 'bg-emerald-600'
+      avatarColor: 'bg-emerald-600',
+      password: studentData.password ? studentData.password.trim() : undefined
     };
 
     setUsers(prev => [newStudentUser, ...prev]);

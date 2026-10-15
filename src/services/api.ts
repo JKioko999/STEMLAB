@@ -97,6 +97,11 @@ export const api = {
       fetchJSON<{ success: boolean; deletedUserId: string }>(`${BASE_URL}/users/${userId}`, {
         method: 'DELETE',
       }),
+    login: (email: string, password: string) =>
+      fetchJSON<{ success: boolean; user: User; message?: string }>(`${BASE_URL}/users/login`, {
+        method: 'POST',
+        body: JSON.stringify({ email, password }),
+      }),
     changePassword: (userId: string, newPassword: string, email?: string) =>
       fetchJSON<{ success: boolean; message?: string }>(`${BASE_URL}/users/change-password`, {
         method: 'POST',

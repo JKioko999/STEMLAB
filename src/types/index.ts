@@ -32,6 +32,7 @@ export interface User {
   avatarColor?: string;
   mustChangePassword?: boolean; // Flag to force password update on first login
   tempPassword?: string; // Generated temporary password sent via email
+  password?: string; // Permanent encrypted/plaintext password set by user
   phone?: string;
 }
 

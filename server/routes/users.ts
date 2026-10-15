@@ -50,6 +50,64 @@ router.get('/', async (req: Request, res: Response) => {
   }
 });
 
+// POST /api/users/login - Secure user authentication with strict password validation
+router.post('/login', async (req: Request, res: Response) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Please enter both your email address and password.' });
+    }
+
+    const normalizedEmail = String(email).trim().toLowerCase();
+    const cleanPassword = String(password).trim();
+
+    let targetUser: User | undefined = store.users.find(u => u.email.toLowerCase() === normalizedEmail);
+
+    if (isSupabaseConfigured()) {
+      const supabase = getSupabaseClient();
+      if (supabase) {
+        const { data, error } = await supabase.from('users').select('*').eq('email', normalizedEmail).maybeSingle();
+        if (!error && data) {
+          const dbUser = userFromDb(data);
+          store.users = store.users.filter(u => u.email.toLowerCase() !== normalizedEmail);
+          store.users.unshift(dbUser);
+          targetUser = dbUser;
+        }
+      }
+    }
+
+    if (!targetUser) {
+      return res.status(401).json({
+        error: 'Invalid credentials. No registered account found with that email address. Please register your school, student, or platform administrator account first.'
+      });
+    }
+
+    // Determine the expected password:
+    // 1. If user has set a permanent password (e.g. after first login or password change), that password is required.
+    // 2. If user hasn't set a permanent password yet, verify against their initial temporary password.
+    const hasPermanentPassword = Boolean(targetUser.password && targetUser.password.trim().length > 0);
+    const expectedPassword = hasPermanentPassword
+      ? targetUser.password
+      : targetUser.tempPassword;
+
+    const isMatch = Boolean(expectedPassword && expectedPassword.trim() === cleanPassword);
+
+    if (!isMatch) {
+      return res.status(401).json({
+        error: 'Incorrect password. Please verify your credentials or use "Forgot password" to reset your password.'
+      });
+    }
+
+    return res.json({
+      success: true,
+      user: targetUser,
+      message: 'Authentication successful'
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message || 'Login failed' });
+  }
+});
+
 // POST /api/users/admin - Register or update a Platform Super Administrator
 router.post('/admin', async (req: Request, res: Response) => {
   try {
@@ -67,7 +125,8 @@ router.post('/admin', async (req: Request, res: Response) => {
       role: 'super_admin',
       avatarColor: 'bg-slate-900',
       mustChangePassword: false,
-      tempPassword: password || undefined
+      password: password ? String(password).trim() : undefined,
+      tempPassword: password ? String(password).trim() : undefined
     };
 
     // Remove any existing user with same email in memory store
@@ -349,7 +408,8 @@ router.post('/change-password', async (req: Request, res: Response) => {
       if (supabase) {
         let q = supabase.from('users').update({
           must_change_password: false,
-          temp_password: null
+          temp_password: null,
+          password: newPassword
         });
         if (userId) {
           await q.eq('id', userId);

@@ -117,25 +117,32 @@ export const userFromDb = (row: any): User => ({
   teacherName: row.teacher_name,
   avatarColor: row.avatar_color,
   mustChangePassword: Boolean(row.must_change_password),
-  tempPassword: row.temp_password
+  tempPassword: row.temp_password,
+  password: row.password || undefined
 });
 
-export const userToDb = (u: Partial<User>): any => ({
-  id: u.id,
-  school_id: u.schoolId,
-  name: u.name,
-  email: u.email,
-  role: u.role,
-  admission_number: u.admissionNumber,
-  subject_specialization: u.subjectSpecialization,
-  class_id: u.classId,
-  class_name: u.className,
-  teacher_id: u.teacherId,
-  teacher_name: u.teacherName,
-  avatar_color: u.avatarColor,
-  must_change_password: u.mustChangePassword ?? false,
-  temp_password: u.tempPassword
-});
+export const userToDb = (u: Partial<User>): any => {
+  const row: any = {
+    id: u.id,
+    school_id: u.schoolId,
+    name: u.name,
+    email: u.email,
+    role: u.role,
+    admission_number: u.admissionNumber,
+    subject_specialization: u.subjectSpecialization,
+    class_id: u.classId,
+    class_name: u.className,
+    teacher_id: u.teacherId,
+    teacher_name: u.teacherName,
+    avatar_color: u.avatarColor,
+    must_change_password: u.mustChangePassword ?? false,
+    temp_password: u.tempPassword
+  };
+  if (u.password !== undefined) {
+    row.password = u.password;
+  }
+  return row;
+};
 
 export const classFromDb = (row: any): ClassGroup => ({
   id: row.id,

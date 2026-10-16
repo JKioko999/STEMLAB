@@ -7,6 +7,11 @@ import {
   ExperimentSpec, 
   EmailDispatch 
 } from '../types';
+import { 
+  clientSupabase, 
+  clientUserFromDb, 
+  clientSchoolFromDb 
+} from '../lib/supabase';
 
 /**
  * ============================================================================
@@ -70,15 +75,55 @@ export const api = {
 
   // Users (Teachers, Students, Administrators)
   users: {
-    getAll: (params?: { schoolId?: string; role?: string; email?: string }) => {
-      const query = new URLSearchParams(params as any).toString();
-      return fetchJSON<User[]>(`${BASE_URL}/users${query ? `?${query}` : ''}`);
+    getAll: async (params?: { schoolId?: string; role?: string; email?: string }) => {
+      try {
+        const query = new URLSearchParams(params as any).toString();
+        return await fetchJSON<User[]>(`${BASE_URL}/users${query ? `?${query}` : ''}`);
+      } catch (err) {
+        if (clientSupabase) {
+          try {
+            let q = clientSupabase.from('users').select('*');
+            if (params?.schoolId) q = q.eq('school_id', params.schoolId);
+            if (params?.role) q = q.eq('role', params.role);
+            if (params?.email) q = q.eq('email', params.email.toLowerCase().trim());
+            const { data, error } = await q;
+            if (!error && Array.isArray(data)) return data.map(clientUserFromDb);
+          } catch (dbErr) {
+            console.warn('[SUPABASE DIRECT] users.getAll notice:', dbErr);
+          }
+        }
+        throw err;
+      }
     },
-    registerAdmin: (adminData: { id?: string; name: string; email: string; password?: string }) =>
-      fetchJSON<User>(`${BASE_URL}/users/admin`, {
-        method: 'POST',
-        body: JSON.stringify(adminData),
-      }),
+    registerAdmin: async (adminData: { id?: string; name: string; email: string; password?: string }) => {
+      try {
+        return await fetchJSON<User>(`${BASE_URL}/users/admin`, {
+          method: 'POST',
+          body: JSON.stringify(adminData),
+        });
+      } catch (err) {
+        if (clientSupabase) {
+          try {
+            const adminId = adminData.id || `usr-super-${Date.now().toString(36)}`;
+            const row = {
+              id: adminId,
+              name: adminData.name.trim(),
+              email: adminData.email.toLowerCase().trim(),
+              role: 'super_admin',
+              avatar_color: 'bg-slate-900',
+              must_change_password: false,
+              password: adminData.password ? String(adminData.password).trim() : null,
+              temp_password: adminData.password ? String(adminData.password).trim() : null
+            };
+            const { data, error } = await clientSupabase.from('users').upsert(row, { onConflict: 'email' }).select().single();
+            if (!error && data) return clientUserFromDb(data);
+          } catch (dbErr) {
+            console.warn('[SUPABASE DIRECT] registerAdmin notice:', dbErr);
+          }
+        }
+        throw err;
+      }
+    },
     registerStudent: (studentData: { id?: string; name: string; email: string; schoolId: string; classId: string; admissionNumber: string; password?: string }) =>
       fetchJSON<User>(`${BASE_URL}/users/student`, {
         method: 'POST',
@@ -97,11 +142,53 @@ export const api = {
       fetchJSON<{ success: boolean; deletedUserId: string }>(`${BASE_URL}/users/${userId}`, {
         method: 'DELETE',
       }),
-    login: (email: string, password: string) =>
-      fetchJSON<{ success: boolean; user: User; message?: string }>(`${BASE_URL}/users/login`, {
-        method: 'POST',
-        body: JSON.stringify({ email, password }),
-      }),
+    login: async (email: string, password: string) => {
+      const normalizedEmail = email.trim().toLowerCase();
+      const cleanPassword = password.trim();
+
+      try {
+        return await fetchJSON<{ success: boolean; user: User; message?: string }>(`${BASE_URL}/users/login`, {
+          method: 'POST',
+          body: JSON.stringify({ email: normalizedEmail, password: cleanPassword }),
+        });
+      } catch (err: any) {
+        const msg = String(err?.message || '');
+        if (msg.includes('Incorrect password') || msg.includes('Invalid credentials')) {
+          throw err;
+        }
+
+        // Direct client Supabase fallback if server 500s or is unreachable
+        if (clientSupabase) {
+          try {
+            const { data, error } = await clientSupabase
+              .from('users')
+              .select('*')
+              .eq('email', normalizedEmail)
+              .maybeSingle();
+
+            if (!error && data) {
+              const expected = (data.password && String(data.password).trim().length > 0)
+                ? String(data.password).trim()
+                : (data.temp_password ? String(data.temp_password).trim() : '');
+
+              if (expected && expected === cleanPassword) {
+                return { success: true, user: clientUserFromDb(data), message: 'Authenticated via direct Supabase' };
+              } else {
+                throw new Error('Incorrect password. Please verify your credentials or use "Forgot password" to reset.');
+              }
+            } else if (!error && !data) {
+              throw new Error('Invalid credentials. No registered account found with that email address. Please register your school, student, or platform administrator account first.');
+            }
+          } catch (dbErr: any) {
+            if (dbErr.message?.includes('Incorrect password') || dbErr.message?.includes('Invalid credentials')) {
+              throw dbErr;
+            }
+          }
+        }
+
+        throw err;
+      }
+    },
     changePassword: (userId: string, newPassword: string, email?: string) =>
       fetchJSON<{ success: boolean; message?: string }>(`${BASE_URL}/users/change-password`, {
         method: 'POST',

@@ -64,15 +64,21 @@ router.post('/login', async (req: Request, res: Response) => {
     let targetUser: User | undefined = store.users.find(u => u.email.toLowerCase() === normalizedEmail);
 
     if (isSupabaseConfigured()) {
-      const supabase = getSupabaseClient();
-      if (supabase) {
-        const { data, error } = await supabase.from('users').select('*').eq('email', normalizedEmail).maybeSingle();
-        if (!error && data) {
-          const dbUser = userFromDb(data);
-          store.users = store.users.filter(u => u.email.toLowerCase() !== normalizedEmail);
-          store.users.unshift(dbUser);
-          targetUser = dbUser;
+      try {
+        const supabase = getSupabaseClient();
+        if (supabase) {
+          const { data, error } = await supabase.from('users').select('*').eq('email', normalizedEmail).maybeSingle();
+          if (!error && data) {
+            const dbUser = userFromDb(data);
+            store.users = store.users.filter(u => u.email.toLowerCase() !== normalizedEmail);
+            store.users.unshift(dbUser);
+            targetUser = dbUser;
+          } else if (error) {
+            console.warn('[LOGIN] Supabase query error:', error.message);
+          }
         }
+      } catch (dbErr: any) {
+        console.warn('[LOGIN] Supabase catch:', dbErr?.message);
       }
     }
 

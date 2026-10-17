@@ -105,7 +105,7 @@ router.post('/', async (req: AuthedRequest, res: Response) => {
     };
     const adminUser: User = {
       id: adminUserId, schoolId, name: schoolData.adminName, email: adminEmail, role: 'school_admin',
-      mustChangePassword: !me, tempPassword: await hashPassword(plain), avatarColor: 'bg-blue-600'
+      mustChangePassword: true, tempPassword: await hashPassword(plain), avatarColor: 'bg-blue-600'
     };
     // Self-registering principals chose their own password, so it is permanent; super-admin-created ones must change theirs.
     if (!me) { adminUser.password = adminUser.tempPassword; adminUser.tempPassword = undefined; adminUser.mustChangePassword = false; }

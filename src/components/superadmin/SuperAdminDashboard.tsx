@@ -132,7 +132,7 @@ export const SuperAdminDashboard: React.FC = () => {
       )}
       
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-slate-200 dark:border-slate-800">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-gradient-to-r from-emerald-50 via-white to-sky-50 dark:from-emerald-950/40 dark:via-slate-900 dark:to-slate-900 p-5 sm:p-6 shadow-sm">
         <div>
           <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-100 tracking-tight">
             Admin overview
@@ -143,18 +143,10 @@ export const SuperAdminDashboard: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => openSettings('password')}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium transition-colors shadow-sm cursor-pointer"
-            title="Settings & Change Password"
-          >
-            <Settings className="w-3.5 h-3.5 text-slate-500" />
-            <span>Settings</span>
-          </button>
 
           <button
             onClick={() => setIsAddSchoolModalOpen(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 text-white dark:text-slate-900 text-xs font-medium transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-slate-400 cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-slate-400 cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Add school</span>
@@ -164,22 +156,22 @@ export const SuperAdminDashboard: React.FC = () => {
 
       {/* Metrics Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatsCard
+        <StatsCard color="emerald"
           title="Registered schools"
           value={schools.length}
           subtitle={`Across ${uniqueCounties.length} counties`}
         />
-        <StatsCard
+        <StatsCard color="blue"
           title="Students enrolled"
           value={totalStudents.toLocaleString()}
           subtitle="Active candidate accounts"
         />
-        <StatsCard
+        <StatsCard color="amber"
           title="Teachers"
           value={totalTeachers}
           subtitle="Chemistry, physics, biology"
         />
-        <StatsCard
+        <StatsCard color="violet"
           title="Practical attempts"
           value={attempts.length}
           subtitle="Completed student attempts"
@@ -192,7 +184,7 @@ export const SuperAdminDashboard: React.FC = () => {
           onClick={() => setActiveTab('schools')}
           className={`pb-2.5 -mb-px whitespace-nowrap transition-colors ${
             activeTab === 'schools'
-              ? 'border-b-2 border-slate-900 dark:border-slate-100 text-slate-900 dark:text-slate-100 font-semibold'
+              ? 'border-b-2 border-emerald-600 dark:border-emerald-400 text-emerald-700 dark:text-emerald-300 font-semibold'
               : 'border-b-2 border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
           }`}
         >
@@ -203,7 +195,7 @@ export const SuperAdminDashboard: React.FC = () => {
           onClick={() => setActiveTab('users')}
           className={`pb-2.5 -mb-px whitespace-nowrap transition-colors ${
             activeTab === 'users'
-              ? 'border-b-2 border-slate-900 dark:border-slate-100 text-slate-900 dark:text-slate-100 font-semibold'
+              ? 'border-b-2 border-emerald-600 dark:border-emerald-400 text-emerald-700 dark:text-emerald-300 font-semibold'
               : 'border-b-2 border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
           }`}
         >
@@ -214,7 +206,7 @@ export const SuperAdminDashboard: React.FC = () => {
           onClick={() => setActiveTab('experiments')}
           className={`pb-2.5 -mb-px whitespace-nowrap transition-colors ${
             activeTab === 'experiments'
-              ? 'border-b-2 border-slate-900 dark:border-slate-100 text-slate-900 dark:text-slate-100 font-semibold'
+              ? 'border-b-2 border-emerald-600 dark:border-emerald-400 text-emerald-700 dark:text-emerald-300 font-semibold'
               : 'border-b-2 border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
           }`}
         >
@@ -225,7 +217,7 @@ export const SuperAdminDashboard: React.FC = () => {
           onClick={() => setActiveTab('analytics')}
           className={`pb-2.5 -mb-px whitespace-nowrap transition-colors ${
             activeTab === 'analytics'
-              ? 'border-b-2 border-slate-900 dark:border-slate-100 text-slate-900 dark:text-slate-100 font-semibold'
+              ? 'border-b-2 border-emerald-600 dark:border-emerald-400 text-emerald-700 dark:text-emerald-300 font-semibold'
               : 'border-b-2 border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
           }`}
         >
@@ -236,7 +228,7 @@ export const SuperAdminDashboard: React.FC = () => {
           onClick={() => setActiveTab('outbox')}
           className={`pb-2.5 -mb-px whitespace-nowrap transition-colors ${
             activeTab === 'outbox'
-              ? 'border-b-2 border-slate-900 dark:border-slate-100 text-slate-900 dark:text-slate-100 font-semibold'
+              ? 'border-b-2 border-emerald-600 dark:border-emerald-400 text-emerald-700 dark:text-emerald-300 font-semibold'
               : 'border-b-2 border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
           }`}
         >
@@ -526,7 +518,7 @@ export const SuperAdminDashboard: React.FC = () => {
                 <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
                   <button
                     onClick={() => startExperiment(exp, null, 'practice')}
-                    className="w-full py-1.5 px-3 rounded-md bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 text-white dark:text-slate-900 font-medium text-xs transition-colors flex items-center justify-center space-x-1.5"
+                    className="w-full py-1.5 px-3 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs transition-colors flex items-center justify-center space-x-1.5"
                   >
                     <Play className="w-3.5 h-3.5" />
                     <span>Launch simulation</span>
@@ -768,7 +760,7 @@ export const SuperAdminDashboard: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-1.5 rounded-md bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 text-white dark:text-slate-900 font-medium shadow-sm"
+                  className="flex-1 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-sm"
                 >
                   Save school
                 </button>
@@ -878,7 +870,7 @@ export const SuperAdminDashboard: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setSelectedSchoolForDetails(null)}
-                className="px-3 py-1.5 rounded-md bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 text-white dark:text-slate-900 text-xs font-medium"
+                className="px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium"
               >
                 Close
               </button>

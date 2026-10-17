@@ -148,7 +148,7 @@ export const TeacherDashboard: React.FC = () => {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       
       {/* Teacher Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-slate-200 dark:border-slate-800">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-gradient-to-r from-emerald-50 via-white to-sky-50 dark:from-emerald-950/40 dark:via-slate-900 dark:to-slate-900 p-5 sm:p-6 shadow-sm">
         <div>
           <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-100 tracking-tight">
             {currentUser?.name}
@@ -159,18 +159,10 @@ export const TeacherDashboard: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => openSettings('password')}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium transition-colors shadow-sm cursor-pointer"
-            title="Settings & Change Password"
-          >
-            <Settings className="w-3.5 h-3.5 text-slate-500" />
-            <span>Settings</span>
-          </button>
 
           <button
             onClick={() => setCurrentView('builder')}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 text-white dark:text-slate-900 text-xs font-medium transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-slate-400 cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-slate-400 cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Create practical</span>
@@ -180,22 +172,22 @@ export const TeacherDashboard: React.FC = () => {
 
       {/* Metrics Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatsCard
+        <StatsCard color="emerald"
           title="Assigned practicals"
           value={myAssignments.length}
           subtitle="Active practical assignments"
         />
-        <StatsCard
+        <StatsCard color="blue"
           title="Class streams"
           value={myClasses.length}
           subtitle={myClasses.map(c => c.name).join(', ') || 'No streams assigned'}
         />
-        <StatsCard
+        <StatsCard color="amber"
           title="Submissions received"
           value={myAttempts.length}
           subtitle="Candidate answer sheets"
         />
-        <StatsCard
+        <StatsCard color="violet"
           title="Class average score"
           value={classMeanScore}
           subtitle={myAttempts.length > 0 ? `Across ${myAttempts.length} submissions` : 'Awaiting candidate submissions'}
@@ -208,7 +200,7 @@ export const TeacherDashboard: React.FC = () => {
           onClick={() => setActiveTab('assignments')}
           className={`pb-2.5 -mb-px transition-colors ${
             activeTab === 'assignments'
-              ? 'border-b-2 border-slate-900 dark:border-slate-100 text-slate-900 dark:text-slate-100 font-semibold'
+              ? 'border-b-2 border-emerald-600 dark:border-emerald-400 text-emerald-700 dark:text-emerald-300 font-semibold'
               : 'border-b-2 border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
           }`}
         >
@@ -219,7 +211,7 @@ export const TeacherDashboard: React.FC = () => {
           onClick={() => setActiveTab('library')}
           className={`pb-2.5 -mb-px transition-colors ${
             activeTab === 'library'
-              ? 'border-b-2 border-slate-900 dark:border-slate-100 text-slate-900 dark:text-slate-100 font-semibold'
+              ? 'border-b-2 border-emerald-600 dark:border-emerald-400 text-emerald-700 dark:text-emerald-300 font-semibold'
               : 'border-b-2 border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
           }`}
         >
@@ -230,7 +222,7 @@ export const TeacherDashboard: React.FC = () => {
           onClick={() => setActiveTab('diagnostics')}
           className={`pb-2.5 -mb-px transition-colors ${
             activeTab === 'diagnostics'
-              ? 'border-b-2 border-slate-900 dark:border-slate-100 text-slate-900 dark:text-slate-100 font-semibold'
+              ? 'border-b-2 border-emerald-600 dark:border-emerald-400 text-emerald-700 dark:text-emerald-300 font-semibold'
               : 'border-b-2 border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
           }`}
         >
@@ -255,7 +247,7 @@ export const TeacherDashboard: React.FC = () => {
                   handleOpenAssignModal(accessibleExperiments[0]);
                 }
               }}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 text-white dark:text-slate-900 text-xs font-medium transition-colors shadow-sm self-start sm:self-auto"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium transition-colors shadow-sm self-start sm:self-auto"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Assign practical</span>
@@ -475,7 +467,7 @@ export const TeacherDashboard: React.FC = () => {
                   <div className="flex gap-2">
                     <button
                       onClick={() => handleOpenAssignModal(exp)}
-                      className="flex-1 py-1.5 px-3 rounded-md bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 text-white dark:text-slate-900 font-medium text-xs transition-colors flex items-center justify-center space-x-1.5"
+                      className="flex-1 py-1.5 px-3 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs transition-colors flex items-center justify-center space-x-1.5"
                     >
                       <Plus className="w-3.5 h-3.5" />
                       <span>Assign to stream</span>
@@ -674,7 +666,7 @@ export const TeacherDashboard: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-1.5 rounded-md bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 text-white dark:text-slate-900 font-medium shadow-sm"
+                  className="flex-1 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-sm"
                 >
                   Assign to stream
                 </button>

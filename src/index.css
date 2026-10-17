@@ -121,3 +121,20 @@
 html { scroll-behavior: smooth; }
 section[id] { scroll-margin-top: 4rem; }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+
+/* Signed-in pages: soft, theme-aware background */
+.app-bg {
+  background-color: #f4f7fb;
+  background-image:
+    radial-gradient(900px 420px at 8% -8%, rgba(16, 185, 129, 0.12), transparent 60%),
+    radial-gradient(800px 380px at 96% 0%, rgba(56, 189, 248, 0.12), transparent 55%);
+  background-attachment: fixed;
+}
+.dark .app-bg {
+  background-color: #070b14;
+  background-image:
+    radial-gradient(900px 420px at 8% -8%, rgba(16, 185, 129, 0.14), transparent 60%),
+    radial-gradient(800px 380px at 96% 0%, rgba(99, 102, 241, 0.16), transparent 55%);
+  background-attachment: fixed;
+}

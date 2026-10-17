@@ -20,7 +20,7 @@ const AppContent: React.FC = () => {
   return (
     <div className={`min-h-screen flex flex-col font-sans antialiased transition-colors ${
       currentUser
-        ? 'bg-slate-50/70 dark:bg-slate-950 text-slate-900 dark:text-slate-100'
+        ? 'app-bg text-slate-900 dark:text-slate-100'
         : 'bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100'
     }`}>
       <Navbar />

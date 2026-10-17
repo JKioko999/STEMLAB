@@ -78,7 +78,7 @@ export const StudentDashboard: React.FC = () => {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       
       {/* Student Profile Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-slate-200 dark:border-slate-800">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-gradient-to-r from-emerald-50 via-white to-sky-50 dark:from-emerald-950/40 dark:via-slate-900 dark:to-slate-900 p-5 sm:p-6 shadow-sm">
         <div>
           <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-100 tracking-tight">
             {currentUser?.name}
@@ -91,40 +91,32 @@ export const StudentDashboard: React.FC = () => {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setActiveTab('practice_lab')}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium transition-colors shadow-sm cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium transition-colors shadow-sm cursor-pointer"
           >
             <span>Practice lab</span>
           </button>
 
-          <button
-            onClick={() => openSettings('password')}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium transition-colors shadow-sm cursor-pointer"
-            title="Settings & Change Password"
-          >
-            <Settings className="w-3.5 h-3.5 text-slate-500" />
-            <span>Settings</span>
-          </button>
         </div>
       </div>
 
       {/* Metrics Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatsCard
+        <StatsCard color="emerald"
           title="Assigned practicals"
           value={myAssignedPracticals.length}
           subtitle={`From ${currentUser?.teacherName || 'teacher'}`}
         />
-        <StatsCard
+        <StatsCard color="blue"
           title="Completed practicals"
           value={myAttempts.length}
           subtitle="Submitted answer sheets"
         />
-        <StatsCard
+        <StatsCard color="amber"
           title="Average score"
           value={averageScore}
           subtitle={myAttempts.length > 0 ? `Across ${myAttempts.length} graded attempts` : 'No attempts logged'}
         />
-        <StatsCard
+        <StatsCard color="violet"
           title="Practice modules"
           value={openPracticeExperiments.length}
           subtitle="Available for revision"
@@ -137,7 +129,7 @@ export const StudentDashboard: React.FC = () => {
           onClick={() => setActiveTab('assigned')}
           className={`pb-2.5 -mb-px transition-colors ${
             activeTab === 'assigned'
-              ? 'border-b-2 border-slate-900 dark:border-slate-100 text-slate-900 dark:text-slate-100 font-semibold'
+              ? 'border-b-2 border-emerald-600 dark:border-emerald-400 text-emerald-700 dark:text-emerald-300 font-semibold'
               : 'border-b-2 border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
           }`}
         >
@@ -148,7 +140,7 @@ export const StudentDashboard: React.FC = () => {
           onClick={() => setActiveTab('practice_lab')}
           className={`pb-2.5 -mb-px transition-colors ${
             activeTab === 'practice_lab'
-              ? 'border-b-2 border-slate-900 dark:border-slate-100 text-slate-900 dark:text-slate-100 font-semibold'
+              ? 'border-b-2 border-emerald-600 dark:border-emerald-400 text-emerald-700 dark:text-emerald-300 font-semibold'
               : 'border-b-2 border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
           }`}
         >
@@ -159,7 +151,7 @@ export const StudentDashboard: React.FC = () => {
           onClick={() => setActiveTab('results')}
           className={`pb-2.5 -mb-px transition-colors ${
             activeTab === 'results'
-              ? 'border-b-2 border-slate-900 dark:border-slate-100 text-slate-900 dark:text-slate-100 font-semibold'
+              ? 'border-b-2 border-emerald-600 dark:border-emerald-400 text-emerald-700 dark:text-emerald-300 font-semibold'
               : 'border-b-2 border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
           }`}
         >
@@ -231,7 +223,7 @@ export const StudentDashboard: React.FC = () => {
                           {asg.mode === 'practice' && exp && (
                             <button
                               onClick={() => startExperiment(exp, asg, 'practice')}
-                              className="py-1.5 px-3 rounded-md bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 text-white dark:text-slate-900 font-medium text-xs transition-colors flex items-center gap-1"
+                              className="py-1.5 px-3 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs transition-colors flex items-center gap-1"
                               title="Practice again"
                             >
                               <RotateCcw className="w-3.5 h-3.5" />
@@ -243,7 +235,7 @@ export const StudentDashboard: React.FC = () => {
                         exp && (
                           <button
                             onClick={() => startExperiment(exp, asg, asg.mode)}
-                            className="w-full py-1.5 px-3 rounded-md bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 text-white dark:text-slate-900 font-medium text-xs transition-colors flex items-center justify-center space-x-1.5 shadow-sm"
+                            className="w-full py-1.5 px-3 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs transition-colors flex items-center justify-center space-x-1.5 shadow-sm"
                           >
                             <Play className="w-3.5 h-3.5" />
                             <span>
@@ -322,7 +314,7 @@ export const StudentDashboard: React.FC = () => {
                 <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
                   <button
                     onClick={() => startExperiment(exp, null, 'practice')}
-                    className="w-full py-1.5 px-3 rounded-md bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 text-white dark:text-slate-900 font-medium text-xs transition-colors flex items-center justify-center space-x-1.5 shadow-sm"
+                    className="w-full py-1.5 px-3 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs transition-colors flex items-center justify-center space-x-1.5 shadow-sm"
                   >
                     <Play className="w-3.5 h-3.5" />
                     <span>Launch practical</span>

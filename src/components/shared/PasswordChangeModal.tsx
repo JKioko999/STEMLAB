@@ -15,8 +15,25 @@ export const PasswordChangeModal: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
 
-  if (!currentUser || !currentUser.mustChangePassword) return null;
+  // Close automatically a moment after a successful change, even if the local user flag has not refreshed yet.
+  React.useEffect(() => {
+    if (!success) return;
+    const t = setTimeout(() => setDismissed(true), 1200);
+    return () => clearTimeout(t);
+  }, [success]);
+
+  // A new sign-in (different user) must start from a clean form.
+  React.useEffect(() => {
+    setSuccess(false);
+    setDismissed(false);
+    setNewPassword('');
+    setConfirmPassword('');
+    setError('');
+  }, [currentUser?.id]);
+
+  if (!currentUser || dismissed || (!currentUser.mustChangePassword && !success)) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,7 +97,7 @@ export const PasswordChangeModal: React.FC = () => {
                 <input
                   type={showPassword ? 'text' : 'password'}
                   required
-                  placeholder="Min 6 characters"
+                  placeholder="Min 8 characters"
                   value={newPassword}
                   onChange={e => setNewPassword(e.target.value)}
                   className="w-full px-3 py-1.5 rounded-md bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-xs focus:outline-none focus:ring-1 focus:ring-slate-900 pr-9"

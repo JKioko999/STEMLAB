@@ -325,32 +325,6 @@ export const AuthPage: React.FC = () => {
               >
                 Student
               </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={authMode === 'register_school'}
-                onClick={() => goMode('register_school')}
-                className={`whitespace-nowrap px-3.5 py-1.5 rounded-lg text-[13px] font-semibold transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
-                  authMode === 'register_school'
-                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm'
-                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                School
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={authMode === 'register_admin'}
-                onClick={() => goMode('register_admin')}
-                className={`whitespace-nowrap px-3.5 py-1.5 rounded-lg text-[13px] font-semibold transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
-                  authMode === 'register_admin'
-                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm'
-                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                Platform admin
-              </button>
           </div>
         </div>
 
@@ -560,15 +534,8 @@ export const AuthPage: React.FC = () => {
                   <Building className="w-8 h-8 mx-auto text-slate-400" />
                   <div className="space-y-1">
                     <p className="text-xs font-semibold text-slate-900 dark:text-slate-100">No secondary schools registered in database yet</p>
-                    <p className="text-xs text-slate-500">A school must be registered first before students can be enrolled.</p>
+                    <p className="text-xs text-slate-500">Your school has not been added to the platform yet. Please ask your school to contact STEM-SPARK-LAB.</p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setAuthMode('register_school')}
-                    className="px-4 py-2 rounded-md bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 text-white dark:text-slate-900 text-xs font-medium transition-colors"
-                  >
-                    Register school now
-                  </button>
                 </div>
               ) : (
                 <form onSubmit={handleStudentSubmit} className="space-y-4">
@@ -816,7 +783,6 @@ export const AuthPage: React.FC = () => {
               <div className="pt-5 border-t border-slate-100 dark:border-slate-800 text-sm text-slate-500 dark:text-slate-400 flex flex-wrap gap-x-5 gap-y-2">
                 <span>New here?</span>
                 <button type="button" onClick={() => goMode('register_student')} className="font-semibold text-slate-900 dark:text-white hover:underline cursor-pointer">Create a student account</button>
-                <button type="button" onClick={() => goMode('register_school')} className="font-semibold text-slate-900 dark:text-white hover:underline cursor-pointer">Enrol your school</button>
               </div>
             </div>
           )}

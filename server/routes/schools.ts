@@ -92,7 +92,7 @@ router.post('/', async (req: AuthedRequest, res: Response) => {
     if (!schoolData || !schoolData.name || !schoolData.adminEmail) {
       return res.status(400).json({ error: 'Missing required school name or admin email' });
     }
-    if (me && me.role !== 'super_admin') return res.status(403).json({ error: 'You do not have permission to do that.' });
+    if (!me || me.role !== 'super_admin') return res.status(403).json({ error: 'Only the platform administrator can register schools.' });
 
     const adminEmail = String(schoolData.adminEmail).trim().toLowerCase();
     const plain: string = validNewPassword(adminPassword) ? adminPassword : `Stem-${crypto.randomBytes(5).toString('base64url')}`;

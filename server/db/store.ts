@@ -1,5 +1,5 @@
-import { School, User, ClassGroup, Assignment, Attempt, ExperimentSpec, EmailDispatch } from '../../src/types';
-import { INITIAL_EXPERIMENTS } from '../../src/data/experimentSpecs';
+import type { School, User, ClassGroup, Assignment, Attempt, ExperimentSpec, EmailDispatch } from '../../src/types/index.js';
+import { INITIAL_EXPERIMENTS } from '../../src/data/experimentSpecs.js';
 
 /**
  * ============================================================================

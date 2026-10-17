@@ -1,4 +1,4 @@
-import { ExperimentSpec } from '../types';
+import type { ExperimentSpec } from '../types/index.js';
 
 export const INITIAL_EXPERIMENTS: ExperimentSpec[] = [
   {

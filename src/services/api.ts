@@ -7,11 +7,6 @@ import {
   ExperimentSpec, 
   EmailDispatch 
 } from '../types';
-import { 
-  clientSupabase, 
-  clientUserFromDb, 
-  clientSchoolFromDb 
-} from '../lib/supabase';
 
 /**
  * ============================================================================
@@ -24,19 +19,37 @@ import {
  */
 
 const BASE_URL = '/api';
+const TOKEN_KEY = 'stem_spark_token';
+
+// Session token. Kept in localStorage so a refresh keeps you signed in; it expires server-side after 12 hours.
+export const authToken = {
+  get: (): string | null => { try { return localStorage.getItem(TOKEN_KEY); } catch { return null; } },
+  set: (t: string) => { try { localStorage.setItem(TOKEN_KEY, t); } catch { /* storage unavailable */ } },
+  clear: () => { try { localStorage.removeItem(TOKEN_KEY); } catch { /* ignore */ } },
+};
+
+// Password-reset state lives in memory only (never persisted).
+let resetChallenge: { email: string; challenge: string } | null = null;
+let resetGrant: { email: string; grant: string } | null = null;
 
 async function fetchJSON<T>(url: string, options?: RequestInit): Promise<T> {
+  const token = authToken.get();
   const res = await fetch(url, {
+    ...options,
     headers: {
       'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options?.headers,
     },
-    ...options,
   });
 
   if (!res.ok) {
     const errorBody = await res.json().catch(() => ({ error: res.statusText }));
-    throw new Error(errorBody.error || `HTTP error ${res.status}`);
+    if (res.status === 401 && token && !url.includes('/users/login')) {
+      authToken.clear();
+      window.dispatchEvent(new Event('stem:session-expired'));
+    }
+    throw new Error(errorBody.error || `Request failed (${res.status})`);
   }
 
   return res.json();
@@ -63,10 +76,10 @@ export const api = {
       adminPassword?: string,
       extra?: { schoolId?: string; adminUserId?: string }
     ) =>
-      fetchJSON<{ school: School; adminUser: User; emailDispatch: EmailDispatch }>(`${BASE_URL}/schools`, {
+      fetchJSON<{ school: School; adminUser: User; emailDispatch: EmailDispatch; token?: string }>(`${BASE_URL}/schools`, {
         method: 'POST',
         body: JSON.stringify({ schoolData, adminPassword, ...extra }),
-      }),
+      }).then(r => { if (r.token) authToken.set(r.token); return r; }),
     delete: (id: string) =>
       fetchJSON<{ success: boolean; deletedSchoolId: string }>(`${BASE_URL}/schools/${id}`, {
         method: 'DELETE',
@@ -75,60 +88,20 @@ export const api = {
 
   // Users (Teachers, Students, Administrators)
   users: {
-    getAll: async (params?: { schoolId?: string; role?: string; email?: string }) => {
-      try {
-        const query = new URLSearchParams(params as any).toString();
-        return await fetchJSON<User[]>(`${BASE_URL}/users${query ? `?${query}` : ''}`);
-      } catch (err) {
-        if (clientSupabase) {
-          try {
-            let q = clientSupabase.from('users').select('*');
-            if (params?.schoolId) q = q.eq('school_id', params.schoolId);
-            if (params?.role) q = q.eq('role', params.role);
-            if (params?.email) q = q.eq('email', params.email.toLowerCase().trim());
-            const { data, error } = await q;
-            if (!error && Array.isArray(data)) return data.map(clientUserFromDb);
-          } catch (dbErr) {
-            console.warn('[SUPABASE DIRECT] users.getAll notice:', dbErr);
-          }
-        }
-        throw err;
-      }
+    getAll: (params?: { schoolId?: string; role?: string; email?: string }) => {
+      const query = new URLSearchParams(params as any).toString();
+      return fetchJSON<User[]>(`${BASE_URL}/users${query ? `?${query}` : ''}`);
     },
-    registerAdmin: async (adminData: { id?: string; name: string; email: string; password?: string }) => {
-      try {
-        return await fetchJSON<User>(`${BASE_URL}/users/admin`, {
-          method: 'POST',
-          body: JSON.stringify(adminData),
-        });
-      } catch (err) {
-        if (clientSupabase) {
-          try {
-            const adminId = adminData.id || `usr-super-${Date.now().toString(36)}`;
-            const row = {
-              id: adminId,
-              name: adminData.name.trim(),
-              email: adminData.email.toLowerCase().trim(),
-              role: 'super_admin',
-              avatar_color: 'bg-slate-900',
-              must_change_password: false,
-              password: adminData.password ? String(adminData.password).trim() : null,
-              temp_password: adminData.password ? String(adminData.password).trim() : null
-            };
-            const { data, error } = await clientSupabase.from('users').upsert(row, { onConflict: 'email' }).select().single();
-            if (!error && data) return clientUserFromDb(data);
-          } catch (dbErr) {
-            console.warn('[SUPABASE DIRECT] registerAdmin notice:', dbErr);
-          }
-        }
-        throw err;
-      }
-    },
-    registerStudent: (studentData: { id?: string; name: string; email: string; schoolId: string; classId: string; admissionNumber: string; password?: string }) =>
-      fetchJSON<User>(`${BASE_URL}/users/student`, {
+    registerAdmin: (adminData: { id?: string; name: string; email: string; password: string; setupKey?: string }) =>
+      fetchJSON<{ user: User; token: string }>(`${BASE_URL}/users/admin`, {
+        method: 'POST',
+        body: JSON.stringify(adminData),
+      }).then(r => { authToken.set(r.token); return r; }),
+    registerStudent: (studentData: { id?: string; name: string; email: string; schoolId: string; classId: string; admissionNumber: string; password: string }) =>
+      fetchJSON<{ user: User; token: string }>(`${BASE_URL}/users/student`, {
         method: 'POST',
         body: JSON.stringify(studentData),
-      }),
+      }).then(r => { authToken.set(r.token); return r; }),
     registerTeacher: (teacherData: { id?: string; name: string; email: string; schoolId: string; subjectSpecialization: string; tempPassword?: string }) =>
       fetchJSON<{ teacher: User; emailDispatch: EmailDispatch }>(`${BASE_URL}/users/teacher`, {
         method: 'POST',
@@ -142,68 +115,33 @@ export const api = {
       fetchJSON<{ success: boolean; deletedUserId: string }>(`${BASE_URL}/users/${userId}`, {
         method: 'DELETE',
       }),
-    login: async (email: string, password: string) => {
-      const normalizedEmail = email.trim().toLowerCase();
-      const cleanPassword = password.trim();
-
-      try {
-        return await fetchJSON<{ success: boolean; user: User; message?: string }>(`${BASE_URL}/users/login`, {
-          method: 'POST',
-          body: JSON.stringify({ email: normalizedEmail, password: cleanPassword }),
-        });
-      } catch (err: any) {
-        const msg = String(err?.message || '');
-        if (msg.includes('Incorrect password') || msg.includes('Invalid credentials')) {
-          throw err;
-        }
-
-        // Direct client Supabase fallback if server 500s or is unreachable
-        if (clientSupabase) {
-          try {
-            const { data, error } = await clientSupabase
-              .from('users')
-              .select('*')
-              .eq('email', normalizedEmail)
-              .maybeSingle();
-
-            if (!error && data) {
-              const expected = (data.password && String(data.password).trim().length > 0)
-                ? String(data.password).trim()
-                : (data.temp_password ? String(data.temp_password).trim() : '');
-
-              if (expected && expected === cleanPassword) {
-                return { success: true, user: clientUserFromDb(data), message: 'Authenticated via direct Supabase' };
-              } else {
-                throw new Error('Incorrect password. Please verify your credentials or use "Forgot password" to reset.');
-              }
-            } else if (!error && !data) {
-              throw new Error('Invalid credentials. No registered account found with that email address. Please register your school, student, or platform administrator account first.');
-            }
-          } catch (dbErr: any) {
-            if (dbErr.message?.includes('Incorrect password') || dbErr.message?.includes('Invalid credentials')) {
-              throw dbErr;
-            }
-          }
-        }
-
-        throw err;
-      }
-    },
-    changePassword: (userId: string, newPassword: string, email?: string) =>
+    login: (email: string, password: string) =>
+      fetchJSON<{ success: boolean; user: User; token: string }>(`${BASE_URL}/users/login`, {
+        method: 'POST',
+        body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
+      }).then(r => { authToken.set(r.token); return r; }),
+    logout: () => { authToken.clear(); resetChallenge = null; resetGrant = null; },
+    changePassword: (newPassword: string, currentPassword?: string) =>
       fetchJSON<{ success: boolean; message?: string }>(`${BASE_URL}/users/change-password`, {
         method: 'POST',
-        body: JSON.stringify({ userId, newPassword, email }),
-      }),
-    requestResetOtp: (email: string, userData?: Partial<User>) =>
-      fetchJSON<{ success: boolean; message: string; simulated?: boolean; targetUser?: User }>(`${BASE_URL}/users/request-reset-otp`, {
+        body: JSON.stringify({
+          newPassword,
+          currentPassword,
+          resetGrant: !authToken.get() ? resetGrant?.grant : undefined,
+        }),
+      }).then(r => { resetChallenge = null; resetGrant = null; return r; }),
+    requestResetOtp: (email: string) =>
+      fetchJSON<{ success: boolean; message: string; challenge: string }>(`${BASE_URL}/users/request-reset-otp`, {
         method: 'POST',
-        body: JSON.stringify({ email, ...userData }),
-      }),
-    verifyResetOtp: (email: string, otp: string) =>
-      fetchJSON<{ success: boolean; message: string }>(`${BASE_URL}/users/verify-reset-otp`, {
+        body: JSON.stringify({ email }),
+      }).then(r => { resetChallenge = { email: email.trim().toLowerCase(), challenge: r.challenge }; return r; }),
+    verifyResetOtp: (email: string, otp: string) => {
+      const e = email.trim().toLowerCase();
+      return fetchJSON<{ success: boolean; resetGrant: string }>(`${BASE_URL}/users/verify-reset-otp`, {
         method: 'POST',
-        body: JSON.stringify({ email, otp }),
-      }),
+        body: JSON.stringify({ email: e, otp, challenge: resetChallenge?.email === e ? resetChallenge.challenge : undefined }),
+      }).then(r => { resetGrant = { email: e, grant: r.resetGrant }; return r; });
+    },
   },
 
   // Classes / Form Streams

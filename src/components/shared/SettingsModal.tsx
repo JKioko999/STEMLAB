@@ -63,13 +63,13 @@ export const SettingsModal: React.FC = () => {
 
   const currentSchool = schools.find(s => s.id === currentUser.schoolId);
 
-  const handlePasswordSubmit = (e: React.FormEvent) => {
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setPasswordError('');
     setPasswordSuccess('');
 
-    if (newPassword.length < 6) {
-      setPasswordError('New password must be at least 6 characters long.');
+    if (newPassword.length < 8) {
+      setPasswordError('New password must be at least 8 characters long.');
       return;
     }
 
@@ -81,7 +81,7 @@ export const SettingsModal: React.FC = () => {
     setIsSubmittingPassword(true);
 
     try {
-      changePassword(currentUser.id, newPassword);
+      await changePassword(currentUser.id, newPassword, currentPasswordInput);
       setPasswordSuccess('Password changed successfully! You can now use your new password for all subsequent logins.');
       setCurrentPasswordInput('');
       setNewPassword('');

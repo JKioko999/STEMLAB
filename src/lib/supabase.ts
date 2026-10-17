@@ -54,6 +54,29 @@ export const clientUserFromDb = (row: any): User => ({
   password: row.password || undefined
 });
 
+export const clientUserToDb = (u: Partial<User>): any => {
+  const row: any = {
+    id: u.id,
+    school_id: u.schoolId,
+    name: u.name,
+    email: u.email,
+    role: u.role,
+    admission_number: u.admissionNumber,
+    subject_specialization: u.subjectSpecialization,
+    class_id: u.classId,
+    class_name: u.className,
+    teacher_id: u.teacherId,
+    teacher_name: u.teacherName,
+    avatar_color: u.avatarColor,
+    must_change_password: u.mustChangePassword ?? false,
+    temp_password: u.tempPassword
+  };
+  if (u.password !== undefined) {
+    row.password = u.password;
+  }
+  return row;
+};
+
 export const clientSchoolFromDb = (row: any): School => ({
   id: row.id,
   name: row.name,
@@ -69,4 +92,88 @@ export const clientSchoolFromDb = (row: any): School => ({
   totalTeachers: Number(row.total_teachers || 0),
   createdAt: row.created_at ? new Date(row.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
   status: row.status || 'active'
+});
+
+export const clientSchoolToDb = (s: Partial<School>): any => ({
+  id: s.id,
+  name: s.name,
+  registration_number: s.registrationNumber,
+  county: s.county,
+  sub_county: s.subCounty,
+  category: s.category,
+  subscription_plan: s.subscriptionPlan,
+  admin_name: s.adminName,
+  admin_email: s.adminEmail,
+  phone: s.phone,
+  total_students: s.totalStudents ?? 0,
+  total_teachers: s.totalTeachers ?? 0,
+  status: s.status || 'active'
+});
+
+export const clientClassFromDb = (row: any): ClassGroup => ({
+  id: row.id,
+  schoolId: row.school_id,
+  name: row.name,
+  formYear: Number(row.form_year),
+  teacherId: row.teacher_id,
+  teacherName: row.teacher_name,
+  subject: row.subject,
+  studentCount: Number(row.student_count || 0)
+});
+
+export const clientClassToDb = (c: Partial<ClassGroup>): any => ({
+  id: c.id,
+  school_id: c.schoolId,
+  name: c.name,
+  form_year: c.formYear,
+  teacher_id: c.teacherId,
+  teacher_name: c.teacherName,
+  subject: c.subject,
+  student_count: c.studentCount ?? 0
+});
+
+export const clientExperimentFromDb = (row: any): ExperimentSpec => ({
+  id: row.id,
+  subject: row.subject,
+  title: row.title,
+  kcsePaper: row.kcse_paper,
+  topic: row.topic,
+  objectives: Array.isArray(row.objectives) ? row.objectives : [],
+  estimatedDurationMinutes: Number(row.estimated_duration_minutes || 45),
+  apparatus: Array.isArray(row.apparatus) ? row.apparatus : [],
+  steps: Array.isArray(row.steps) ? row.steps : [],
+  procedures: Array.isArray(row.simulation_config?.procedures) ? row.simulation_config.procedures : undefined,
+  simulationType: row.simulation_type,
+  simulationConfig: row.simulation_config || {},
+  answerSheet: Array.isArray(row.answer_sheet) ? row.answer_sheet : [],
+  ownerType: row.owner_type || 'global',
+  schoolId: row.school_id,
+  teacherId: row.teacher_id,
+  authorName: row.author_name || 'KCSE National Science Curriculum',
+  status: row.status || 'published',
+  clonedFrom: row.cloned_from
+});
+
+export const clientExperimentToDb = (e: Partial<ExperimentSpec>): any => ({
+  id: e.id,
+  subject: e.subject,
+  title: e.title,
+  kcse_paper: e.kcsePaper,
+  topic: e.topic,
+  objectives: e.objectives || [],
+  estimated_duration_minutes: e.estimatedDurationMinutes || 45,
+  apparatus: e.apparatus || [],
+  steps: e.steps || [],
+  simulation_type: e.simulationType,
+  simulation_config: {
+    ...(e.simulationConfig || {}),
+    ...(e.procedures ? { procedures: e.procedures } : {})
+  },
+  answer_sheet: e.answerSheet || [],
+  owner_type: e.ownerType || 'global',
+  school_id: e.schoolId,
+  teacher_id: e.teacherId,
+  author_name: e.authorName || 'KCSE National Science Curriculum',
+  status: e.status || 'published',
+  cloned_from: e.clonedFrom
 });

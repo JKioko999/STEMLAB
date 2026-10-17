@@ -49,8 +49,8 @@ const AppContent: React.FC = () => {
         {currentUser && currentView === 'builder' && <ExperimentBuilder />}
       </main>
 
-      {/* Clean Institutional Footer */}
-      <footer className="border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 py-4 text-xs text-slate-500 dark:text-slate-400">
+      {/* Clean Institutional Footer (the landing page has its own) */}
+      {currentView !== 'landing' && !( !currentUser && currentView !== 'auth' && currentView !== 'lab') && <footer className="border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 py-4 text-xs text-slate-500 dark:text-slate-400">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-2">
           <div className="flex items-center space-x-2">
             <span className="font-semibold text-slate-800 dark:text-slate-200">STEM-SPARK-LAB</span>
@@ -62,7 +62,7 @@ const AppContent: React.FC = () => {
             <span>Chemistry, Physics & Biology practicals</span>
           </div>
         </div>
-      </footer>
+      </footer>}
     </div>
   );
 };

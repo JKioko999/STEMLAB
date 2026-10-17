@@ -12,30 +12,39 @@ import {
 } from '../db/supabase.js';
 import { School, User, EmailDispatch } from '../../src/types/index.js';
 import { sendEmail } from '../services/mailer.js';
+import crypto from 'crypto';
+import { AuthedRequest, attachSession, hashPassword, validNewPassword, issueSession, sanitizeUser } from '../auth.js';
 
 const router = Router();
 
 // GET /api/schools - List all secondary schools
-router.get('/', async (req: Request, res: Response) => {
+router.get('/', async (req: AuthedRequest, res: Response) => {
   try {
+    const me = attachSession(req);
+    const reply = (list: School[]) => {
+      if (!me) return res.json(list.map(({ id, name, county, subCounty, category }) => ({ id, name, county, subCounty, category })));
+      if (me.role !== 'super_admin') return res.json(list.filter(s => s.id === me.schoolId));
+      return res.json(list);
+    };
     if (isSupabaseConfigured()) {
       const supabase = getSupabaseClient();
       if (supabase) {
         const { data, error } = await supabase.from('schools').select('*').order('created_at', { ascending: false });
         if (!error && data) {
-          return res.json(data.map(schoolFromDb));
+          return reply(data.map(schoolFromDb));
         }
       }
     }
-    return res.json(store.schools);
+    return reply(store.schools);
   } catch (err: any) {
     return res.status(500).json({ error: err.message || 'Failed to fetch schools' });
   }
 });
 
 // GET /api/schools/:id - Detailed school profile with teachers and classes
-router.get('/:id', async (req: Request, res: Response) => {
+router.get('/:id', async (req: AuthedRequest, res: Response) => {
   const { id } = req.params;
+  if (req.auth!.role !== 'super_admin' && req.auth!.schoolId !== id) return res.status(403).json({ error: 'You do not have permission to do that.' });
   try {
     if (isSupabaseConfigured()) {
       const supabase = getSupabaseClient();
@@ -47,7 +56,7 @@ router.get('/:id', async (req: Request, res: Response) => {
           const { count: studentCount } = await supabase.from('users').select('*', { count: 'exact', head: true }).eq('school_id', id).eq('role', 'student');
           return res.json({
             school: schoolFromDb(sch),
-            teachers: (teachers || []).map(userFromDb),
+            teachers: (teachers || []).map(userFromDb).map(sanitizeUser),
             classes: (classes || []).map(classFromDb),
             studentCount: studentCount || 0
           });
@@ -66,7 +75,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 
     return res.json({
       school,
-      teachers: schoolTeachers,
+      teachers: schoolTeachers.map(sanitizeUser),
       classes: schoolClasses,
       studentCount: schoolStudents.length
     });
@@ -76,78 +85,65 @@ router.get('/:id', async (req: Request, res: Response) => {
 });
 
 // POST /api/schools - Register a new secondary school
-router.post('/', async (req: Request, res: Response) => {
+router.post('/', async (req: AuthedRequest, res: Response) => {
   try {
-    const { schoolData, adminPassword, schoolId: passedSchoolId, adminUserId: passedAdminUserId } = req.body;
+    const me = attachSession(req);
+    const { schoolData, adminPassword, schoolId: passedSchoolId, adminUserId: passedAdminUserId } = req.body || {};
     if (!schoolData || !schoolData.name || !schoolData.adminEmail) {
       return res.status(400).json({ error: 'Missing required school name or admin email' });
     }
+    if (me && me.role !== 'super_admin') return res.status(403).json({ error: 'You do not have permission to do that.' });
 
-    const schoolId = schoolData.id || passedSchoolId || `sch-${Date.now().toString(36)}`;
+    const adminEmail = String(schoolData.adminEmail).trim().toLowerCase();
+    const plain: string = validNewPassword(adminPassword) ? adminPassword : `Stem-${crypto.randomBytes(5).toString('base64url')}`;
+    const schoolId = passedSchoolId || `sch-${Date.now().toString(36)}`;
     const adminUserId = passedAdminUserId || `usr-admin-${Date.now().toString(36)}`;
-    const tempPassword = adminPassword || `Kcse${Math.floor(1000 + Math.random() * 9000)}!`;
 
     const newSchool: School = {
-      ...schoolData,
-      id: schoolId,
-      totalStudents: 0,
-      totalTeachers: 0,
-      createdAt: new Date().toISOString().split('T')[0],
-      status: 'active'
+      ...schoolData, id: schoolId, adminEmail, totalStudents: 0, totalTeachers: 0,
+      createdAt: new Date().toISOString().split('T')[0], status: 'active'
     };
-
     const adminUser: User = {
-      id: adminUserId,
-      schoolId: schoolId,
-      name: schoolData.adminName,
-      email: schoolData.adminEmail,
-      role: 'school_admin',
-      mustChangePassword: true,
-      tempPassword: tempPassword,
-      avatarColor: 'bg-blue-600'
+      id: adminUserId, schoolId, name: schoolData.adminName, email: adminEmail, role: 'school_admin',
+      mustChangePassword: !me, tempPassword: await hashPassword(plain), avatarColor: 'bg-blue-600'
     };
+    // Self-registering principals chose their own password, so it is permanent; super-admin-created ones must change theirs.
+    if (!me) { adminUser.password = adminUser.tempPassword; adminUser.tempPassword = undefined; adminUser.mustChangePassword = false; }
 
-    const emailDispatch: EmailDispatch = {
-      id: `email-${Date.now().toString(36)}`,
-      senderEmail: 'intellicaautomationgroup@gmail.com',
-      recipientEmail: schoolData.adminEmail,
-      recipientName: schoolData.adminName,
-      recipientRole: 'school_admin',
-      subject: `STEM-SPARK-LAB Portal Credentials: ${schoolData.name}`,
-      tempPassword: tempPassword,
-      sentAt: new Date().toISOString(),
-      schoolName: schoolData.name,
-      messageBody: `Dear Principal ${schoolData.adminName},\n\nYour school ${schoolData.name} has been enrolled into the STEM-SPARK-LAB KCSE Virtual Science Laboratory platform by Intellica Automation Group.\n\nFrom: Intellica Automation Group <intellicaautomationgroup@gmail.com>\nSupport: intellicaautomationgroup@gmail.com`
-    };
-
-    // Save to local store
+    const supabase = isSupabaseConfigured() ? getSupabaseClient() : null;
+    if (supabase) {
+      const { data: dup } = await supabase.from('users').select('id').eq('email', adminEmail).maybeSingle();
+      if (dup) return res.status(409).json({ error: 'An account with this email already exists. Please sign in instead.' });
+      const s1 = await supabase.from('schools').insert(schoolToDb(newSchool));
+      if (s1.error) throw new Error(s1.error.message);
+      const s2 = await supabase.from('users').insert(userToDb(adminUser));
+      if (s2.error) { await supabase.from('schools').delete().eq('id', schoolId); throw new Error(s2.error.message); }
+    } else if (store.users.some(u => u.email.toLowerCase() === adminEmail)) {
+      return res.status(409).json({ error: 'An account with this email already exists. Please sign in instead.' });
+    }
     store.schools.unshift(newSchool);
     store.users.unshift(adminUser);
-    store.emails.unshift(emailDispatch);
 
-    // Save to live Supabase database if configured
-    if (isSupabaseConfigured()) {
-      const supabase = getSupabaseClient();
-      if (supabase) {
-        await supabase.from('schools').upsert(schoolToDb(newSchool), { onConflict: 'id' });
-        await supabase.from('users').upsert(userToDb(adminUser), { onConflict: 'email' });
-        await supabase.from('dispatched_emails').insert([emailToDb(emailDispatch)]);
-      }
-    }
+    const body = `Dear ${schoolData.adminName},\n\n${schoolData.name} has been enrolled in the STEM-SPARK-LAB KCSE Virtual Science Laboratory.\n\nSign in with ${adminEmail} and this password: ${plain}${me ? '\n\nYou will be asked to choose a new password the first time you sign in.' : ''}`;
+    const dispatch: EmailDispatch = {
+      id: `email-${Date.now().toString(36)}`, senderEmail: 'intellicaautomationgroup@gmail.com', recipientEmail: adminEmail,
+      recipientName: schoolData.adminName, recipientRole: 'school_admin', subject: `STEM-SPARK-LAB Portal Credentials: ${schoolData.name}`,
+      sentAt: new Date().toISOString(), schoolName: schoolData.name, messageBody: body.split(plain).join('••••••••')
+    };
+    store.emails.unshift(dispatch);
+    if (supabase) await supabase.from('dispatched_emails').insert([emailToDb(dispatch)]);
 
-    // Transmit email directly from intellicaautomationgroup@gmail.com
-    const mailResult = await sendEmail({
-      to: schoolData.adminEmail,
-      toName: schoolData.adminName,
-      subject: emailDispatch.subject,
-      text: emailDispatch.messageBody,
-      tempPassword: tempPassword
+    const mailResult = await sendEmail({ to: adminEmail, toName: schoolData.adminName, subject: dispatch.subject, text: body, tempPassword: plain });
+    return res.status(201).json({
+      school: newSchool, adminUser: sanitizeUser(adminUser),
+      // A platform admin creating a school sees the initial password once, here; it is never stored in readable form.
+      emailDispatch: me ? { ...dispatch, messageBody: body, tempPassword: plain } : dispatch,
+      mailResult: { success: mailResult.success, simulated: mailResult.simulated },
+      token: me ? undefined : issueSession(adminUser)
     });
-    console.info(`[MAILER] School registration email dispatched to ${schoolData.adminEmail}:`, mailResult);
-
-    return res.status(201).json({ school: newSchool, adminUser, emailDispatch, mailResult });
   } catch (err: any) {
-    return res.status(500).json({ error: err.message || 'Failed to create school' });
+    console.error('[schools] create failed:', err);
+    return res.status(500).json({ error: 'Failed to create school. Please try again.' });
   }
 });
 

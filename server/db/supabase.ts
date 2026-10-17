@@ -24,10 +24,19 @@ dotenv.config();
  */
 
 export const getSupabaseConfig = () => {
-  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || '';
+  // Accepts the names used by the Vercel Supabase integration as well as the Vite-style ones.
+  const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
+  const key =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.SUPABASE_ANON_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    process.env.VITE_SUPABASE_ANON_KEY ||
+    '';
   return { url, key };
 };
+
+/** True when the server is using the service-role key (required once Row Level Security is on). */
+export const usingServiceRole = () => Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY);
 
 let supabaseClient: SupabaseClient | null = null;
 

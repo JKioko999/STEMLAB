@@ -11,7 +11,14 @@ import {
   Building,
   GraduationCap,
   Eye,
-  EyeOff
+  EyeOff,
+  Mail,
+  Lock,
+  Loader2,
+  FlaskConical,
+  ShieldCheck,
+  ClipboardCheck,
+  Zap
 } from 'lucide-react';
 
 export const AuthPage: React.FC = () => {
@@ -66,10 +73,12 @@ export const AuthPage: React.FC = () => {
     password: ''
   });
   const [adminForm, setAdminForm] = useState({
-    name: 'Joseph Kioko',
-    email: 'jkioko999@gmail.com',
-    password: ''
+    name: '',
+    email: '',
+    password: '',
+    setupKey: ''
   });
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [showAdminPassword, setShowAdminPassword] = useState(false);
   const [loginError, setLoginError] = useState('');
   const [registrationError, setRegistrationError] = useState('');
@@ -98,9 +107,14 @@ export const AuthPage: React.FC = () => {
     setRegistrationError('');
   };
 
-  const handleSchoolSubmit = (e: React.FormEvent) => {
+  const handleSchoolSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setRegistrationError('');
+    if (schoolForm.adminPassword.trim().length < 8) {
+      setRegistrationError('Choose a password of at least 8 characters for the administrator account.');
+      return;
+    }
+    setIsSubmitting(true);
 
     if (!schoolForm.name.trim() || !schoolForm.adminName.trim() || !schoolForm.adminEmail.trim()) {
       setRegistrationError('Fill in all required school and administrator fields.');
@@ -108,7 +122,7 @@ export const AuthPage: React.FC = () => {
     }
 
     try {
-      const created = registerSchool({
+      const created = await registerSchool({
         name: schoolForm.name.trim(),
         registrationNumber: schoolForm.registrationNumber.trim() || `MOE/REG/${Math.floor(10000 + Math.random() * 90000)}/2026`,
         county: schoolForm.county.trim() || 'Nairobi',
@@ -118,15 +132,17 @@ export const AuthPage: React.FC = () => {
         adminName: schoolForm.adminName.trim(),
         adminEmail: schoolForm.adminEmail.trim(),
         phone: schoolForm.phone.trim() || '+254 700 000 000'
-      }, schoolForm.adminPassword.trim() || undefined);
+      }, schoolForm.adminPassword.trim());
 
       setSuccessMessage(`School ${created.name} registered. Opening dashboard...`);
     } catch (err: any) {
       setRegistrationError(err.message || 'Failed to register school');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const handleStudentSubmit = (e: React.FormEvent) => {
+  const handleStudentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setRegistrationError('');
 
@@ -145,19 +161,27 @@ export const AuthPage: React.FC = () => {
       return;
     }
 
+    if (studentForm.password.trim().length < 8) {
+      setRegistrationError('Choose a password of at least 8 characters.');
+      return;
+    }
+
+    setIsSubmitting(true);
     try {
-      const newStudent = registerStudent({
+      const newStudent = await registerStudent({
         name: studentForm.name.trim(),
         email: studentForm.email.trim(),
         schoolId: studentForm.schoolId,
         classId: studentForm.classId,
         admissionNumber: studentForm.admissionNumber.trim(),
-        password: studentForm.password.trim() || undefined
+        password: studentForm.password.trim()
       });
 
       setSuccessMessage(`Account created for ${newStudent.name}. Redirecting to dashboard...`);
     } catch (err: any) {
       setRegistrationError(err.message || 'Failed to register student');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -168,15 +192,23 @@ export const AuthPage: React.FC = () => {
       setRegistrationError('Please fill in all fields (name, email, and password).');
       return;
     }
+    if (adminForm.password.trim().length < 8) {
+      setRegistrationError('Use a password of at least 8 characters.');
+      return;
+    }
+    setIsSubmitting(true);
     try {
-      const newAdmin = registerSuperAdmin({
+      const newAdmin = await registerSuperAdmin({
         name: adminForm.name.trim(),
         email: adminForm.email.trim().toLowerCase(),
-        password: adminForm.password.trim()
+        password: adminForm.password.trim(),
+        setupKey: adminForm.setupKey.trim() || undefined
       });
       setSuccessMessage(`Platform Super Administrator account initialized for ${newAdmin.name}. Redirecting to dashboard...`);
     } catch (err: any) {
       setRegistrationError(err.message || 'Failed to initialize Platform Super Administrator');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -195,128 +227,155 @@ export const AuthPage: React.FC = () => {
     }
 
     try {
-      // 1. Authenticate with backend server API (which checks database and strictly validates password)
       const res = await api.users.login(trimmedEmail, cleanPassword);
-      if (res.success && res.user) {
-        login(res.user);
-        setIsSubmitting(false);
-        return;
-      }
+      if (res.success && res.user) login(res.user);
     } catch (apiErr: any) {
-      const errMsg = apiErr.message || '';
-
-      // Fallback check against local users state if server is unreachable
-      const localUser = users.find(u => u.email.toLowerCase() === trimmedEmail);
-      if (localUser) {
-        const hasPermanentPassword = Boolean(localUser.password && localUser.password.trim().length > 0);
-        const expected = hasPermanentPassword ? localUser.password : localUser.tempPassword;
-        if (expected && expected.trim() === cleanPassword) {
-          login(localUser);
-          setIsSubmitting(false);
-          return;
-        } else {
-          setLoginError('Incorrect password. Please verify your credentials or use "Forgot password" to reset.');
-          setIsSubmitting(false);
-          return;
-        }
-      }
-
-      setLoginError(errMsg || 'Invalid credentials. No registered account found with that email address.');
+      setLoginError(apiErr.message || 'We could not sign you in. Please try again.');
+    } finally {
       setIsSubmitting(false);
-      return;
     }
-
-    setIsSubmitting(false);
   };
 
+  const goMode = (m: 'login' | 'register_student' | 'register_school' | 'register_admin' | 'forgot_password') => {
+    setAuthMode(m);
+    setLoginError('');
+    setRegistrationError('');
+    setSuccessMessage('');
+  };
+
+  const panel = {
+    login: { title: 'Welcome back', body: 'Pick up where you left off: assigned practicals, marked attempts, and class progress.' },
+    register_student: { title: 'Join your class lab', body: 'Create your account, choose your school and stream, and start your KCSE practicals.' },
+    register_school: { title: 'Bring your school online', body: 'Enrol your school, add science teachers, and give every student access to a virtual lab.' },
+    register_admin: { title: 'Platform setup', body: 'Secure the master account that manages schools, curriculum and platform health.' }
+  }[authMode as 'login' | 'register_student' | 'register_school' | 'register_admin'] || { title: 'Welcome', body: '' };
+
   return (
-    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4 sm:p-6 lg:p-8 bg-slate-50 dark:bg-slate-950">
-      <div className="w-full max-w-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md shadow-sm overflow-hidden text-slate-900 dark:text-slate-100">
-        
-        {/* Navigation back to landing page */}
-        <div className="px-6 pt-5 pb-3 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <button
-            type="button"
-            onClick={() => setCurrentView('landing')}
-            className="inline-flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Back to overview</span>
-          </button>
-          
-          <div className="flex flex-wrap items-center gap-1 p-0.5 bg-slate-100 dark:bg-slate-800 rounded-md border border-slate-200 dark:border-slate-700 text-xs">
-            <button
-              type="button"
-              onClick={() => { setAuthMode('login'); setLoginError(''); setRegistrationError(''); }}
-              className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
-                authMode === 'login'
-                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
-              }`}
-            >
-              Sign in
-            </button>
+    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-3 sm:p-6 lg:p-10 bg-gradient-to-br from-slate-50 via-white to-emerald-50/60 dark:from-slate-950 dark:via-slate-950 dark:to-emerald-950/20">
+      <div className="w-full max-w-6xl grid lg:grid-cols-[5fr_7fr] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl shadow-slate-900/5 overflow-hidden">
 
-            <button
-              type="button"
-              onClick={() => { setAuthMode('register_student'); setLoginError(''); setRegistrationError(''); }}
-              className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
-                authMode === 'register_student'
-                  ? 'bg-emerald-600 text-white shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
-              }`}
-            >
-              Register student
-            </button>
+        {/* Brand panel */}
+        <aside className="relative hidden lg:flex flex-col justify-between p-10 text-white bg-slate-900 overflow-hidden">
+          <div aria-hidden className="absolute inset-0 opacity-30" style={{ backgroundImage: 'radial-gradient(circle at 20% 10%, #10b981 0, transparent 45%), radial-gradient(circle at 90% 90%, #6366f1 0, transparent 40%)' }} />
+          <div aria-hidden className="absolute inset-0 opacity-[0.07]" style={{ backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
+          <div className="relative flex items-center gap-2.5">
+            <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur flex items-center justify-center ring-1 ring-white/20">
+              <FlaskConical className="w-5 h-5 text-emerald-300" />
+            </div>
+            <span className="font-bold tracking-tight text-lg">STEM-SPARK-LAB</span>
+          </div>
 
-            <button
-              type="button"
-              onClick={() => { setAuthMode('register_school'); setLoginError(''); setRegistrationError(''); }}
-              className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
-                authMode === 'register_school'
-                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
-              }`}
-            >
-              Enroll school
-            </button>
+          <div className="relative space-y-6">
+            <div>
+              <h1 className="text-3xl xl:text-4xl font-extrabold tracking-tight leading-tight">{panel.title}</h1>
+              <p className="mt-3 text-slate-300 text-[15px] leading-relaxed max-w-sm">{panel.body}</p>
+            </div>
+            <ul className="space-y-3.5 text-sm text-slate-200">
+              <li className="flex items-start gap-3"><Zap className="w-4 h-4 mt-0.5 text-emerald-300 shrink-0" /><span>Interactive KCSE chemistry, physics and biology practicals</span></li>
+              <li className="flex items-start gap-3"><ClipboardCheck className="w-4 h-4 mt-0.5 text-emerald-300 shrink-0" /><span>Digital answer sheets with automatic marking for teachers</span></li>
+              <li className="flex items-start gap-3"><ShieldCheck className="w-4 h-4 mt-0.5 text-emerald-300 shrink-0" /><span>Each school's data stays separate and protected</span></li>
+            </ul>
+          </div>
 
+          <p className="relative text-xs text-slate-400">Built for Kenyan secondary schools by Intellica Automation Group.</p>
+        </aside>
+
+        {/* Form panel */}
+        <section className="min-w-0 flex flex-col">
+
+        {/* Navigation back to landing page + mode switcher */}
+        <div className="px-5 sm:px-8 pt-5 pb-4 border-b border-slate-100 dark:border-slate-800 flex flex-col gap-3">
+          <div className="flex items-center justify-between">
             <button
               type="button"
-              onClick={() => { setAuthMode('register_admin'); setLoginError(''); setRegistrationError(''); }}
-              className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
-                authMode === 'register_admin'
-                  ? 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
-              }`}
+              onClick={() => setCurrentView('landing')}
+              className="inline-flex items-center gap-1.5 text-[13px] font-medium text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded"
             >
-              Platform admin
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Back to overview</span>
             </button>
+            <div className="lg:hidden flex items-center gap-2 text-slate-900 dark:text-white font-bold text-sm">
+              <FlaskConical className="w-4 h-4 text-emerald-600" /> STEM-SPARK-LAB
+            </div>
+          </div>
+          <div role="tablist" aria-label="Account actions" className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl overflow-x-auto no-scrollbar self-start max-w-full">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={authMode === 'login'}
+                onClick={() => goMode('login')}
+                className={`whitespace-nowrap px-3.5 py-1.5 rounded-lg text-[13px] font-semibold transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
+                  authMode === 'login'
+                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                Sign in
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={authMode === 'register_student'}
+                onClick={() => goMode('register_student')}
+                className={`whitespace-nowrap px-3.5 py-1.5 rounded-lg text-[13px] font-semibold transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
+                  authMode === 'register_student'
+                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                Student
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={authMode === 'register_school'}
+                onClick={() => goMode('register_school')}
+                className={`whitespace-nowrap px-3.5 py-1.5 rounded-lg text-[13px] font-semibold transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
+                  authMode === 'register_school'
+                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                School
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={authMode === 'register_admin'}
+                onClick={() => goMode('register_admin')}
+                className={`whitespace-nowrap px-3.5 py-1.5 rounded-lg text-[13px] font-semibold transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
+                  authMode === 'register_admin'
+                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                Platform admin
+              </button>
           </div>
         </div>
 
         {/* Alerts */}
         {successMessage && (
-          <div className="mx-6 mt-4 p-3 rounded-md bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900 flex items-center space-x-2 text-emerald-800 dark:text-emerald-300 text-xs">
+          <div role="status" className="mx-5 sm:mx-8 mt-5 p-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900 flex items-center space-x-2 text-emerald-800 dark:text-emerald-300 text-xs">
             <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
             <span>{successMessage}</span>
           </div>
         )}
 
         {registrationError && (
-          <div className="mx-6 mt-4 p-3 rounded-md bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900 flex items-center space-x-2 text-rose-800 dark:text-rose-300 text-xs">
+          <div role="alert" className="mx-5 sm:mx-8 mt-5 p-3 rounded-lg bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900 flex items-center space-x-2 text-rose-800 dark:text-rose-300 text-xs">
             <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
             <span>{registrationError}</span>
           </div>
         )}
 
-        <div className="p-6">
+        <div className="p-5 sm:p-8 flex-1">
           
           {/* 1. REGISTER SCHOOL */}
           {authMode === 'register_school' && (
             <div className="space-y-5">
               <div>
-                <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+                <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
                   Register new secondary school
                 </h2>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
@@ -334,7 +393,7 @@ export const AuthPage: React.FC = () => {
                   
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="sm:col-span-2">
-                      <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">
+                      <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                         School name *
                       </label>
                       <input
@@ -343,12 +402,12 @@ export const AuthPage: React.FC = () => {
                         placeholder="Enter official school name"
                         value={schoolForm.name}
                         onChange={e => setSchoolForm({ ...schoolForm, name: e.target.value })}
-                        className="w-full px-3 py-1.5 rounded-md bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-xs focus:outline-none focus:ring-1 focus:ring-slate-900"
+                        className="w-full px-3.5 py-2.5 rounded-lg bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 transition focus:outline-none focus:ring-1 focus:ring-slate-900"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">
+                      <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                         Registration number (optional)
                       </label>
                       <input
@@ -356,12 +415,12 @@ export const AuthPage: React.FC = () => {
                         placeholder="e.g. MOE/REG/00102"
                         value={schoolForm.registrationNumber}
                         onChange={e => setSchoolForm({ ...schoolForm, registrationNumber: e.target.value })}
-                        className="w-full px-3 py-1.5 rounded-md bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-slate-900"
+                        className="w-full px-3.5 py-2.5 rounded-lg bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 transition font-mono focus:outline-none focus:ring-1 focus:ring-slate-900"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">
+                      <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                         County *
                       </label>
                       <input
@@ -370,18 +429,18 @@ export const AuthPage: React.FC = () => {
                         placeholder="e.g. Nairobi"
                         value={schoolForm.county}
                         onChange={e => setSchoolForm({ ...schoolForm, county: e.target.value })}
-                        className="w-full px-3 py-1.5 rounded-md bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-xs focus:outline-none focus:ring-1 focus:ring-slate-900"
+                        className="w-full px-3.5 py-2.5 rounded-lg bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 transition focus:outline-none focus:ring-1 focus:ring-slate-900"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">
+                      <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                         Category
                       </label>
                       <select
                         value={schoolForm.category}
                         onChange={e => setSchoolForm({ ...schoolForm, category: e.target.value as any })}
-                        className="w-full px-3 py-1.5 rounded-md bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-xs focus:outline-none focus:ring-1 focus:ring-slate-900"
+                        className="w-full px-3.5 py-2.5 rounded-lg bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 transition focus:outline-none focus:ring-1 focus:ring-slate-900"
                       >
                         <option value="National">National</option>
                         <option value="Extra-County">Extra-County</option>
@@ -392,13 +451,13 @@ export const AuthPage: React.FC = () => {
                     </div>
 
                     <div>
-                      <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">
+                      <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                         Curriculum package
                       </label>
                       <select
                         value={schoolForm.subscriptionPlan}
                         onChange={e => setSchoolForm({ ...schoolForm, subscriptionPlan: e.target.value as any })}
-                        className="w-full px-3 py-1.5 rounded-md bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-xs focus:outline-none focus:ring-1 focus:ring-slate-900"
+                        className="w-full px-3.5 py-2.5 rounded-lg bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 transition focus:outline-none focus:ring-1 focus:ring-slate-900"
                       >
                         <option value="Institutional Pro">Institutional Pro (Full Lab)</option>
                         <option value="Standard KCSE Prep">Standard KCSE Prep</option>
@@ -416,7 +475,7 @@ export const AuthPage: React.FC = () => {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">
+                      <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                         Principal / Administrator name *
                       </label>
                       <input
@@ -424,12 +483,12 @@ export const AuthPage: React.FC = () => {
                         required
                         value={schoolForm.adminName}
                         onChange={e => setSchoolForm({ ...schoolForm, adminName: e.target.value })}
-                        className="w-full px-3 py-1.5 rounded-md bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-xs focus:outline-none focus:ring-1 focus:ring-slate-900"
+                        className="w-full px-3.5 py-2.5 rounded-lg bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 transition focus:outline-none focus:ring-1 focus:ring-slate-900"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">
+                      <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                         Administrator email address *
                       </label>
                       <input
@@ -437,24 +496,27 @@ export const AuthPage: React.FC = () => {
                         required
                         value={schoolForm.adminEmail}
                         onChange={e => setSchoolForm({ ...schoolForm, adminEmail: e.target.value })}
-                        className="w-full px-3 py-1.5 rounded-md bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-xs focus:outline-none focus:ring-1 focus:ring-slate-900"
+                        className="w-full px-3.5 py-2.5 rounded-lg bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 transition focus:outline-none focus:ring-1 focus:ring-slate-900"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">
-                        Institutional password (optional)
+                      <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                        Create a password * (at least 8 characters)
                       </label>
                       <input
                         type="password"
+                        required
+                        minLength={8}
+                        autoComplete="new-password"
                         value={schoolForm.adminPassword}
                         onChange={e => setSchoolForm({ ...schoolForm, adminPassword: e.target.value })}
-                        className="w-full px-3 py-1.5 rounded-md bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-xs focus:outline-none focus:ring-1 focus:ring-slate-900"
+                        className="w-full px-3.5 py-2.5 rounded-lg bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 transition focus:outline-none focus:ring-1 focus:ring-slate-900"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">
+                      <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                         Contact phone number
                       </label>
                       <input
@@ -462,7 +524,7 @@ export const AuthPage: React.FC = () => {
                         placeholder="+254 700 000 000"
                         value={schoolForm.phone}
                         onChange={e => setSchoolForm({ ...schoolForm, phone: e.target.value })}
-                        className="w-full px-3 py-1.5 rounded-md bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-xs focus:outline-none focus:ring-1 focus:ring-slate-900"
+                        className="w-full px-3.5 py-2.5 rounded-lg bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 transition focus:outline-none focus:ring-1 focus:ring-slate-900"
                       />
                     </div>
                   </div>
@@ -485,7 +547,7 @@ export const AuthPage: React.FC = () => {
           {authMode === 'register_student' && (
             <div className="space-y-5">
               <div>
-                <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+                <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
                   Register student account
                 </h2>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
@@ -513,14 +575,14 @@ export const AuthPage: React.FC = () => {
                   
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="sm:col-span-2">
-                      <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">
+                      <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                         Select your secondary school *
                       </label>
                       <select
                         required
                         value={studentForm.schoolId}
                         onChange={e => handleSchoolChange(e.target.value)}
-                        className="w-full px-3 py-1.5 rounded-md bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-xs focus:outline-none focus:ring-1 focus:ring-slate-900"
+                        className="w-full px-3.5 py-2.5 rounded-lg bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 transition focus:outline-none focus:ring-1 focus:ring-slate-900"
                       >
                         {schools.map(s => (
                           <option key={s.id} value={s.id}>
@@ -531,7 +593,7 @@ export const AuthPage: React.FC = () => {
                     </div>
 
                     <div>
-                      <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">
+                      <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                         Student full name *
                       </label>
                       <input
@@ -539,12 +601,12 @@ export const AuthPage: React.FC = () => {
                         required
                         value={studentForm.name}
                         onChange={e => setStudentForm({ ...studentForm, name: e.target.value })}
-                        className="w-full px-3 py-1.5 rounded-md bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-xs focus:outline-none focus:ring-1 focus:ring-slate-900"
+                        className="w-full px-3.5 py-2.5 rounded-lg bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 transition focus:outline-none focus:ring-1 focus:ring-slate-900"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">
+                      <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                         Student admission number *
                       </label>
                       <input
@@ -552,12 +614,27 @@ export const AuthPage: React.FC = () => {
                         required
                         value={studentForm.admissionNumber}
                         onChange={e => setStudentForm({ ...studentForm, admissionNumber: e.target.value })}
-                        className="w-full px-3 py-1.5 rounded-md bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-slate-900"
+                        className="w-full px-3.5 py-2.5 rounded-lg bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 transition font-mono focus:outline-none focus:ring-1 focus:ring-slate-900"
                       />
                     </div>
 
                     <div className="sm:col-span-2">
-                      <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">
+                      <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                        Create a password * (at least 8 characters)
+                      </label>
+                      <input
+                        type="password"
+                        required
+                        minLength={8}
+                        autoComplete="new-password"
+                        value={studentForm.password}
+                        onChange={e => setStudentForm({ ...studentForm, password: e.target.value })}
+                        className="w-full px-3.5 py-2.5 rounded-lg bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 transition"
+                      />
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                         Student email address *
                       </label>
                       <input
@@ -565,7 +642,7 @@ export const AuthPage: React.FC = () => {
                         required
                         value={studentForm.email}
                         onChange={e => setStudentForm({ ...studentForm, email: e.target.value })}
-                        className="w-full px-3 py-1.5 rounded-md bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-xs focus:outline-none focus:ring-1 focus:ring-slate-900"
+                        className="w-full px-3.5 py-2.5 rounded-lg bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 transition focus:outline-none focus:ring-1 focus:ring-slate-900"
                       />
                     </div>
                   </div>
@@ -660,87 +737,87 @@ export const AuthPage: React.FC = () => {
 
           {/* 3. REGULAR LOGIN */}
           {authMode === 'login' && (
-            <div className="space-y-6">
+            <div className="space-y-7 max-w-md">
               <div>
-                <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-                  Sign in
-                </h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Sign in with your registered school administrator, teacher, or student email.
+                <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Sign in</h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                  Use the email address your school registered for you.
                 </p>
               </div>
 
               {loginError && (
-                <div className="p-3 rounded-md bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900 text-rose-800 dark:text-rose-300 text-xs flex flex-col gap-2">
-                  <div className="flex items-center gap-2">
-                    <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
-                    <span>{loginError}</span>
-                  </div>
-                  {loginError.includes('No registered account') && (
-                    <div className="pt-2 border-t border-rose-200/60 dark:border-rose-900/60 flex items-center justify-between gap-2">
-                      <span className="text-[11px] text-rose-700 dark:text-rose-400">First time setting up this server?</span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setAdminForm(prev => ({ ...prev, email: loginForm.email || prev.email }));
-                          setAuthMode('register_admin');
-                          setLoginError('');
-                        }}
-                        className="text-[11px] font-semibold text-rose-900 dark:text-rose-200 underline hover:no-underline cursor-pointer"
-                      >
-                        Setup Platform Super Admin →
-                      </button>
-                    </div>
-                  )}
+                <div role="alert" className="p-3 rounded-lg bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900 text-rose-800 dark:text-rose-300 text-sm flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 mt-0.5 shrink-0 text-rose-600" />
+                  <span>{loginError}</span>
                 </div>
               )}
 
-              <form onSubmit={handleLoginSubmit} className="space-y-3.5 max-w-md">
+              <form onSubmit={handleLoginSubmit} className="space-y-4" noValidate>
                 <div>
-                  <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
-                    Email address
-                  </label>
-                  <input
-                    type="email"
-                    required
-                    value={loginForm.email}
-                    onChange={e => setLoginForm({ ...loginForm, email: e.target.value })}
-                    className="w-full px-3 py-1.5 rounded-md bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-xs focus:outline-none focus:ring-1 focus:ring-slate-900"
-                  />
+                  <label htmlFor="login-email" className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Email address</label>
+                  <div className="relative">
+                    <Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                    <input
+                      id="login-email"
+                      type="email"
+                      autoComplete="username"
+                      inputMode="email"
+                      autoFocus
+                      placeholder="you@school.ac.ke"
+                      value={loginForm.email}
+                      onChange={e => setLoginForm({ ...loginForm, email: e.target.value })}
+                      className="w-full pl-10 pr-3.5 py-2.5 rounded-lg bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 transition"
+                    />
+                  </div>
                 </div>
 
                 <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
-                      Password
-                    </label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label htmlFor="login-password" className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300">Password</label>
                     <button
                       type="button"
-                      onClick={() => {
-                        setAuthMode('forgot_password');
-                        setLoginError('');
-                      }}
-                      className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline font-medium cursor-pointer"
+                      onClick={() => goMode('forgot_password')}
+                      className="text-[13px] font-medium text-emerald-700 dark:text-emerald-400 hover:underline cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded"
                     >
                       Forgot password?
                     </button>
                   </div>
-                  <input
-                    type="password"
-                    value={loginForm.password}
-                    onChange={e => setLoginForm({ ...loginForm, password: e.target.value })}
-                    className="w-full px-3 py-1.5 rounded-md bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-xs focus:outline-none focus:ring-1 focus:ring-slate-900"
-                  />
+                  <div className="relative">
+                    <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                    <input
+                      id="login-password"
+                      type={showLoginPassword ? 'text' : 'password'}
+                      autoComplete="current-password"
+                      placeholder="Enter your password"
+                      value={loginForm.password}
+                      onChange={e => setLoginForm({ ...loginForm, password: e.target.value })}
+                      className="w-full pl-10 pr-11 py-2.5 rounded-lg bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 transition"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowLoginPassword(v => !v)}
+                      aria-label={showLoginPassword ? 'Hide password' : 'Show password'}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded"
+                    >
+                      {showLoginPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </div>
 
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full py-2 px-4 rounded-md bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 text-white dark:text-slate-900 font-medium text-xs transition-colors shadow-sm disabled:opacity-50"
+                  className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold text-sm shadow-sm transition cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-emerald-500 dark:focus-visible:ring-offset-slate-900"
                 >
-                  {isSubmitting ? 'Authenticating...' : 'Sign in'}
+                  {isSubmitting ? (<><Loader2 className="w-4 h-4 animate-spin" /> Signing in…</>) : 'Sign in'}
                 </button>
               </form>
+
+              <div className="pt-5 border-t border-slate-100 dark:border-slate-800 text-sm text-slate-500 dark:text-slate-400 flex flex-wrap gap-x-5 gap-y-2">
+                <span>New here?</span>
+                <button type="button" onClick={() => goMode('register_student')} className="font-semibold text-slate-900 dark:text-white hover:underline cursor-pointer">Create a student account</button>
+                <button type="button" onClick={() => goMode('register_school')} className="font-semibold text-slate-900 dark:text-white hover:underline cursor-pointer">Enrol your school</button>
+              </div>
             </div>
           )}
 
@@ -748,7 +825,7 @@ export const AuthPage: React.FC = () => {
           {authMode === 'register_admin' && (
             <div className="space-y-6">
               <div>
-                <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+                <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
                   Platform Super Administrator Setup
                 </h2>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
@@ -758,35 +835,48 @@ export const AuthPage: React.FC = () => {
 
               <form onSubmit={handleAdminSubmit} className="space-y-3.5 max-w-md">
                 <div>
-                  <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                     Full name *
                   </label>
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Joseph Kioko"
+                    placeholder="Full name"
                     value={adminForm.name}
                     onChange={e => setAdminForm({ ...adminForm, name: e.target.value })}
-                    className="w-full px-3 py-1.5 rounded-md bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-xs focus:outline-none focus:ring-1 focus:ring-slate-900"
+                    className="w-full px-3.5 py-2.5 rounded-lg bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 transition focus:outline-none focus:ring-1 focus:ring-slate-900"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                     Official administrator email *
                   </label>
                   <input
                     type="email"
                     required
-                    placeholder="e.g. jkioko999@gmail.com"
+                    placeholder="you@example.com"
                     value={adminForm.email}
                     onChange={e => setAdminForm({ ...adminForm, email: e.target.value })}
-                    className="w-full px-3 py-1.5 rounded-md bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-xs focus:outline-none focus:ring-1 focus:ring-slate-900"
+                    className="w-full px-3.5 py-2.5 rounded-lg bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 transition focus:outline-none focus:ring-1 focus:ring-slate-900"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                    Setup key * <span className="font-normal text-slate-500">(the SUPER_ADMIN_SETUP_KEY set in your hosting environment)</span>
+                  </label>
+                  <input
+                    type="password"
+                    autoComplete="off"
+                    value={adminForm.setupKey}
+                    onChange={e => setAdminForm({ ...adminForm, setupKey: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-lg bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 transition"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                     Permanent password *
                   </label>
                   <div className="relative">
@@ -796,7 +886,7 @@ export const AuthPage: React.FC = () => {
                       placeholder="Choose your secure password"
                       value={adminForm.password}
                       onChange={e => setAdminForm({ ...adminForm, password: e.target.value })}
-                      className="w-full px-3 py-1.5 rounded-md bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-xs focus:outline-none focus:ring-1 focus:ring-slate-900 pr-9"
+                      className="w-full px-3.5 py-2.5 rounded-lg bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 transition focus:outline-none focus:ring-1 focus:ring-slate-900 pr-9"
                     />
                     <button
                       type="button"
@@ -820,6 +910,7 @@ export const AuthPage: React.FC = () => {
 
         </div>
 
+        </section>
       </div>
     </div>
   );

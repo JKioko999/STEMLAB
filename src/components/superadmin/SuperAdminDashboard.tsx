@@ -78,7 +78,7 @@ export const SuperAdminDashboard: React.FC = () => {
   const [successNotification, setSuccessNotification] = useState<string | null>(null);
   const uniqueCounties = Array.from(new Set(schools.map(s => s.county)));
 
-  const handleCreateSchool = (e: React.FormEvent) => {
+  const handleCreateSchool = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError('');
     if (!newSchoolForm.name.trim() || !newSchoolForm.registrationNumber.trim() || !newSchoolForm.adminName.trim() || !newSchoolForm.adminEmail.trim()) {
@@ -88,7 +88,12 @@ export const SuperAdminDashboard: React.FC = () => {
     const targetSchoolName = newSchoolForm.name.trim();
     const targetAdminEmail = newSchoolForm.adminEmail.trim();
 
-    registerSchool(newSchoolForm);
+    try {
+      await registerSchool(newSchoolForm);
+    } catch (err: any) {
+      setFormError(err.message || 'Could not register the school. Please try again.');
+      return;
+    }
     setIsAddSchoolModalOpen(false);
     setSuccessNotification(`"${targetSchoolName}" registered successfully! Welcome credentials and temporary password sent directly to ${targetAdminEmail} from intellicaautomationgroup@gmail.com.`);
     setTimeout(() => setSuccessNotification(null), 6000);

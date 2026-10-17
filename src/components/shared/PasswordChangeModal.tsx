@@ -18,12 +18,12 @@ export const PasswordChangeModal: React.FC = () => {
 
   if (!currentUser || !currentUser.mustChangePassword) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    if (newPassword.length < 6) {
-      setError('Password must be at least 6 characters long.');
+    if (newPassword.length < 8) {
+      setError('Password must be at least 8 characters long.');
       return;
     }
 
@@ -32,8 +32,12 @@ export const PasswordChangeModal: React.FC = () => {
       return;
     }
 
-    changePassword(currentUser.id, newPassword);
-    setSuccess(true);
+    try {
+      await changePassword(currentUser.id, newPassword);
+      setSuccess(true);
+    } catch (err: any) {
+      setError(err.message || 'Could not update your password. Please try again.');
+    }
   };
 
   return (

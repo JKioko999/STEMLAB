@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { School, User, UserRole, ClassGroup, Assignment, Attempt, ExperimentSpec, EmailDispatch, UserPreferences, COMPANY_SENDER_EMAIL, COMPANY_SENDER_NAME } from '../types';
 import { INITIAL_EXPERIMENTS } from '../data/experimentSpecs';
-import { api } from '../services/api';
+import { api, authToken } from '../services/api';
 
 interface AppContextType {
   currentUser: User | null;
@@ -14,7 +14,7 @@ interface AppContextType {
   sentEmails: EmailDispatch[];
   latestDispatchedEmail: EmailDispatch | null;
   clearDispatchedEmail: () => void;
-  changePassword: (userId: string, newPassword: string) => void;
+  changePassword: (userId: string, newPassword: string, currentPassword?: string) => Promise<void>;
   
   // Settings & Preferences
   isSettingsOpen: boolean;
@@ -63,9 +63,9 @@ interface AppContextType {
   }) => Promise<{ success: boolean; message: string; emailDispatch?: EmailDispatch }>;
   
   // Registration
-  registerSchool: (schoolData: Omit<School, 'id' | 'createdAt' | 'status' | 'totalStudents' | 'totalTeachers'>, adminPassword?: string) => School;
-  registerSuperAdmin: (adminData: { name: string; email: string; password?: string }) => User;
-  registerStudent: (studentData: { name: string; email: string; schoolId: string; classId: string; admissionNumber: string; password?: string }) => User;
+  registerSchool: (schoolData: Omit<School, 'id' | 'createdAt' | 'status' | 'totalStudents' | 'totalTeachers'>, adminPassword?: string) => Promise<School>;
+  registerSuperAdmin: (adminData: { name: string; email: string; password: string; setupKey?: string }) => Promise<User>;
+  registerStudent: (studentData: { name: string; email: string; schoolId: string; classId: string; admissionNumber: string; password: string }) => Promise<User>;
   registerTeacher: (teacherData: { name: string; email: string; schoolId: string; subjectSpecialization: string }) => User;
   
   // Deletion Actions
@@ -185,9 +185,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
-    if (saved) {
+    if (saved && authToken.get()) {
       try {
-        return JSON.parse(saved);
+        const { password, tempPassword, ...safe } = JSON.parse(saved);
+        return safe;
       } catch (e) {
         // fallback
       }
@@ -463,7 +464,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [schools]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users.map(({ password, tempPassword, ...u }) => u)));
   }, [users]);
 
   useEffect(() => {
@@ -483,16 +484,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [attempts]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.EMAILS, JSON.stringify(sentEmails));
+    localStorage.setItem(STORAGE_KEYS.EMAILS, JSON.stringify(sentEmails.map(({ tempPassword, ...m }) => ({ ...m, messageBody: tempPassword ? m.messageBody.split(tempPassword).join('••••••••') : m.messageBody }))));
   }, [sentEmails]);
 
   useEffect(() => {
     if (currentUser) {
-      localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(currentUser));
+      localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify((({ password, tempPassword, ...u }) => u)(currentUser)));
     } else {
       localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
     }
   }, [currentUser]);
+
+  useEffect(() => {
+    const onExpired = () => { setCurrentUser(null); setViewWithUrl('auth'); setAuthMode('login'); };
+    window.addEventListener('stem:session-expired', onExpired);
+    return () => window.removeEventListener('stem:session-expired', onExpired);
+  }, []);
 
   const login = (user: User) => {
     setUsers(prev => {
@@ -507,6 +514,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const logout = () => {
+    api.users.logout();
     setCurrentUser(null);
     setViewWithUrl('landing');
     setAuthMode('login');
@@ -524,166 +532,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setLatestDispatchedEmail(null);
   };
 
-  const changePassword = (userId: string, newPassword: string) => {
-    const targetUser = users.find(u => u.id === userId || (currentUser?.id === userId && u.email === currentUser.email));
-    const targetEmail = targetUser?.email || currentUser?.email;
-
-    setUsers(prev => prev.map(u => {
-      const isMatch = u.id === userId || (targetEmail && u.email.toLowerCase() === targetEmail.toLowerCase());
-      if (isMatch) {
-        return {
-          ...u,
-          mustChangePassword: false,
-          tempPassword: undefined,
-          password: newPassword
-        };
-      }
-      return u;
-    }));
-
-    if (currentUser?.id === userId || (targetEmail && currentUser?.email?.toLowerCase() === targetEmail.toLowerCase())) {
-      setCurrentUser(prev => prev ? {
-        ...prev,
-        mustChangePassword: false,
-        tempPassword: undefined,
-        password: newPassword
-      } : null);
-    }
-
-    api.users.changePassword(userId, newPassword, targetEmail).catch(err => console.warn('API sync:', err));
+  const changePassword = async (userId: string, newPassword: string, currentPassword?: string) => {
+    // The server is the authority; only update local state once it has accepted the change.
+    await api.users.changePassword(newPassword, currentPassword);
+    setUsers(prev => prev.map(u => (u.id === userId ? { ...u, mustChangePassword: false } : u)));
+    setCurrentUser(prev => (prev && prev.id === userId ? { ...prev, mustChangePassword: false } : prev));
   };
 
   const requestPasswordResetOtp = async (email: string): Promise<{ success: boolean; error?: string; otp?: string; user?: User; infoMessage?: string }> => {
     const normalizedEmail = email.trim().toLowerCase();
-    if (!normalizedEmail) {
-      return { success: false, error: 'Please enter your registered email address.' };
-    }
-
-    let targetUser = users.find(u => u.email.toLowerCase() === normalizedEmail);
-
-    if (!targetUser) {
-      try {
-        const remoteUsers = await api.users.getAll({ email: normalizedEmail });
-        if (Array.isArray(remoteUsers) && remoteUsers.length > 0) {
-          targetUser = remoteUsers[0];
-          setUsers(prev => {
-            if (prev.some(u => u.id === targetUser!.id)) return prev;
-            return [targetUser!, ...prev];
-          });
-        }
-      } catch (err) {
-        console.warn('Remote user check:', err);
-      }
-    }
-
-    if (!targetUser) {
-      return {
-        success: false,
-        error: `No registered account found with email "${email}". Password reset is only available for registered school administrators, teachers, and students. Please check your spelling or register for an account.`
-      };
-    }
-
-    let serverMessage = '';
-    let serverOtp = '';
-
-    // Trigger backend mailer service to transmit real email from intellicaautomationgroup@gmail.com
+    if (!normalizedEmail) return { success: false, error: 'Please enter your registered email address.' };
     try {
-      const res = await api.users.requestResetOtp(normalizedEmail, {
-        id: targetUser.id,
-        name: targetUser.name,
-        role: targetUser.role,
-        schoolId: targetUser.schoolId || undefined
-      });
-      serverMessage = res.message || '';
-      if (res.targetUser) {
-        targetUser = { ...targetUser, ...res.targetUser };
-      }
+      const res = await api.users.requestResetOtp(normalizedEmail);
+      setActiveResetSession({ email: normalizedEmail, otp: '', expiresAt: Date.now() + 10 * 60 * 1000, user: { email: normalizedEmail } as User });
+      return { success: true, user: { email: normalizedEmail, name: '' } as User, infoMessage: res.message };
     } catch (err: any) {
-      console.warn('Backend reset OTP sync:', err.message);
+      return { success: false, error: err.message || 'Could not send a code. Please try again.' };
     }
-
-    // Generate local 6-digit session OTP code
-    const otp = serverOtp || Math.floor(100000 + Math.random() * 900000).toString();
-    const session = {
-      email: normalizedEmail,
-      otp,
-      expiresAt: Date.now() + 10 * 60 * 1000, // 10 minutes validity
-      user: targetUser
-    };
-    setActiveResetSession(session);
-
-    const school = targetUser.schoolId ? schools.find(s => s.id === targetUser.schoolId) : null;
-    const emailDispatch: EmailDispatch = {
-      id: `email-otp-${Date.now()}-${Math.random().toString(36).substring(2, 5)}`,
-      senderEmail: COMPANY_SENDER_EMAIL,
-      recipientEmail: targetUser.email,
-      recipientName: targetUser.name,
-      recipientRole: targetUser.role,
-      subject: `Password Reset Verification Code (OTP): ${otp} - Intellica Automation Group`,
-      tempPassword: otp,
-      messageBody: `Dear ${targetUser.name},\n\nYou requested a password reset for your STEM-SPARK-LAB Kenya registered account (${targetUser.email}).\n\nYour One-Time Password (OTP) verification code is:\n\n${otp}\n\n• Validity: 10 minutes\n• Enter this 6-digit OTP code on the verification screen to verify your identity and set a new password.\n• If you did not request this verification code, please ignore this email or contact support at ${COMPANY_SENDER_EMAIL}.\n\nFrom: ${COMPANY_SENDER_NAME} <${COMPANY_SENDER_EMAIL}>\nRegards,\nIntellica Automation Group Security Team\nSTEM-SPARK-LAB Kenya Directorate`,
-      sentAt: `${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}, ${new Date().toLocaleDateString()}`,
-      schoolName: school?.name
-    };
-
-    // Record dispatch in background audit history without popping up any modal or exposing the OTP on screen
-    setSentEmails(prev => [emailDispatch, ...prev]);
-
-    // Secure server/console notice for auditing
-    console.info(`[STEM-SPARK-LAB Mail Delivery] 6-digit verification code sent from ${COMPANY_SENDER_EMAIL} to: ${targetUser.email}`);
-
-    return { 
-      success: true, 
-      user: targetUser,
-      infoMessage: serverMessage || `A 6-digit verification code has been dispatched from ${COMPANY_SENDER_EMAIL} to ${targetUser.email}. Please check your inbox.`
-    };
   };
 
   const verifyPasswordResetOtp = async (email: string, enteredOtp: string): Promise<{ valid: boolean; error?: string }> => {
-    const normalizedEmail = email.trim().toLowerCase();
-    const cleanOtp = enteredOtp.trim();
-
-    // Check with server
     try {
-      const srvRes = await api.users.verifyResetOtp(normalizedEmail, cleanOtp);
-      if (srvRes.success) {
-        return { valid: true };
-      }
-    } catch (e: any) {
-      // Fallback to local session check
+      const res = await api.users.verifyResetOtp(email, enteredOtp.trim());
+      return res.success ? { valid: true } : { valid: false, error: 'That code is incorrect.' };
+    } catch (err: any) {
+      return { valid: false, error: err.message || 'Could not verify the code.' };
     }
-
-    if (!activeResetSession || activeResetSession.email !== normalizedEmail) {
-      return { valid: false, error: 'No active OTP verification session found for this email. Please request a new verification code.' };
-    }
-
-    if (Date.now() > activeResetSession.expiresAt) {
-      return { valid: false, error: 'The verification code has expired (10-minute limit). Please request a new OTP code.' };
-    }
-
-    const isMatch = activeResetSession.otp === cleanOtp;
-    if (!isMatch) {
-      return { valid: false, error: 'Invalid verification code. Please check the 6-digit OTP code sent to your email.' };
-    }
-
-    return { valid: true };
   };
 
   const resetPasswordWithOtp = async (email: string, enteredOtp: string, newPassword: string): Promise<{ success: boolean; error?: string }> => {
-    const verifyResult = await verifyPasswordResetOtp(email, enteredOtp);
-    if (!verifyResult.valid) {
-      return { success: false, error: verifyResult.error };
+    try {
+      await api.users.changePassword(newPassword);
+      setActiveResetSession(null);
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Could not update your password. Please request a new code.' };
     }
-
-    if (!activeResetSession?.user) {
-      return { success: false, error: 'Account session not found. Please request a new OTP code.' };
-    }
-
-    const targetUser = activeResetSession.user;
-    changePassword(targetUser.id, newPassword);
-    setActiveResetSession(null);
-
-    return { success: true };
   };
 
   const sendUserEmail = async (data: {
@@ -738,134 +622,47 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // 1. School Registration with Credentials Dispatch
-  const registerSchool = (
+  // 1. School registration (server creates the school + principal account, emails credentials, returns a session)
+  const registerSchool = async (
     schoolData: Omit<School, 'id' | 'createdAt' | 'status' | 'totalStudents' | 'totalTeachers'>,
     adminPassword?: string
-  ): School => {
+  ): Promise<School> => {
     const schoolId = `sch-${Date.now().toString(36)}`;
     const adminUserId = `usr-admin-${Date.now().toString(36)}`;
-    const tempPassword = adminPassword || generateTempPassword('Stem');
     const registrationNumber = schoolData.registrationNumber || `MOE/REG/${Math.floor(10000 + Math.random() * 90000)}/2026`;
+    const res = await api.schools.create({ id: schoolId, ...schoolData, registrationNumber }, adminPassword, { schoolId, adminUserId });
 
-    const newSchool: School = {
-      ...schoolData,
-      id: schoolId,
-      registrationNumber: registrationNumber,
-      totalStudents: 0,
-      totalTeachers: 1,
-      createdAt: new Date().toISOString().split('T')[0],
-      status: 'active'
-    };
-
-    const newAdminUser: User = {
-      id: adminUserId,
-      schoolId: schoolId,
-      name: `${schoolData.adminName} (Principal)`,
-      email: schoolData.adminEmail,
-      role: 'school_admin',
-      avatarColor: 'bg-indigo-600',
-      mustChangePassword: true,
-      tempPassword: tempPassword
-    };
-
-    const emailDispatch: EmailDispatch = {
-      id: `email-${Date.now()}-${Math.random().toString(36).substring(2, 5)}`,
-      senderEmail: COMPANY_SENDER_EMAIL,
-      recipientEmail: schoolData.adminEmail,
-      recipientName: schoolData.adminName,
-      recipientRole: 'school_admin',
-      subject: `Official Welcome & Portal Activation: ${schoolData.name} STEM Spark Lab Admin Access`,
-      tempPassword: tempPassword,
-      messageBody: `Dear ${schoolData.adminName},\n\nYour secondary school "${schoolData.name}" (Registration Number: ${registrationNumber}) has been officially onboarded to STEM-SPARK-LAB Kenya by Intellica Automation Group.\n\nYour institutional administrator credentials have been provisioned:\n• Portal URL: STEM-SPARK-LAB Kenya\n• Official Username: ${schoolData.adminEmail}\n• Temporary Password: ${tempPassword}\n\nIMPORTANT: For institutional cybersecurity and data privacy, you are required to change this temporary password upon your initial sign in.\n\nFrom: ${COMPANY_SENDER_NAME} <${COMPANY_SENDER_EMAIL}>\nRegards,\nIntellica Automation Group & STEM-SPARK-LAB Directorate\nSupport: ${COMPANY_SENDER_EMAIL}`,
-      sentAt: `${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}, ${new Date().toLocaleDateString()}`,
-      schoolName: schoolData.name
-    };
-
-    setSchools(prev => [newSchool, ...prev]);
-    setUsers(prev => [newAdminUser, ...prev]);
-    setSentEmails(prev => [emailDispatch, ...prev]);
-    
-    // Only automatically log in as the newly created School Admin if NO user is currently logged in!
-    // If a Super Admin created this school, DO NOT hijack their session or prompt them to change password!
-    if (!currentUser) {
-      setCurrentUser(newAdminUser);
+    setSchools(prev => [res.school, ...prev]);
+    setUsers(prev => [res.adminUser, ...prev]);
+    if (res.emailDispatch) setSentEmails(prev => [res.emailDispatch, ...prev]);
+    if (currentUser && res.emailDispatch) setLatestDispatchedEmail(res.emailDispatch);
+    if (!currentUser && res.token) {
+      setCurrentUser(res.adminUser);
       setCurrentView('dashboard');
     }
-
-    api.schools.create(
-      { id: schoolId, ...schoolData },
-      tempPassword,
-      { schoolId, adminUserId }
-    ).catch(err => console.warn('API sync:', err));
-
-    return newSchool;
+    return res.school;
   };
 
-  // 1b. Platform Super Administrator Registration
-  const registerSuperAdmin = (adminData: { name: string; email: string; password?: string }): User => {
-    const adminUserId = `usr-super-${Date.now().toString(36)}`;
-    const newAdminUser: User = {
-      id: adminUserId,
-      schoolId: null,
-      name: adminData.name,
-      email: adminData.email.trim().toLowerCase(),
-      role: 'super_admin',
-      avatarColor: 'bg-slate-900',
-      mustChangePassword: false,
-      password: adminData.password ? adminData.password.trim() : undefined,
-      tempPassword: adminData.password ? adminData.password.trim() : undefined
-    };
-
-    setUsers(prev => [newAdminUser, ...prev]);
-    setCurrentUser(newAdminUser);
+  // 1b. Platform Super Administrator registration (needs the setup key the first time)
+  const registerSuperAdmin = async (adminData: { name: string; email: string; password: string; setupKey?: string }): Promise<User> => {
+    const { user } = await api.users.registerAdmin(adminData);
+    setUsers(prev => [user, ...prev.filter(u => u.id !== user.id)]);
+    setCurrentUser(user);
     setCurrentView('dashboard');
-
-    api.users.registerAdmin({ id: adminUserId, ...adminData }).catch(err => console.warn('API sync:', err));
-
-    return newAdminUser;
+    return user;
   };
 
-  // 2. Student Registration
-  const registerStudent = (studentData: {
-    name: string;
-    email: string;
-    schoolId: string;
-    classId: string;
-    admissionNumber: string;
-    password?: string;
-  }): User => {
-    const studentId = `usr-student-${Date.now().toString(36)}`;
-    const targetClass = classes.find(c => c.id === studentData.classId);
-
-    const newStudentUser: User = {
-      id: studentId,
-      schoolId: studentData.schoolId,
-      name: studentData.name,
-      email: studentData.email,
-      role: 'student',
-      admissionNumber: studentData.admissionNumber,
-      classId: studentData.classId,
-      className: targetClass?.name || 'Class Stream',
-      teacherId: targetClass?.teacherId,
-      teacherName: targetClass?.teacherName,
-      avatarColor: 'bg-emerald-600',
-      password: studentData.password ? studentData.password.trim() : undefined
-    };
-
-    setUsers(prev => [newStudentUser, ...prev]);
-
-    // Update class and school counts
+  // 2. Student registration
+  const registerStudent = async (studentData: {
+    name: string; email: string; schoolId: string; classId: string; admissionNumber: string; password: string;
+  }): Promise<User> => {
+    const { user } = await api.users.registerStudent(studentData);
+    setUsers(prev => [user, ...prev.filter(u => u.id !== user.id)]);
     setClasses(prev => prev.map(c => c.id === studentData.classId ? { ...c, studentCount: c.studentCount + 1 } : c));
     setSchools(prev => prev.map(s => s.id === studentData.schoolId ? { ...s, totalStudents: s.totalStudents + 1 } : s));
-
-    // Automatically log in as student
-    setCurrentUser(newStudentUser);
+    setCurrentUser(user);
     setCurrentView('dashboard');
-
-    api.users.registerStudent({ id: studentId, ...studentData }).catch(err => console.warn('API sync:', err));
-
-    return newStudentUser;
+    return user;
   };
 
   // 3. Teacher Appointment with Credentials Email

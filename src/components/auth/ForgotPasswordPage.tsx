@@ -143,7 +143,7 @@ export const ForgotPasswordPage: React.FC = () => {
     setErrorMessage('');
     setSuccessNotice('');
 
-    if (newPassword.length < 6) {
+    if (newPassword.length < 8) {
       setErrorMessage('Password must be at least 6 characters long.');
       return;
     }
@@ -392,28 +392,6 @@ export const ForgotPasswordPage: React.FC = () => {
                 </p>
               </div>
 
-              {/* Verified User Identity Banner */}
-              {verifiedUser && (
-                <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3 text-xs">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-8 h-8 rounded-full bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 font-bold flex items-center justify-center text-xs shrink-0">
-                      {verifiedUser.name.charAt(0)}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="font-semibold text-slate-900 dark:text-slate-100 truncate">
-                        {verifiedUser.name}
-                      </p>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-                        {getRoleLabel(verifiedUser.role)} {userSchool ? `• ${userSchool.name}` : ''}
-                      </p>
-                    </div>
-                  </div>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 shrink-0">
-                    Registered Account
-                  </span>
-                </div>
-              )}
-
               {/* Security Notice */}
               <div className="p-3.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-start gap-2.5 text-xs text-slate-600 dark:text-slate-400">
                 <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
@@ -519,7 +497,7 @@ export const ForgotPasswordPage: React.FC = () => {
                     <input
                       type={showPassword ? 'text' : 'password'}
                       required
-                      placeholder="Minimum 6 characters"
+                      placeholder="Minimum 8 characters"
                       value={newPassword}
                       onChange={e => {
                         setNewPassword(e.target.value);
@@ -590,7 +568,7 @@ export const ForgotPasswordPage: React.FC = () => {
                 <div className="pt-2">
                   <button
                     type="submit"
-                    disabled={loading || newPassword.length < 6 || newPassword !== confirmPassword}
+                    disabled={loading || newPassword.length < 8 || newPassword !== confirmPassword}
                     className="w-full py-2.5 px-4 rounded-lg bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 text-white dark:text-slate-900 font-semibold text-xs transition-colors shadow-sm disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
                   >
                     {loading ? (
@@ -629,18 +607,6 @@ export const ForgotPasswordPage: React.FC = () => {
               </div>
 
               <div className="max-w-xs mx-auto space-y-2.5 pt-2">
-                {verifiedUser && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      login(verifiedUser);
-                    }}
-                    className="w-full py-2.5 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs transition-colors shadow-sm cursor-pointer flex items-center justify-center gap-2"
-                  >
-                    <span>Sign In & Open Dashboard Directly</span>
-                  </button>
-                )}
-
                 <button
                   type="button"
                   onClick={() => {

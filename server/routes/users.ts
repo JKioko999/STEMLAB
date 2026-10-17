@@ -1,604 +1,369 @@
-import { Router, Request, Response } from 'express';
+import crypto from 'crypto';
+import { Router, Response } from 'express';
 import { store } from '../db/store.js';
-import { 
-  isSupabaseConfigured, 
-  getSupabaseClient, 
-  userFromDb, 
-  userToDb, 
-  classFromDb,
-  schoolFromDb,
-  emailToDb 
+import {
+  isSupabaseConfigured, getSupabaseClient, userFromDb, userToDb, classFromDb, schoolFromDb, emailToDb
 } from '../db/supabase.js';
 import { User, EmailDispatch, ClassGroup, School } from '../../src/types/index.js';
 import { sendEmail } from '../services/mailer.js';
+import {
+  AuthedRequest, attachSession, hashPassword, verifyPassword, isHashed, validNewPassword, issueSession,
+  signToken, readToken, otpDigest, randomOtp, safeEquals, sanitizeUser, rateLimited, clientIp
+} from '../auth.js';
 
 const router = Router();
+const isProd = () => process.env.NODE_ENV === 'production' || Boolean(process.env.VERCEL);
+const SENDER = 'intellicaautomationgroup@gmail.com';
+const norm = (e: unknown) => String(e || '').trim().toLowerCase();
+const tempPw = (prefix: string) => `${prefix}-${crypto.randomBytes(5).toString('base64url')}`;
 
-// GET /api/users - List users (supports ?schoolId= & ?role= & ?email=)
-router.get('/', async (req: Request, res: Response) => {
+// ---------------------------------------------------------------- data access
+// Supabase is the source of truth when configured; the in-memory store is only a dev fallback.
+
+async function findUser(by: { email?: string; id?: string }): Promise<User | undefined> {
+  const supabase = isSupabaseConfigured() ? getSupabaseClient() : null;
+  if (supabase) {
+    const q = supabase.from('users').select('*');
+    const { data, error } = by.id ? await q.eq('id', by.id).maybeSingle() : await q.eq('email', by.email!).maybeSingle();
+    if (!error) return data ? userFromDb(data) : undefined;
+    console.warn('[DB] user lookup failed:', error.message);
+  }
+  return store.users.find(u => (by.id ? u.id === by.id : u.email.toLowerCase() === by.email));
+}
+
+async function countRole(role: string): Promise<number> {
+  const supabase = isSupabaseConfigured() ? getSupabaseClient() : null;
+  if (supabase) {
+    const { count, error } = await supabase.from('users').select('*', { count: 'exact', head: true }).eq('role', role);
+    if (!error && count !== null) return count;
+  }
+  return store.users.filter(u => u.role === role).length;
+}
+
+async function insertUser(u: User) {
+  // Never overwrite an existing account, whichever storage mode is in use.
+  if (await findUser({ email: u.email.toLowerCase() })) throw Object.assign(new Error('exists'), { status: 409 });
+  const supabase = isSupabaseConfigured() ? getSupabaseClient() : null;
+  if (supabase) {
+    const { error } = await supabase.from('users').insert(userToDb(u));
+    if (error) {
+      if (error.code === '23505') throw Object.assign(new Error('exists'), { status: 409 });
+      throw new Error(error.message);
+    }
+  }
+  store.users = store.users.filter(x => x.id !== u.id && x.email.toLowerCase() !== u.email.toLowerCase());
+  store.users.unshift(u);
+}
+
+async function patchUser(id: string, fields: Partial<User>) {
+  const row: Record<string, any> = {};
+  if ('password' in fields) row.password = fields.password ?? null;
+  if ('tempPassword' in fields) row.temp_password = fields.tempPassword ?? null;
+  if ('mustChangePassword' in fields) row.must_change_password = Boolean(fields.mustChangePassword);
+  const supabase = isSupabaseConfigured() ? getSupabaseClient() : null;
+  if (supabase) {
+    const { error } = await supabase.from('users').update(row).eq('id', id);
+    if (error) throw new Error(error.message);
+  }
+  store.users = store.users.map(u => (u.id === id ? { ...u, ...fields } : u));
+}
+
+async function getSchool(id: string): Promise<School | undefined> {
+  const supabase = isSupabaseConfigured() ? getSupabaseClient() : null;
+  if (supabase) {
+    const { data } = await supabase.from('schools').select('*').eq('id', id).maybeSingle();
+    if (data) return schoolFromDb(data);
+  }
+  return store.schools.find(s => s.id === id);
+}
+
+async function getClass(id: string): Promise<ClassGroup | undefined> {
+  const supabase = isSupabaseConfigured() ? getSupabaseClient() : null;
+  if (supabase) {
+    const { data } = await supabase.from('classes').select('*').eq('id', id).maybeSingle();
+    if (data) return classFromDb(data);
+  }
+  return store.classes.find(c => c.id === id);
+}
+
+async function syncCounts(schoolId?: string | null, classId?: string | null) {
+  const supabase = isSupabaseConfigured() ? getSupabaseClient() : null;
+  if (!supabase || !schoolId) return;
+  const cnt = async (role: string, col: 'school_id' | 'class_id', v: string) =>
+    (await supabase.from('users').select('*', { count: 'exact', head: true }).eq(col, v).eq('role', role)).count;
+  const [students, teachers] = await Promise.all([cnt('student', 'school_id', schoolId), cnt('teacher', 'school_id', schoolId)]);
+  await supabase.from('schools').update({
+    ...(students !== null ? { total_students: students } : {}),
+    ...(teachers !== null ? { total_teachers: teachers } : {})
+  }).eq('id', schoolId);
+  if (classId) {
+    const c = await cnt('student', 'class_id', classId);
+    if (c !== null) await supabase.from('classes').update({ student_count: c }).eq('id', classId);
+  }
+}
+
+/** Logs an email in the audit trail with any secret removed. */
+async function logEmail(d: EmailDispatch, secretToHide?: string) {
+  const safe: EmailDispatch = {
+    ...d,
+    tempPassword: undefined,
+    messageBody: secretToHide ? d.messageBody.split(secretToHide).join('••••••••') : d.messageBody
+  };
+  store.emails.unshift(safe);
+  const supabase = isSupabaseConfigured() ? getSupabaseClient() : null;
+  if (supabase) await supabase.from('dispatched_emails').insert([emailToDb(safe)]);
+  return safe;
+}
+
+const fail = (res: Response, err: any) =>
+  err?.status === 409
+    ? res.status(409).json({ error: 'An account with this email already exists. Please sign in instead.' })
+    : (console.error('[users]', err), res.status(500).json({ error: 'Something went wrong. Please try again.' }));
+
+// ---------------------------------------------------------------- list
+
+router.get('/', async (req: AuthedRequest, res) => {
   try {
+    const me = req.auth!;
+    if (me.role === 'student') {
+      const self = await findUser({ id: me.sub });
+      return res.json(self ? [sanitizeUser(self)] : []);
+    }
     const { schoolId, role, email } = req.query;
+    const scope = me.role === 'super_admin' ? (schoolId as string | undefined) : (me.schoolId || '__none__');
+    let rows: User[];
+    const supabase = isSupabaseConfigured() ? getSupabaseClient() : null;
+    if (supabase) {
+      let q = supabase.from('users').select('*');
+      if (scope) q = q.eq('school_id', scope);
+      if (role) q = q.eq('role', String(role));
+      if (email) q = q.eq('email', norm(email));
+      const { data, error } = await q;
+      if (error) throw new Error(error.message);
+      rows = (data || []).map(userFromDb);
+    } else {
+      rows = store.users.filter(u => (!scope || u.schoolId === scope) && (!role || u.role === role) && (!email || u.email.toLowerCase() === norm(email)));
+    }
+    return res.json(rows.map(sanitizeUser));
+  } catch (err) { return fail(res, err); }
+});
 
-    if (isSupabaseConfigured()) {
-      const supabase = getSupabaseClient();
-      if (supabase) {
-        let query = supabase.from('users').select('*');
-        if (schoolId) query = query.eq('school_id', schoolId);
-        if (role) query = query.eq('role', role);
-        if (email) query = query.ilike('email', String(email).trim());
-        const { data, error } = await query;
-        if (!error && data) {
-          return res.json(data.map(userFromDb));
-        }
+// ---------------------------------------------------------------- login
+
+router.post('/login', async (req, res) => {
+  try {
+    const email = norm(req.body?.email);
+    const password = String(req.body?.password || '');
+    if (!email || !password) return res.status(400).json({ error: 'Please enter both your email address and password.' });
+    if (rateLimited(`login:${clientIp(req)}:${email}`, 8, 15 * 60_000)) {
+      return res.status(429).json({ error: 'Too many attempts. Please wait a few minutes and try again.' });
+    }
+
+    const user = await findUser({ email });
+    const generic = { error: 'Incorrect email or password.' };
+    if (!user) { await hashPassword(password); return res.status(401).json(generic); }
+
+    const usePermanent = Boolean(user.password);
+    const stored = usePermanent ? user.password : user.tempPassword;
+    if (!(await verifyPassword(password, stored))) return res.status(401).json(generic);
+
+    // Upgrade legacy plaintext credentials to hashes on first successful sign-in.
+    if (stored && !isHashed(stored)) {
+      const h = await hashPassword(password);
+      await patchUser(user.id, usePermanent ? { password: h } : { tempPassword: h }).catch(e => console.warn('[auth] rehash failed', e.message));
+    }
+
+    return res.json({ success: true, user: sanitizeUser(user), token: issueSession(user) });
+  } catch (err) { return fail(res, err); }
+});
+
+// ---------------------------------------------------------------- registration
+
+router.post('/admin', async (req: AuthedRequest, res) => {
+  try {
+    const { id, name, password, setupKey } = req.body || {};
+    const email = norm(req.body?.email);
+    if (!name || !email) return res.status(400).json({ error: 'Name and email are required.' });
+    if (!validNewPassword(password)) return res.status(400).json({ error: 'Password must be at least 8 characters.' });
+
+    const me = attachSession(req);
+    if (me?.role !== 'super_admin') {
+      if ((await countRole('super_admin')) > 0) return res.status(403).json({ error: 'A platform administrator already exists. Ask them to add you.' });
+      const required = process.env.SUPER_ADMIN_SETUP_KEY;
+      if (required) {
+        if (!setupKey || !safeEquals(String(setupKey), required)) return res.status(403).json({ error: 'Invalid setup key.' });
+      } else if (isProd()) {
+        return res.status(403).json({ error: 'Platform setup is locked. Set SUPER_ADMIN_SETUP_KEY in your hosting environment first.' });
       }
     }
 
-    let results = [...store.users];
-    if (schoolId) {
-      results = results.filter(u => u.schoolId === schoolId);
-    }
-    if (role) {
-      results = results.filter(u => u.role === role);
-    }
-    if (email) {
-      results = results.filter(u => u.email.toLowerCase() === String(email).trim().toLowerCase());
-    }
-
-    return res.json(results);
-  } catch (err: any) {
-    return res.status(500).json({ error: err.message });
-  }
-});
-
-// POST /api/users/login - Secure user authentication with strict password validation
-router.post('/login', async (req: Request, res: Response) => {
-  try {
-    const { email, password } = req.body;
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Please enter both your email address and password.' });
-    }
-
-    const normalizedEmail = String(email).trim().toLowerCase();
-    const cleanPassword = String(password).trim();
-
-    let targetUser: User | undefined = store.users.find(u => u.email.toLowerCase() === normalizedEmail);
-
-    if (isSupabaseConfigured()) {
-      try {
-        const supabase = getSupabaseClient();
-        if (supabase) {
-          const { data, error } = await supabase.from('users').select('*').eq('email', normalizedEmail).maybeSingle();
-          if (!error && data) {
-            const dbUser = userFromDb(data);
-            store.users = store.users.filter(u => u.email.toLowerCase() !== normalizedEmail);
-            store.users.unshift(dbUser);
-            targetUser = dbUser;
-          } else if (error) {
-            console.warn('[LOGIN] Supabase query error:', error.message);
-          }
-        }
-      } catch (dbErr: any) {
-        console.warn('[LOGIN] Supabase catch:', dbErr?.message);
-      }
-    }
-
-    if (!targetUser) {
-      return res.status(401).json({
-        error: 'Invalid credentials. No registered account found with that email address. Please register your school, student, or platform administrator account first.'
-      });
-    }
-
-    // Determine the expected password:
-    // 1. If user has set a permanent password (e.g. after first login or password change), that password is required.
-    // 2. If user hasn't set a permanent password yet, verify against their initial temporary password.
-    const hasPermanentPassword = Boolean(targetUser.password && targetUser.password.trim().length > 0);
-    const expectedPassword = hasPermanentPassword
-      ? targetUser.password
-      : targetUser.tempPassword;
-
-    const isMatch = Boolean(expectedPassword && expectedPassword.trim() === cleanPassword);
-
-    if (!isMatch) {
-      return res.status(401).json({
-        error: 'Incorrect password. Please verify your credentials or use "Forgot password" to reset your password.'
-      });
-    }
-
-    return res.json({
-      success: true,
-      user: targetUser,
-      message: 'Authentication successful'
-    });
-  } catch (err: any) {
-    return res.status(500).json({ error: err.message || 'Login failed' });
-  }
-});
-
-// POST /api/users/admin - Register or update a Platform Super Administrator
-router.post('/admin', async (req: Request, res: Response) => {
-  try {
-    const { id, name, email, password } = req.body;
-    if (!name || !email) {
-      return res.status(400).json({ error: 'Missing required admin name or email' });
-    }
-
-    const adminId = id || `usr-super-${Date.now().toString(36)}`;
-    const newAdmin: User = {
-      id: adminId,
-      schoolId: null,
-      name: name.trim(),
-      email: email.trim().toLowerCase(),
-      role: 'super_admin',
-      avatarColor: 'bg-slate-900',
-      mustChangePassword: false,
-      password: password ? String(password).trim() : undefined,
-      tempPassword: password ? String(password).trim() : undefined
+    const user: User = {
+      id: id || `usr-super-${Date.now().toString(36)}`, schoolId: null, name: String(name).trim(), email,
+      role: 'super_admin', avatarColor: 'bg-slate-900', mustChangePassword: false, password: await hashPassword(password)
     };
-
-    // Remove any existing user with same email in memory store
-    store.users = store.users.filter(u => u.email.toLowerCase() !== newAdmin.email);
-    store.users.unshift(newAdmin);
-
-    if (isSupabaseConfigured()) {
-      const supabase = getSupabaseClient();
-      if (supabase) {
-        // Upsert by email so duplicate email registers/updates existing platform owner cleanly
-        const { error: upsertErr } = await supabase
-          .from('users')
-          .upsert(userToDb(newAdmin), { onConflict: 'email' });
-        if (upsertErr) {
-          console.error('[SUPABASE] Admin upsert error:', upsertErr);
-        }
-      }
-    }
-
-    return res.status(201).json(newAdmin);
-  } catch (err: any) {
-    return res.status(500).json({ error: err.message });
-  }
+    await insertUser(user);
+    return res.status(201).json({ user: sanitizeUser(user), token: issueSession(user) });
+  } catch (err) { return fail(res, err); }
 });
 
-// POST /api/users/student - Register a candidate student
-router.post('/student', async (req: Request, res: Response) => {
+router.post('/student', async (req, res) => {
   try {
-    const { id, name, email, schoolId, classId, admissionNumber } = req.body;
-    if (!name || !email || !schoolId || !classId) {
-      return res.status(400).json({ error: 'Missing required student registration fields' });
-    }
+    const { id, name, schoolId, classId, admissionNumber, password } = req.body || {};
+    const email = norm(req.body?.email);
+    if (!name || !email || !schoolId || !classId) return res.status(400).json({ error: 'Please complete all required fields.' });
+    if (!validNewPassword(password)) return res.status(400).json({ error: 'Password must be at least 8 characters.' });
 
-    const studentId = id || `usr-student-${Date.now().toString(36)}`;
-    let targetClass: ClassGroup | undefined = store.classes.find(c => c.id === classId);
+    const [school, cls] = await Promise.all([getSchool(schoolId), getClass(classId)]);
+    if (!school || !cls || cls.schoolId !== schoolId) return res.status(400).json({ error: 'Selected school or class was not found.' });
 
-    if (!targetClass && isSupabaseConfigured()) {
-      const supabase = getSupabaseClient();
-      if (supabase) {
-        const { data: clsData } = await supabase.from('classes').select('*').eq('id', classId).maybeSingle();
-        if (clsData) targetClass = classFromDb(clsData);
-      }
-    }
-
-    const newStudentUser: User = {
-      id: studentId,
-      schoolId: schoolId,
-      name: name,
-      email: email.trim().toLowerCase(),
-      role: 'student',
+    const user: User = {
+      id: id || `usr-student-${Date.now().toString(36)}`, schoolId, name: String(name).trim(), email, role: 'student',
       admissionNumber: admissionNumber || `ADM-${Math.floor(1000 + Math.random() * 9000)}`,
-      classId: classId,
-      className: targetClass?.name || 'Class Stream',
-      teacherId: targetClass?.teacherId,
-      teacherName: targetClass?.teacherName,
-      avatarColor: 'bg-emerald-600'
+      classId, className: cls.name, teacherId: cls.teacherId, teacherName: cls.teacherName,
+      avatarColor: 'bg-emerald-600', mustChangePassword: false, password: await hashPassword(password)
     };
-
-    store.users.unshift(newStudentUser);
-
-    // Update class and school counts in local store
-    store.classes = store.classes.map(c => c.id === classId ? { ...c, studentCount: c.studentCount + 1 } : c);
-    store.schools = store.schools.map(s => s.id === schoolId ? { ...s, totalStudents: s.totalStudents + 1 } : s);
-
-    // Update in Supabase
-    if (isSupabaseConfigured()) {
-      const supabase = getSupabaseClient();
-      if (supabase) {
-        const { error: insErr } = await supabase
-          .from('users')
-          .upsert(userToDb(newStudentUser), { onConflict: 'email' });
-        if (insErr) {
-          console.error('[SUPABASE] Student registration error:', insErr);
-        }
-        // Sync actual student count in class
-        const { count: clsCount } = await supabase.from('users').select('*', { count: 'exact', head: true }).eq('class_id', classId).eq('role', 'student');
-        if (clsCount !== null) {
-          await supabase.from('classes').update({ student_count: clsCount }).eq('id', classId);
-        }
-        // Sync actual student count in school
-        const { count: schCount } = await supabase.from('users').select('*', { count: 'exact', head: true }).eq('school_id', schoolId).eq('role', 'student');
-        if (schCount !== null) {
-          await supabase.from('schools').update({ total_students: schCount }).eq('id', schoolId);
-        }
-      }
-    }
-
-    return res.status(201).json(newStudentUser);
-  } catch (err: any) {
-    return res.status(500).json({ error: err.message });
-  }
+    await insertUser(user);
+    store.classes = store.classes.map(c => (c.id === classId ? { ...c, studentCount: c.studentCount + 1 } : c));
+    store.schools = store.schools.map(s => (s.id === schoolId ? { ...s, totalStudents: s.totalStudents + 1 } : s));
+    await syncCounts(schoolId, classId);
+    return res.status(201).json({ user: sanitizeUser(user), token: issueSession(user) });
+  } catch (err) { return fail(res, err); }
 });
 
-// POST /api/users/teacher - Register / Appoint a Science Teacher
-router.post('/teacher', async (req: Request, res: Response) => {
+router.post('/teacher', async (req: AuthedRequest, res) => {
   try {
-    const { id, name, email, schoolId, subjectSpecialization, tempPassword: passedTempPassword } = req.body;
-    if (!name || !email || !schoolId) {
-      return res.status(400).json({ error: 'Missing required teacher fields' });
-    }
+    const me = req.auth!;
+    if (me.role !== 'school_admin' && me.role !== 'super_admin') return res.status(403).json({ error: 'You do not have permission to do that.' });
+    const { id, name, schoolId, subjectSpecialization } = req.body || {};
+    const email = norm(req.body?.email);
+    if (!name || !email || !schoolId) return res.status(400).json({ error: 'Missing required teacher fields.' });
+    if (me.role === 'school_admin' && me.schoolId !== schoolId) return res.status(403).json({ error: 'You can only add teachers to your own school.' });
 
-    const teacherId = id || `usr-teacher-${Date.now().toString(36)}`;
-    const tempPassword = passedTempPassword || `Tchr${Math.floor(1000 + Math.random() * 9000)}!`;
-    let targetSchool: School | undefined = store.schools.find(s => s.id === schoolId);
+    const school = await getSchool(schoolId);
+    if (!school) return res.status(400).json({ error: 'School not found.' });
 
-    if (!targetSchool && isSupabaseConfigured()) {
-      const supabase = getSupabaseClient();
-      if (supabase) {
-        const { data: schData } = await supabase.from('schools').select('*').eq('id', schoolId).maybeSingle();
-        if (schData) targetSchool = schoolFromDb(schData);
-      }
-    }
-
-    const newTeacher: User = {
-      id: teacherId,
-      schoolId: schoolId,
-      name: name,
-      email: email.trim().toLowerCase(),
-      role: 'teacher',
-      subjectSpecialization: subjectSpecialization || 'Chemistry & Biology',
-      mustChangePassword: true,
-      tempPassword: tempPassword,
-      avatarColor: 'bg-amber-600'
+    const supplied = req.body?.tempPassword;
+    const plain = validNewPassword(supplied) ? supplied : tempPw('Tchr');
+    const teacher: User = {
+      id: id || `usr-teacher-${Date.now().toString(36)}`, schoolId, name: String(name).trim(), email, role: 'teacher',
+      subjectSpecialization: subjectSpecialization || 'Chemistry & Biology', mustChangePassword: true,
+      tempPassword: await hashPassword(plain), avatarColor: 'bg-amber-600'
     };
+    await insertUser(teacher);
 
-    const emailDispatch: EmailDispatch = {
-      id: `email-${Date.now().toString(36)}`,
-      senderEmail: 'intellicaautomationgroup@gmail.com',
-      recipientEmail: email,
-      recipientName: name,
-      recipientRole: 'teacher',
-      subject: `STEM-SPARK-LAB Faculty Appointment: ${targetSchool?.name || 'Secondary School'}`,
-      tempPassword: tempPassword,
-      sentAt: new Date().toISOString(),
-      schoolName: targetSchool?.name,
-      messageBody: `Dear Teacher ${name},\n\nYou have been registered as a Science Teacher (${newTeacher.subjectSpecialization}) at ${targetSchool?.name || 'your institution'} on STEM-SPARK-LAB by Intellica Automation Group.\n\nYour temporary password: ${tempPassword}\nPlease update your password on initial sign in.\n\nFrom: Intellica Automation Group <intellicaautomationgroup@gmail.com>\nSupport: intellicaautomationgroup@gmail.com`
+    const dispatch: EmailDispatch = {
+      id: `email-${Date.now().toString(36)}`, senderEmail: SENDER, recipientEmail: email, recipientName: name, recipientRole: 'teacher',
+      subject: `STEM-SPARK-LAB Faculty Appointment: ${school.name}`, sentAt: new Date().toISOString(), schoolName: school.name,
+      messageBody: `Dear ${name},\n\nYou have been registered as a Science Teacher (${teacher.subjectSpecialization}) at ${school.name}.\n\nSign in with your email and this temporary password: ${plain}\n\nYou will be asked to choose a new password the first time you sign in.`
     };
-
-    store.users = store.users.filter(u => u.email.toLowerCase() !== newTeacher.email);
-    store.users.unshift(newTeacher);
-    store.emails.unshift(emailDispatch);
-    store.schools = store.schools.map(s => s.id === schoolId ? { ...s, totalTeachers: s.totalTeachers + 1 } : s);
-
-    if (isSupabaseConfigured()) {
-      const supabase = getSupabaseClient();
-      if (supabase) {
-        const { error: tchrErr } = await supabase
-          .from('users')
-          .upsert(userToDb(newTeacher), { onConflict: 'email' });
-        if (tchrErr) {
-          console.error('[SUPABASE] Teacher registration error:', tchrErr);
-        }
-        await supabase.from('dispatched_emails').insert([emailToDb(emailDispatch)]);
-        // Sync actual teacher count
-        const { count: tchrCount } = await supabase.from('users').select('*', { count: 'exact', head: true }).eq('school_id', schoolId).eq('role', 'teacher');
-        if (tchrCount !== null) {
-          await supabase.from('schools').update({ total_teachers: tchrCount }).eq('id', schoolId);
-        }
-      }
-    }
-
-    // Transmit email directly from intellicaautomationgroup@gmail.com
-    const mailResult = await sendEmail({
-      to: email,
-      toName: name,
-      subject: emailDispatch.subject,
-      text: emailDispatch.messageBody,
-      tempPassword: tempPassword
-    });
-    console.info(`[MAILER] Teacher registration email dispatched to ${email}:`, mailResult);
-
-    return res.status(201).json({ teacher: newTeacher, emailDispatch, mailResult });
-  } catch (err: any) {
-    return res.status(500).json({ error: err.message });
-  }
+    const logged = await logEmail(dispatch, plain);
+    store.schools = store.schools.map(s => (s.id === schoolId ? { ...s, totalTeachers: s.totalTeachers + 1 } : s));
+    await syncCounts(schoolId);
+    const mailResult = await sendEmail({ to: email, toName: name, subject: dispatch.subject, text: dispatch.messageBody, tempPassword: plain });
+    return res.status(201).json({ teacher: sanitizeUser(teacher), emailDispatch: logged, mailResult: { success: mailResult.success, simulated: mailResult.simulated } });
+  } catch (err) { return fail(res, err); }
 });
 
-// DELETE /api/users/teacher/:id - Remove science teacher
-router.delete('/teacher/:id', async (req: Request, res: Response) => {
-  const { id } = req.params;
-  try {
-    const teacher = store.users.find(u => u.id === id);
-    const schoolId = teacher?.schoolId;
+// ---------------------------------------------------------------- delete
 
-    if (schoolId) {
-      store.schools = store.schools.map(s => s.id === schoolId ? { ...s, totalTeachers: Math.max(0, s.totalTeachers - 1) } : s);
+async function removeUser(req: AuthedRequest, res: Response, id: string) {
+  try {
+    const me = req.auth!;
+    if (me.role !== 'school_admin' && me.role !== 'super_admin') return res.status(403).json({ error: 'You do not have permission to do that.' });
+    if (id === me.sub) return res.status(400).json({ error: 'You cannot delete your own account.' });
+    const target = await findUser({ id });
+    if (!target) return res.status(404).json({ error: 'User not found.' });
+    if (me.role === 'school_admin' && (target.schoolId !== me.schoolId || !['teacher', 'student'].includes(target.role))) {
+      return res.status(403).json({ error: 'You can only remove teachers and students in your own school.' });
+    }
+    const supabase = isSupabaseConfigured() ? getSupabaseClient() : null;
+    if (supabase) {
+      await supabase.from('users').delete().eq('id', id);
+      if (target.role === 'teacher') await supabase.from('classes').update({ teacher_id: null, teacher_name: 'Unassigned' }).eq('teacher_id', id);
     }
     store.users = store.users.filter(u => u.id !== id);
-    store.classes = store.classes.map(c => c.teacherId === id ? { ...c, teacherId: '', teacherName: 'Unassigned' } : c);
-
-    if (isSupabaseConfigured()) {
-      const supabase = getSupabaseClient();
-      if (supabase) {
-        await supabase.from('users').delete().eq('id', id);
-        await supabase.from('classes').update({ teacher_id: null, teacher_name: 'Unassigned' }).eq('teacher_id', id);
-        if (schoolId) {
-          const { count: tchrCount } = await supabase.from('users').select('*', { count: 'exact', head: true }).eq('school_id', schoolId).eq('role', 'teacher');
-          if (tchrCount !== null) {
-            await supabase.from('schools').update({ total_teachers: tchrCount }).eq('id', schoolId);
-          }
-        }
-      }
+    store.classes = store.classes.map(c => (c.teacherId === id ? { ...c, teacherId: '', teacherName: 'Unassigned' } : c));
+    if (target.schoolId) {
+      const field = target.role === 'teacher' ? 'totalTeachers' : target.role === 'student' ? 'totalStudents' : null;
+      if (field) store.schools = store.schools.map(s => (s.id === target.schoolId ? { ...s, [field]: Math.max(0, (s as any)[field] - 1) } : s));
+      await syncCounts(target.schoolId, target.classId);
     }
+    return res.json({ success: true, deletedUserId: id, deletedTeacherId: id });
+  } catch (err) { return fail(res, err); }
+}
+router.delete('/teacher/:id', (req: AuthedRequest, res) => removeUser(req, res, req.params.id));
+router.delete('/:id', (req: AuthedRequest, res) => removeUser(req, res, req.params.id));
 
-    return res.json({ success: true, deletedTeacherId: id });
-  } catch (err: any) {
-    return res.status(500).json({ error: err.message });
-  }
-});
+// ---------------------------------------------------------------- password change / reset
 
-// DELETE /api/users/:id - Remove any user
-router.delete('/:id', async (req: Request, res: Response) => {
-  const { id } = req.params;
+router.post('/change-password', async (req: AuthedRequest, res) => {
   try {
-    const user = store.users.find(u => u.id === id);
-    const schoolId = user?.schoolId;
+    const { newPassword, currentPassword, resetGrant } = req.body || {};
+    if (!validNewPassword(newPassword)) return res.status(400).json({ error: 'Password must be at least 8 characters.' });
 
-    if (user?.role === 'teacher' && schoolId) {
-      store.schools = store.schools.map(s => s.id === schoolId ? { ...s, totalTeachers: Math.max(0, s.totalTeachers - 1) } : s);
-      store.classes = store.classes.map(c => c.teacherId === id ? { ...c, teacherId: '', teacherName: 'Unassigned' } : c);
-    } else if (user?.role === 'student' && schoolId) {
-      store.schools = store.schools.map(s => s.id === schoolId ? { ...s, totalStudents: Math.max(0, s.totalStudents - 1) } : s);
-    }
-
-    store.users = store.users.filter(u => u.id !== id);
-
-    if (isSupabaseConfigured()) {
-      const supabase = getSupabaseClient();
-      if (supabase) {
-        await supabase.from('users').delete().eq('id', id);
-        if (user?.role === 'teacher') {
-          await supabase.from('classes').update({ teacher_id: null, teacher_name: 'Unassigned' }).eq('teacher_id', id);
-          if (schoolId) {
-            const { count: tchrCount } = await supabase.from('users').select('*', { count: 'exact', head: true }).eq('school_id', schoolId).eq('role', 'teacher');
-            if (tchrCount !== null) {
-              await supabase.from('schools').update({ total_teachers: tchrCount }).eq('id', schoolId);
-            }
-          }
-        } else if (user?.role === 'student' && schoolId) {
-          const { count: stdCount } = await supabase.from('users').select('*', { count: 'exact', head: true }).eq('school_id', schoolId).eq('role', 'student');
-          if (stdCount !== null) {
-            await supabase.from('schools').update({ total_students: stdCount }).eq('id', schoolId);
-          }
-        }
+    let user: User | undefined;
+    const me = attachSession(req);
+    if (me) {
+      user = await findUser({ id: me.sub });
+      if (!user) return res.status(401).json({ error: 'Please sign in again.' });
+      if (!user.mustChangePassword) {
+        if (rateLimited(`chgpw:${user.id}`, 6, 15 * 60_000)) return res.status(429).json({ error: 'Too many attempts. Please wait and try again.' });
+        const ok = await verifyPassword(String(currentPassword || ''), user.password || user.tempPassword);
+        if (!ok) return res.status(403).json({ error: 'Your current password is incorrect.' });
       }
+    } else {
+      const grant = readToken<{ email: string }>(resetGrant, 'reset');
+      if (!grant) return res.status(401).json({ error: 'Your verification has expired. Please request a new code.' });
+      user = await findUser({ email: grant.email });
+      if (!user) return res.status(404).json({ error: 'Account not found.' });
     }
 
-    return res.json({ success: true, deletedUserId: id });
-  } catch (err: any) {
-    return res.status(500).json({ error: err.message });
-  }
-});
+    await patchUser(user.id, { password: await hashPassword(newPassword), tempPassword: undefined, mustChangePassword: false });
 
-// POST /api/users/change-password - Change private password
-router.post('/change-password', async (req: Request, res: Response) => {
-  try {
-    const { userId, email, newPassword } = req.body;
-    if ((!userId && !email) || !newPassword) {
-      return res.status(400).json({ error: 'Missing userId/email or newPassword' });
-    }
-
-    const normalizedEmail = email ? String(email).trim().toLowerCase() : null;
-
-    store.users = store.users.map(u => {
-      const match = (userId && u.id === userId) || (normalizedEmail && u.email.toLowerCase() === normalizedEmail);
-      if (match) {
-        return {
-          ...u,
-          mustChangePassword: false,
-          tempPassword: undefined,
-          password: newPassword
-        };
-      }
-      return u;
-    });
-
-    if (isSupabaseConfigured()) {
-      const supabase = getSupabaseClient();
-      if (supabase) {
-        let q = supabase.from('users').update({
-          must_change_password: false,
-          temp_password: null,
-          password: newPassword
-        });
-        if (userId) {
-          await q.eq('id', userId);
-        } else if (normalizedEmail) {
-          await q.eq('email', normalizedEmail);
-        }
-      }
-    }
-
-    // Notify user of password change via email from intellicaautomationgroup@gmail.com
-    const changedUser = store.users.find(u => (userId && u.id === userId) || (normalizedEmail && u.email.toLowerCase() === normalizedEmail));
-    if (changedUser) {
-      const securityDispatch: EmailDispatch = {
-        id: `email-pwd-${Date.now().toString(36)}`,
-        senderEmail: 'intellicaautomationgroup@gmail.com',
-        recipientEmail: changedUser.email,
-        recipientName: changedUser.name,
-        recipientRole: changedUser.role,
-        subject: 'Security Alert: Password Updated - STEM-SPARK-LAB',
-        messageBody: `Dear ${changedUser.name},\n\nYour password for STEM-SPARK-LAB Kenya was successfully updated.\n\nIf you made this change, no further action is required.\nIf you did not authorize this change, please contact Intellica Automation Group immediately at intellicaautomationgroup@gmail.com.\n\nFrom: Intellica Automation Group <intellicaautomationgroup@gmail.com>\nRegards,\nIntellica Automation Group Security Directorate`,
-        sentAt: new Date().toISOString()
-      };
-      store.emails.unshift(securityDispatch);
-      if (isSupabaseConfigured()) {
-        const supabase = getSupabaseClient();
-        if (supabase) {
-          try {
-            await supabase.from('dispatched_emails').insert([emailToDb(securityDispatch)]);
-          } catch (e) {}
-        }
-      }
-
-      sendEmail({
-        to: changedUser.email,
-        toName: changedUser.name,
-        subject: securityDispatch.subject,
-        text: securityDispatch.messageBody
-      }).catch(err => console.warn('[MAILER] Password change notice error:', err));
-    }
+    const notice = `Dear ${user.name},\n\nThe password for your STEM-SPARK-LAB account was just changed. If this wasn't you, reset it immediately and contact your school administrator.`;
+    logEmail({
+      id: `email-pwd-${Date.now().toString(36)}`, senderEmail: SENDER, recipientEmail: user.email, recipientName: user.name,
+      recipientRole: user.role, subject: 'Security alert: your STEM-SPARK-LAB password was changed', messageBody: notice, sentAt: new Date().toISOString()
+    }).catch(() => {});
+    sendEmail({ to: user.email, toName: user.name, subject: 'Security alert: your STEM-SPARK-LAB password was changed', text: notice }).catch(e => console.warn('[mailer]', e?.message));
 
     return res.json({ success: true, message: 'Password updated successfully' });
-  } catch (err: any) {
-    return res.status(500).json({ error: err.message });
-  }
+  } catch (err) { return fail(res, err); }
 });
 
-// POST /api/users/request-reset-otp - Send OTP from intellicaautomationgroup@gmail.com
-router.post('/request-reset-otp', async (req: Request, res: Response) => {
+router.post('/request-reset-otp', async (req, res) => {
   try {
-    const { email, name, role, schoolId, user } = req.body;
-    if (!email) {
-      return res.status(400).json({ error: 'Email is required' });
+    const email = norm(req.body?.email);
+    if (!email) return res.status(400).json({ error: 'Email is required.' });
+    if (rateLimited(`otpreq:${clientIp(req)}`, 10, 15 * 60_000) || rateLimited(`otpreq:${email}`, 4, 15 * 60_000)) {
+      return res.status(429).json({ error: 'Too many requests. Please wait a few minutes and try again.' });
     }
 
-    const normalizedEmail = String(email).trim().toLowerCase();
-    let targetUser: User | undefined = store.users.find(u => u.email.toLowerCase() === normalizedEmail);
-
-    if (!targetUser && isSupabaseConfigured()) {
-      const supabase = getSupabaseClient();
-      if (supabase) {
-        const { data } = await supabase.from('users').select('*').eq('email', normalizedEmail).maybeSingle();
-        if (data) {
-          targetUser = userFromDb(data);
-          store.users.unshift(targetUser);
-        }
-      }
+    const otp = randomOtp();
+    // Same response whether or not the account exists, so this endpoint can't be used to discover who is registered.
+    const challenge = signToken({ email, h: otpDigest(email, otp) }, 'otp', 600);
+    const user = await findUser({ email });
+    if (user) {
+      const subject = 'Your STEM-SPARK-LAB verification code';
+      const body = `Dear ${user.name},\n\nYour one-time verification code is ${otp}. It expires in 10 minutes.\n\nIf you didn't request this, you can ignore this email.`;
+      await logEmail({ id: `email-otp-${Date.now().toString(36)}`, senderEmail: SENDER, recipientEmail: user.email, recipientName: user.name, recipientRole: user.role, subject, messageBody: body, sentAt: new Date().toISOString() }, otp);
+      const mail = await sendEmail({ to: user.email, toName: user.name, subject, text: body, tempPassword: otp });
+      if (!mail.success) console.error('[mailer] OTP email failed:', mail.error);
     }
-
-    // If target user exists on the client (e.g. registered in local session) but server restarted, restore into store
-    if (!targetUser && (name || user)) {
-      const restoredUser: User = {
-        id: (user && user.id) || `usr-${Date.now().toString(36)}`,
-        name: name || (user && user.name) || normalizedEmail.split('@')[0],
-        email: normalizedEmail,
-        role: (role || (user && user.role) || 'student') as any,
-        schoolId: schoolId || (user && user.schoolId) || null
-      };
-      targetUser = restoredUser;
-      store.users.unshift(restoredUser);
-      if (isSupabaseConfigured()) {
-        const supabase = getSupabaseClient();
-        if (supabase) {
-          try {
-            await supabase.from('users').upsert(userToDb(restoredUser), { onConflict: 'email' });
-          } catch (e) {}
-        }
-      }
-    }
-
-    if (!targetUser) {
-      return res.status(404).json({
-        error: `No registered account found with email "${email}". Password reset is only available for registered school administrators, teachers, and students.`
-      });
-    }
-
-    // Generate 6-digit OTP code
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
-
-    store.resetOtpSessions.set(normalizedEmail, { otp, expiresAt, user: targetUser });
-
-    const subject = `Password Reset Verification Code: ${otp} - Intellica Automation Group`;
-    const messageBody = `Dear ${targetUser.name},\n\nYou requested a password reset for your STEM-SPARK-LAB Kenya registered account (${targetUser.email}).\n\nYour One-Time Password (OTP) verification code is:\n\n${otp}\n\n• Validity: 10 minutes\n• Enter this 6-digit OTP code on the verification screen to verify your identity and set a new password.\n• If you did not request this verification code, please ignore this email or contact support at intellicaautomationgroup@gmail.com.\n\nFrom: Intellica Automation Group <intellicaautomationgroup@gmail.com>\nRegards,\nIntellica Automation Group Security Team\nSTEM-SPARK-LAB Kenya Directorate`;
-
-    const emailDispatch: EmailDispatch = {
-      id: `email-otp-${Date.now().toString(36)}`,
-      senderEmail: 'intellicaautomationgroup@gmail.com',
-      recipientEmail: targetUser.email,
-      recipientName: targetUser.name,
-      recipientRole: targetUser.role,
-      subject,
-      tempPassword: otp,
-      messageBody,
-      sentAt: new Date().toISOString()
-    };
-
-    store.emails.unshift(emailDispatch);
-    if (isSupabaseConfigured()) {
-      const supabase = getSupabaseClient();
-      if (supabase) {
-        await supabase.from('dispatched_emails').insert([emailToDb(emailDispatch)]);
-      }
-    }
-
-    // Deliver via real Gmail SMTP / mailer from intellicaautomationgroup@gmail.com
-    const mailResult = await sendEmail({
-      to: targetUser.email,
-      toName: targetUser.name,
-      subject,
-      text: messageBody,
-      tempPassword: otp
-    });
-
-    if (!mailResult.success) {
-      return res.status(400).json({
-        error: mailResult.error || 'Failed to dispatch email via Gmail SMTP.',
-        targetUser: { id: targetUser.id, name: targetUser.name, email: targetUser.email, role: targetUser.role }
-      });
-    }
-
-    return res.json({
-      success: true,
-      message: mailResult.simulated
-        ? `Verification code dispatched from intellicaautomationgroup@gmail.com.`
-        : `Verification code sent to ${targetUser.email} from intellicaautomationgroup@gmail.com.`,
-      simulated: mailResult.simulated,
-      targetUser: { id: targetUser.id, name: targetUser.name, email: targetUser.email, role: targetUser.role }
-    });
-  } catch (err: any) {
-    return res.status(500).json({ error: err.message });
-  }
+    return res.json({ success: true, challenge, message: 'If that email is registered, a 6-digit code has been sent to it.' });
+  } catch (err) { return fail(res, err); }
 });
 
-// POST /api/users/verify-reset-otp - Verify OTP code
-router.post('/verify-reset-otp', (req: Request, res: Response) => {
-  try {
-    const { email, otp } = req.body;
-    if (!email || !otp) {
-      return res.status(400).json({ error: 'Email and OTP code are required' });
-    }
+router.post('/verify-reset-otp', (req, res) => {
+  const email = norm(req.body?.email);
+  const otp = String(req.body?.otp || '').trim();
+  if (!email || !otp) return res.status(400).json({ error: 'Email and code are required.' });
+  if (rateLimited(`otpver:${email}`, 6, 10 * 60_000)) return res.status(429).json({ error: 'Too many wrong attempts. Please request a new code.' });
 
-    const normalizedEmail = String(email).trim().toLowerCase();
-    const cleanOtp = String(otp).trim();
-
-    const session = store.resetOtpSessions.get(normalizedEmail);
-    if (!session) {
-      return res.status(400).json({ error: 'No active OTP verification session found for this email. Please request a new code.' });
-    }
-
-    if (Date.now() > session.expiresAt) {
-      store.resetOtpSessions.delete(normalizedEmail);
-      return res.status(400).json({ error: 'The verification code has expired (10-minute limit). Please request a new code.' });
-    }
-
-    const isValid = session.otp === cleanOtp;
-    if (!isValid) {
-      return res.status(400).json({ error: 'Invalid verification code. Please check the 6-digit OTP code sent to your email.' });
-    }
-
-    return res.json({ success: true, message: 'Identity verified successfully' });
-  } catch (err: any) {
-    return res.status(500).json({ error: err.message });
-  }
+  const c = readToken<{ email: string; h: string }>(req.body?.challenge, 'otp');
+  if (!c || c.email !== email) return res.status(400).json({ error: 'This code has expired. Please request a new one.' });
+  if (!safeEquals(c.h, otpDigest(email, otp))) return res.status(400).json({ error: 'That code is incorrect. Please check your email and try again.' });
+  return res.json({ success: true, resetGrant: signToken({ email }, 'reset', 600) });
 });
 
 export default router;

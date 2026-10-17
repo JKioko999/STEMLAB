@@ -29,12 +29,9 @@ export const Navbar: React.FC = () => {
   const currentSchool = schools.find(s => s.id === currentUser?.schoolId);
 
   const navTabs = [
-    { id: 'home', label: 'Home' },
-    { id: 'about', label: 'About' },
+    { id: 'about', label: 'How it works' },
     { id: 'subjects', label: 'Subjects' },
-    { id: 'workbenches', label: 'Workbenches' },
-    { id: 'curriculum', label: 'KCSE Standards' },
-    { id: 'schools', label: 'Institutions' },
+    { id: 'schools', label: 'For schools' },
     { id: 'faq', label: 'FAQ' }
   ] as const;
 
@@ -60,11 +57,13 @@ export const Navbar: React.FC = () => {
   };
 
   const handleTabClick = (tabId: typeof navTabs[number]['id']) => {
-    setLandingTab(tabId);
+    const scrollToSection = () => document.getElementById(tabId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     if (currentView !== 'landing') {
       setCurrentView('landing');
+      setTimeout(scrollToSection, 60);
+    } else {
+      scrollToSection();
     }
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   return (
@@ -106,7 +105,7 @@ export const Navbar: React.FC = () => {
           {(!currentUser || currentView === 'landing') && (
             <nav className="hidden md:flex items-center space-x-1 lg:space-x-1.5 overflow-x-auto no-scrollbar py-1">
               {navTabs.map((tab) => {
-                const isActive = currentView === 'landing' && landingTab === tab.id;
+                const isActive = false;
                 return (
                   <button
                     key={tab.id}

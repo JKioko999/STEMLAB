@@ -205,7 +205,7 @@ export async function sendEmail(options: SendMailOptions): Promise<SendMailResul
     console.info(`  TO:      ${recipient}`);
     console.info(`  SUBJECT: ${subject}`);
     if (tempPassword) {
-      console.info(`  OTP/CREDENTIAL: ${tempPassword}`);
+      console.info(`  OTP/CREDENTIAL: ${process.env.NODE_ENV === 'production' || process.env.VERCEL ? '[hidden in production]' : tempPassword}`);
     }
     console.info(`  NOTE: Live SMTP transmission requires GMAIL_APP_PASSWORD in .env.`);
     console.info(`  Get 16-character Google App Password at: https://myaccount.google.com/apppasswords`);
